@@ -1,39 +1,50 @@
 import React, { useEffect, useState } from "react";
-import { getRiskSummary } from "../api/nom035";
-import { Box, Typography, Paper, Button } from "@mui/material";
+import {
+  getCompanyDashboard,
+  getCompanyRisk,
+  getCompanyParticipation
+} from "../api/nom035";
+import { Box, Typography, Paper, Button, Table, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
 import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#A28BFE", "#FEA8B2"];
+const COMPANY_ID = 1; // Change as needed or make selectable
 
 export default function Dashboard() {
-  const [riskSummary, setRiskSummary] = useState({ counts: {}, averageScore: 0 });
+  const [dashboard, setDashboard] = useState({ employees: [], surveyStatusCounts: [], surveys: [] });
+  const [riskByFactor, setRiskByFactor] = useState({});
+  const [participation, setParticipation] = useState([]);
 
   useEffect(() => {
-    getRiskSummary().then(res => setRiskSummary(res.data));
+    getCompanyDashboard(COMPANY_ID).then(res => setDashboard(res.data));
+    getCompanyRisk(COMPANY_ID).then(res => setRiskByFactor(res.data));
+    getCompanyParticipation(COMPANY_ID).then(res => setParticipation(res.data));
   }, []);
 
-  const pieData = Object.keys(riskSummary.counts || {}).map((key, idx) => ({
+  // Pie data for risk by factor
+  const pieData = Object.keys(riskByFactor).map((key, idx) => ({
     name: key,
-    value: riskSummary.counts[key]
+    value: riskByFactor[key]
   }));
 
-  const exportExcel = () => {
+  // Export risk by factor to Excel
+  const exportRiskExcel = () => {
     const ws = XLSX.utils.json_to_sheet(
-      pieData.map(d => ({ Risk: d.name, Count: d.value }))
+      pieData.map(d => ({ Factor: d.name, AverageRisk: d.value }))
     );
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "RiskSummary");
+    XLSX.utils.book_append_sheet(wb, ws, "RiskByFactor");
     const buf = XLSX.write(wb, { type: "array", bookType: "xlsx" });
-    saveAs(new Blob([buf], { type: "application/octet-stream" }), "risk_summary.xlsx");
+    saveAs(new Blob([buf], { type: "application/octet-stream" }), "risk_by_factor.xlsx");
   };
 
   return (
     <Box sx={{ p: 2 }}>
       <Typography variant="h4">Dashboard</Typography>
       <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography variant="h6">Risk Level Distribution</Typography>
+        <Typography variant="h6">Risk by Factor</Typography>
         <PieChart width={400} height={300}>
           <Pie
             data={pieData}
@@ -52,11 +63,50 @@ export default function Dashboard() {
           <Tooltip />
           <Legend />
         </PieChart>
-        <Button variant="contained" sx={{ mt: 2 }} onClick={exportExcel}>
-          Export to Excel
+        <Button variant="contained" sx={{ mt: 2 }} onClick={exportRiskExcel}>
+          Export Risk by Factor to Excel
         </Button>
       </Paper>
-      <Typography variant="body1">Average Score: {riskSummary.averageScore}</Typography>
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <Typography variant="h6">Participation by Survey</Typography>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Survey Title</TableCell>
+              <TableCell>Completion Rate (%)</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {participation.map((row, idx) => (
+              <TableRow key={idx}>
+                <TableCell>{row.surveyTitle}</TableCell>
+                <TableCell>{row.completionRate.toFixed(2)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Paper>
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <Typography variant="h6">Employees</Typography>
+        <Typography variant="body2">Total: {dashboard.employees.length}</Typography>
+        <ul>
+          {dashboard.employees.map(emp => (
+            <li key={emp.id}>{emp.name} ({emp.position})</li>
+          ))}
+        </ul>
+      </Paper>
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <Typography variant="h6">Survey Status Counts</Typography>
+        <pre>{JSON.stringify(dashboard.surveyStatusCounts, null, 2)}</pre>
+      </Paper>
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <Typography variant="h6">Surveys</Typography>
+        <ul>
+          {dashboard.surveys.map(survey => (
+            <li key={survey.id}>{survey.title}</li>
+          ))}
+        </ul>
+      </Paper>
     </Box>
   );
 }

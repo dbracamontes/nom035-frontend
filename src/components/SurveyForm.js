@@ -1,14 +1,18 @@
-import React, { useState } from "react";
-import { TextField, Button, Box, IconButton, Paper } from "@mui/material";
+import React, { useState, useEffect } from "react";
+import { TextField, Button, Box, IconButton, Paper, MenuItem } from "@mui/material";
 import AddIcon from '@mui/icons-material/Add';
-import { createSurvey } from "../api/nom035";
+import { createSurvey, updateSurvey, getCompanies } from "../api/nom035";
 
-export default function SurveyForm({ onCreated }) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [questions, setQuestions] = useState([
-    { text: "", type: "single-choice", options: "A,B,C,D", answerScores: '{"A":1,"B":2,"C":3,"D":4}' }
-  ]);
+export default function SurveyForm({ survey, onCreated }) {
+  const [title, setTitle] = useState(survey ? survey.title : "");
+  const [description, setDescription] = useState(survey ? survey.description : "");
+  const [questions, setQuestions] = useState(survey ? survey.questions : [{ text: "", type: "single-choice", options: "A,B,C,D", answerScores: '{"A":1,"B":2,"C":3,"D":4}' }]);
+  const [companies, setCompanies] = useState([]);
+  const [companyId, setCompanyId] = useState(survey && survey.company ? survey.company.id : "");
+
+  useEffect(() => {
+    getCompanies().then(res => setCompanies(res.data));
+  }, []);
 
   const handleQChange = (idx, field, value) => {
     const newQs = [...questions];
@@ -20,8 +24,18 @@ export default function SurveyForm({ onCreated }) {
 
   const handleSubmit = async e => {
     e.preventDefault();
-    await createSurvey({ title, description, questions });
-    setTitle(""); setDescription(""); setQuestions([{ text: "", type: "single-choice", options: "", answerScores: "" }]);
+    const payload = {
+      title,
+      description,
+      questions,
+      company: companyId ? { id: companyId } : undefined
+    };
+    if (survey && survey.id) {
+      await updateSurvey(survey.id, payload);
+    } else {
+      await createSurvey(payload);
+    }
+    setTitle(""); setDescription(""); setQuestions([{ text: "", type: "single-choice", options: "", answerScores: "" }]); setCompanyId("");
     if (onCreated) onCreated();
   };
 
@@ -30,6 +44,19 @@ export default function SurveyForm({ onCreated }) {
       <Box component="form" onSubmit={handleSubmit}>
         <TextField label="Title" value={title} onChange={e => setTitle(e.target.value)} required sx={{ mr: 2 }} />
         <TextField label="Description" value={description} onChange={e => setDescription(e.target.value)} sx={{ mr: 2 }} />
+        <TextField
+          select
+          label="Company"
+          value={companyId}
+          onChange={e => setCompanyId(e.target.value)}
+          required
+          sx={{ mr: 2, minWidth: 120 }}
+        >
+          <MenuItem value="">Select Company</MenuItem>
+          {companies.map(company => (
+            <MenuItem key={company.id} value={company.id}>{company.name}</MenuItem>
+          ))}
+        </TextField>
         {questions.map((q, idx) => (
           <Box key={idx} sx={{ mt: 2, mb: 2 }}>
             <TextField label="Question Text" value={q.text} onChange={e => handleQChange(idx, "text", e.target.value)} required sx={{ mr: 2 }} />
@@ -39,7 +66,7 @@ export default function SurveyForm({ onCreated }) {
           </Box>
         ))}
         <IconButton onClick={addQuestion}><AddIcon /></IconButton>
-        <Button type="submit" variant="contained">Create Survey</Button>
+        <Button type="submit" variant="contained">{survey ? "Update Survey" : "Create Survey"}</Button>
       </Box>
     </Paper>
   );
