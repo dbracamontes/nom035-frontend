@@ -1,34 +1,59 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { getEmployees, getEmployeesByCompany, getCompanies, deleteEmployee } from "../api/nom035";
-import { Paper, Typography, List, ListItem, ListItemText, IconButton, MenuItem, TextField } from "@mui/material";
+import EmployeeForm from "./EmployeeForm";
+import { Paper, Typography, List, ListItem, ListItemText, IconButton, MenuItem, TextField, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Button } from "@mui/material";
 import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 
-export default function EmployeeList() {
+export default function EmployeeList({ refreshFlag }) {
   const [employees, setEmployees] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState("");
+  const [editingEmployee, setEditingEmployee] = useState(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const formRef = useRef();
 
   useEffect(() => {
     getCompanies().then(res => setCompanies(res.data));
-    fetchEmployees();
   }, []);
 
-  const fetchEmployees = () => {
+  const fetchEmployees = useCallback(() => {
     if (selectedCompany) {
       getEmployeesByCompany(selectedCompany).then(res => setEmployees(res.data));
     } else {
       getEmployees().then(res => setEmployees(res.data));
     }
-  };
+  }, [selectedCompany]);
 
   useEffect(() => {
     fetchEmployees();
-    // eslint-disable-next-line
-  }, [selectedCompany]);
+  }, [fetchEmployees, refreshFlag]);
 
   const handleDelete = async (id) => {
     await deleteEmployee(id);
     fetchEmployees();
+  };
+
+  const handleEdit = (employee) => {
+    setEditingEmployee(employee);
+    setDialogOpen(true);
+  };
+
+  const handleDialogClose = () => {
+    setDialogOpen(false);
+    setEditingEmployee(null);
+  };
+
+  const handleFormComplete = () => {
+    setDialogOpen(false);
+    setEditingEmployee(null);
+    fetchEmployees();
+  };
+
+  const handleGuardar = () => {
+    if (formRef.current) {
+      formRef.current.submitForm();
+    }
   };
 
   return (
@@ -50,18 +75,34 @@ export default function EmployeeList() {
         {employees.map(e => (
           <ListItem key={e.id}
             secondaryAction={
-              <IconButton edge="end" aria-label="delete" onClick={() => handleDelete(e.id)}>
-                <DeleteIcon />
-              </IconButton>
+              <Stack direction="row" spacing={1}>
+                <IconButton edge="end" aria-label="edit" onClick={() => handleEdit(e)}>
+                  <EditIcon />
+                </IconButton>
+                <IconButton edge="end" aria-label="delete" onClick={() => handleDelete(e.id)}>
+                  <DeleteIcon />
+                </IconButton>
+              </Stack>
             }
           >
             <ListItemText
               primary={e.name}
-              secondary={`Company: ${e.company?.name || "N/A"} | ${e.department} | ${e.position} | ${e.email}`}
+              secondary={`Company: ${e.companyName || "N/A"} | ${e.department} | ${e.position} | ${e.email}`}
             />
           </ListItem>
         ))}
       </List>
+      {/* Dialog para editar empleado */}
+      <Dialog open={dialogOpen} onClose={handleDialogClose} maxWidth="sm" fullWidth>
+        <DialogTitle>Editar empleado</DialogTitle>
+        <DialogContent>
+          <EmployeeForm ref={formRef} employee={editingEmployee} onComplete={handleFormComplete} isEdit />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDialogClose}>Cancelar</Button>
+          <Button onClick={handleGuardar} variant="contained">Guardar</Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 }

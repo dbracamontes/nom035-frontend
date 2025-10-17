@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Box, CssBaseline, Drawer, Toolbar, AppBar, Typography, List, ListItem, ListItemIcon, ListItemText } from "@mui/material";
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -14,13 +13,14 @@ import SurveyList from "./components/SurveyList";
 import SurveyAnswer from "./components/SurveyAnswer";
 import Dashboard from "./components/Dashboard";
 import SurveyResponsesTable from "./components/SurveyResponsesTable";
+import EmployeesPage from "./components/EmployeesPage";
 
 const drawerWidth = 220;
 
 const menuOptions = [
   { text: "Landing", icon: <DashboardIcon />, component: <LandingPage /> },
   { text: "Dashboard", icon: <DashboardIcon />, component: <Dashboard /> },
-  { text: "Employees", icon: <PeopleIcon />, component: <><EmployeeForm /><EmployeeList /></> },
+  { text: "Employees", icon: <PeopleIcon />, component: <EmployeesPage /> },
   { text: "Surveys", icon: <AssignmentIcon />, component: <><SurveyForm /><SurveyList /></> },
   { text: "Answer Survey", icon: <QuizIcon />, component: <SurveyAnswer /> },
   { text: "Survey Responses", icon: <TableChartIcon />, component: <SurveyResponsesTable /> }
