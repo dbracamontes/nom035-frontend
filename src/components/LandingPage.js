@@ -1,16 +1,19 @@
 import React from "react";
 import { Box, Typography, Paper } from "@mui/material";
+import { useTranslation } from 'react-i18next';
 
 export default function LandingPage() {
+  const { t } = useTranslation();
+  
   return (
     <Box sx={{ textAlign: "center", mt: 6 }}>
       <Paper elevation={3} sx={{ p: 6 }}>
-        <Typography variant="h3" gutterBottom>NOM-035 Survey Platform</Typography>
+        <Typography variant="h3" gutterBottom>{t("app.title")}</Typography>
         <Typography variant="h6" gutterBottom>
-          Welcome! Use the sidebar to manage employees, surveys, answers, and view analytics.
+          {t("landing.welcomeMessage")}
         </Typography>
         <Typography variant="body1" sx={{ mt: 2 }}>
-          This platform helps organizations comply with NOM-035 by enabling survey management, employee well-being tracking, and risk analytics.
+          {t("landing.platformDescription")}
         </Typography>
       </Paper>
     </Box>

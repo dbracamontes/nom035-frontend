@@ -14,27 +14,33 @@ import SurveyAnswer from "./components/SurveyAnswer";
 import Dashboard from "./components/Dashboard";
 import SurveyResponsesTable from "./components/SurveyResponsesTable";
 import EmployeesPage from "./components/EmployeesPage";
+import LanguageSelector from "./components/LanguageSelector";
+import { useTranslation } from 'react-i18next';
 
 const drawerWidth = 220;
 
-const menuOptions = [
-  { text: "Landing", icon: <DashboardIcon />, component: <LandingPage /> },
-  { text: "Dashboard", icon: <DashboardIcon />, component: <Dashboard /> },
-  { text: "Employees", icon: <PeopleIcon />, component: <EmployeesPage /> },
-  { text: "Surveys", icon: <AssignmentIcon />, component: <><SurveyForm /><SurveyList /></> },
-  { text: "Answer Survey", icon: <QuizIcon />, component: <SurveyAnswer /> },
-  { text: "Survey Responses", icon: <TableChartIcon />, component: <SurveyResponsesTable /> }
-];
-
 export default function App() {
+  const { t } = useTranslation();
   const [selected, setSelected] = useState(0);
+
+  const menuOptions = [
+    { text: t("navigation.landing"), icon: <DashboardIcon />, component: <LandingPage /> },
+    { text: t("navigation.dashboard"), icon: <DashboardIcon />, component: <Dashboard /> },
+    { text: t("navigation.employees"), icon: <PeopleIcon />, component: <EmployeesPage /> },
+    { text: t("navigation.surveys"), icon: <AssignmentIcon />, component: <><SurveyForm /><SurveyList /></> },
+    { text: t("navigation.answerSurvey"), icon: <QuizIcon />, component: <SurveyAnswer /> },
+    { text: t("navigation.surveyResponses"), icon: <TableChartIcon />, component: <SurveyResponsesTable /> }
+  ];
 
   return (
     <Box sx={{ display: "flex" }}>
       <CssBaseline />
       <AppBar position="fixed" sx={{ zIndex: 1201 }}>
         <Toolbar>
-          <Typography variant="h6" noWrap component="div">NOM-035 Survey Platform</Typography>
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+            {t("app.title")}
+          </Typography>
+          <LanguageSelector />
         </Toolbar>
       </AppBar>
       <Drawer

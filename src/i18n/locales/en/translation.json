@@ -1,0 +1,99 @@
+{
+  "app": {
+    "title": "NOM-035 Survey Platform"
+  },
+  "navigation": {
+    "landing": "Landing",
+    "dashboard": "Dashboard",
+    "employees": "Employees",
+    "surveys": "Surveys",
+    "answerSurvey": "Answer Survey",
+    "surveyResponses": "Survey Responses"
+  },
+  "landing": {
+    "welcomeMessage": "Welcome! Use the sidebar to manage employees, surveys, answers, and view analytics.",
+    "platformDescription": "This platform helps organizations comply with NOM-035 by enabling survey management, employee well-being tracking, and risk analytics."
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "riskByFactor": "Risk by Factor",
+    "exportRiskExcel": "Export Risk by Factor to Excel",
+    "participationBySurvey": "Participation by Survey",
+    "surveyTitle": "Survey Title",
+    "completionRate": "Completion Rate (%)",
+    "employees": "Employees",
+    "total": "Total",
+    "surveyStatusCounts": "Survey Status Counts",
+    "surveys": "Surveys"
+  },
+  "employee": {
+    "form": {
+      "name": "Name",
+      "department": "Department",
+      "position": "Position",
+      "email": "Email",
+      "company": "Company",
+      "validation": {
+        "nameEmailCompanyRequired": "Name, Email, and Company are required."
+      }
+    },
+    "list": {
+      "title": "Employees List",
+      "filterByCompany": "Filter by Company",
+      "allCompanies": "All Companies",
+      "companyLabel": "Company"
+    },
+    "page": {
+      "addEmployee": "Add Employee",
+      "editEmployee": "Edit Employee"
+    }
+  },
+  "survey": {
+    "form": {
+      "title": "Title",
+      "description": "Description",
+      "selectCompany": "Select Company",
+      "questionText": "Question Text",
+      "type": "Type",
+      "options": "Options",
+      "answerScores": "Answer Scores (JSON)",
+      "createSurvey": "Create Survey",
+      "updateSurvey": "Update Survey"
+    },
+    "list": {
+      "title": "Surveys List",
+      "editSurvey": "Edit Survey",
+      "descriptionLabel": "Description",
+      "companyLabel": "Company"
+    },
+    "answer": {
+      "selectEmployee": "Select Employee",
+      "selectAnEmployee": "Select an employee",
+      "selectSurvey": "Select Survey",
+      "selectASurvey": "Select a survey",
+      "submitAnswers": "Submit Answers",
+      "submitted": "Submitted!"
+    },
+    "responses": {
+      "title": "Survey Responses",
+      "filterBySurvey": "Filter by Survey",
+      "allSurveys": "All Surveys",
+      "filterByEmployee": "Filter by Employee",
+      "allEmployees": "All Employees",
+      "exportToExcel": "Export to Excel",
+      "exportToPDF": "Export to PDF",
+      "survey": "Survey",
+      "employee": "Employee",
+      "riskLevel": "Risk Level",
+      "date": "Date",
+      "answers": "Answers"
+    }
+  },
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "edit": "Edit",
+    "delete": "Delete",
+    "language": "Language"
+  }
+}
