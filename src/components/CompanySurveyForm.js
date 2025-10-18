@@ -73,19 +73,23 @@ export default function CompanySurveyForm({ onCreated }) {
       return;
     }
 
-    // Usando el formato JSON que recomendó el backend
+    // Usando el formato JSON que requiere el backend
     const payload = {
       companyId: parseInt(selectedCompany),
       surveyId: parseInt(selectedSurvey),
-      assignedAt: startDate ? startDate.split('T')[0] : new Date().toISOString().split('T')[0],
+      dueDate: endDate ? endDate.split('T')[0] : "2025-12-15",
+      companyVersion: "v1",
+      status: "activo",
+      completionRate: 0.0,
       notes: description || title || "Encuesta creada desde frontend"
     };
 
     console.log("Payload enviado:", payload);
+    console.log("Payload serializado:", JSON.stringify(payload));
 
     try {
       const response = await createCompanySurvey(payload);
-      console.log("Respuesta del servidor:", response.data);
+      console.log("Respuesta del servidor:", response);
       
       // Reset form
       setTitle("");
@@ -110,6 +114,10 @@ export default function CompanySurveyForm({ onCreated }) {
           errorMessage += `\nError 400: Datos inválidos - ${JSON.stringify(error.response.data)}`;
         } else if (error.response.status === 415) {
           errorMessage += "\nError 415: Problema con Content-Type. Verifica el controlador del backend.";
+          errorMessage += "\nPosibles causas:";
+          errorMessage += "\n- El backend no acepta application/json";
+          errorMessage += "\n- Falta @RequestBody en el controlador";
+          errorMessage += "\n- Problema con la serialización de datos";
         } else {
           errorMessage += `\nError ${error.response.status}: ${JSON.stringify(error.response.data)}`;
         }
