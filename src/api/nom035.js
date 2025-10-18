@@ -2,6 +2,10 @@ import axios from 'axios';
 
 const API_BASE = "http://localhost:8080/api";
 
+// Configure axios defaults
+axios.defaults.headers.post['Content-Type'] = 'application/json';
+axios.defaults.headers.put['Content-Type'] = 'application/json';
+
 // Employee endpoints
 export const getEmployees = () => axios.get(`${API_BASE}/employees`);
 export const getEmployeeById = id => axios.get(`${API_BASE}/employees/${id}`);
@@ -29,7 +33,11 @@ export const getCompanySurveys = () => axios.get(`${API_BASE}/company-surveys`);
 export const getCompanySurveyById = id => axios.get(`${API_BASE}/company-surveys/${id}`);
 export const getCompanySurveysByCompany = companyId => axios.get(`${API_BASE}/company-surveys/company/${companyId}`);
 export const getCompanySurveysBySurvey = surveyId => axios.get(`${API_BASE}/company-surveys/survey/${surveyId}`);
-export const createCompanySurvey = data => axios.post(`${API_BASE}/company-surveys`, data);
+export const createCompanySurvey = data => axios.post(`${API_BASE}/company-surveys`, data, {
+  headers: {
+    'Content-Type': 'application/json',
+  }
+});
 export const updateCompanySurvey = (id, data) => axios.put(`${API_BASE}/company-surveys/${id}`, data);
 export const deleteCompanySurvey = id => axios.delete(`${API_BASE}/company-surveys/${id}`);
 

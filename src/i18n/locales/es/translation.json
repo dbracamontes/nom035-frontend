@@ -7,6 +7,7 @@
     "dashboard": "Panel de Control",
     "employees": "Empleados",
     "surveys": "Encuestas",
+    "companySurveys": "Encuestas de Empresa",
     "answerSurvey": "Responder Encuesta",
     "surveyResponses": "Respuestas de Encuestas"
   },

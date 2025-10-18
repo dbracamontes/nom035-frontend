@@ -14,6 +14,7 @@ const resources = {
         "dashboard": "Dashboard",
         "employees": "Employees",
         "surveys": "Surveys",
+        "companySurveys": "Company Surveys",
         "answerSurvey": "Answer Survey",
         "surveyResponses": "Survey Responses"
       },
@@ -36,6 +37,7 @@ const resources = {
         "dashboard": "Panel de Control",
         "employees": "Empleados",
         "surveys": "Encuestas",
+        "companySurveys": "Encuestas de Empresa",
         "answerSurvey": "Responder Encuesta",
         "surveyResponses": "Respuestas de Encuestas"
       },
