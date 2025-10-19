@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { 
-  TextField, Button, Box, Paper, MenuItem, Typography, 
+  TextField, Button, Box, MenuItem, Typography, 
   FormControlLabel, Checkbox, List, ListItem, ListItemText,
   Dialog, DialogTitle, DialogContent, DialogActions, Grid,
   Chip, Stack, Divider
 } from "@mui/material";
-import { createCompanySurvey, getCompanies, getEmployeesByCompany, getSurveys } from "../api/nom035";
+import { createCompanySurvey, getCompanies, getEmployeesByCompany, getSurveys, getSurveyById } from "../api/nom035";
 
 
 export default function CompanySurveyForm({ onCreated }) {
@@ -25,6 +25,7 @@ export default function CompanySurveyForm({ onCreated }) {
   // Dialog state
   const [employeeDialogOpen, setEmployeeDialogOpen] = useState(false);
   const [surveyDialogOpen, setSurveyDialogOpen] = useState(false);
+  const [surveyDetails, setSurveyDetails] = useState(null);
 
   useEffect(() => {
     // Load companies and surveys on component mount
@@ -131,17 +132,57 @@ export default function CompanySurveyForm({ onCreated }) {
     }
   };
 
+  const handleOpenSurveyDialog = async () => {
+    if (selectedSurvey) {
+      try {
+        const response = await getSurveyById(selectedSurvey);
+        setSurveyDetails(response.data);
+        setSurveyDialogOpen(true);
+      } catch (error) {
+        console.error("Error cargando detalles de la encuesta:", error);
+        // Si falla, usamos los datos básicos que ya tenemos
+        setSurveyDetails(surveys.find(s => s.id === selectedSurvey));
+        setSurveyDialogOpen(true);
+      }
+    }
+  };
+
   const selectedCompanyName = companies.find(c => c.id === selectedCompany)?.name || "";
-  const selectedSurveyTitle = surveys.find(s => s.id === selectedSurvey)?.title || "";
   const selectedEmployeeNames = employees.filter(emp => selectedEmployees.includes(emp.id));
 
   return (
-    <Paper sx={{ p: 3, mb: 2 }}>
-      <Typography variant="h5" gutterBottom>
-        Crear Encuesta para Empresa
+    <Box sx={{ 
+      background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+      borderRadius: 3,
+      p: 4,
+      boxShadow: '0 4px 16px rgba(99, 102, 241, 0.1)',
+      border: '1px solid rgba(99, 102, 241, 0.1)',
+      mb: 3
+    }}>
+      <Typography 
+        variant="h4" 
+        gutterBottom
+        sx={{
+          fontWeight: 700,
+          color: '#1e293b',
+          mb: 4,
+          textAlign: 'center'
+        }}
+      >
+        Crear Nueva Encuesta para Empresa
       </Typography>
       
-      <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+      <Box 
+        component="form" 
+        onSubmit={handleSubmit} 
+        sx={{ 
+          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+          borderRadius: 2,
+          p: 4,
+          border: '1px solid rgba(99, 102, 241, 0.08)',
+          boxShadow: '0 2px 8px rgba(99, 102, 241, 0.05)'
+        }}
+      >
         <Grid container spacing={3}>
           {/* Company Selection */}
           <Grid item xs={12} md={6}>
@@ -152,6 +193,50 @@ export default function CompanySurveyForm({ onCreated }) {
               value={selectedCompany}
               onChange={e => setSelectedCompany(e.target.value)}
               required
+              sx={{
+                minHeight: '80px',
+                width: '100%',
+                '& .MuiOutlinedInput-root': {
+                  background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                  borderRadius: 2,
+                  height: '56px',
+                  minWidth: '250px',
+                  '&:hover fieldset': {
+                    borderColor: '#6366f1',
+                    borderWidth: 2
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#6366f1',
+                    borderWidth: 2,
+                    boxShadow: '0 0 0 3px rgba(99, 102, 241, 0.1)'
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  fontWeight: 500,
+                  color: '#374151',
+                  '&.Mui-focused': {
+                    color: '#6366f1'
+                  }
+                },
+                '& .MuiSelect-select': {
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }
+              }}
+              MenuProps={{
+                PaperProps: {
+                  sx: {
+                    maxHeight: 300,
+                    minWidth: '250px',
+                    '& .MuiMenuItem-root': {
+                      whiteSpace: 'normal',
+                      wordWrap: 'break-word',
+                      padding: '12px 16px'
+                    }
+                  }
+                }
+              }}
             >
               <MenuItem value="">-- Seleccionar Empresa --</MenuItem>
               {companies.map(company => (
@@ -167,10 +252,54 @@ export default function CompanySurveyForm({ onCreated }) {
             <TextField
               select
               fullWidth
-              label="Seleccionar Encuesta Base"
+              label="Seleccionar Encuesta"
               value={selectedSurvey}
               onChange={e => setSelectedSurvey(e.target.value)}
               required
+              sx={{
+                minHeight: '80px',
+                width: '100%',
+                '& .MuiOutlinedInput-root': {
+                  background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                  borderRadius: 2,
+                  height: '56px',
+                  minWidth: '250px',
+                  '&:hover fieldset': {
+                    borderColor: '#6366f1',
+                    borderWidth: 2
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#6366f1',
+                    borderWidth: 2,
+                    boxShadow: '0 0 0 3px rgba(99, 102, 241, 0.1)'
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  fontWeight: 500,
+                  color: '#374151',
+                  '&.Mui-focused': {
+                    color: '#6366f1'
+                  }
+                },
+                '& .MuiSelect-select': {
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }
+              }}
+              MenuProps={{
+                PaperProps: {
+                  sx: {
+                    maxHeight: 300,
+                    minWidth: '250px',
+                    '& .MuiMenuItem-root': {
+                      whiteSpace: 'normal',
+                      wordWrap: 'break-word',
+                      padding: '12px 16px'
+                    }
+                  }
+                }
+              }}
             >
               <MenuItem value="">-- Seleccionar Encuesta --</MenuItem>
               {surveys.map(survey => (
@@ -182,8 +311,21 @@ export default function CompanySurveyForm({ onCreated }) {
             {selectedSurvey && (
               <Button 
                 size="small" 
-                onClick={() => setSurveyDialogOpen(true)}
-                sx={{ mt: 1 }}
+                onClick={handleOpenSurveyDialog}
+                sx={{ 
+                  mt: 2,
+                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                  color: 'white',
+                  fontWeight: 500,
+                  borderRadius: 2,
+                  px: 2,
+                  py: 1,
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #5b5bd6 0%, #7c3aed 100%)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)'
+                  }
+                }}
               >
                 Ver detalles de la encuesta
               </Button>
@@ -194,10 +336,35 @@ export default function CompanySurveyForm({ onCreated }) {
           <Grid item xs={12}>
             <TextField
               fullWidth
-              label="Título de la Encuesta"
+              label="Título Encuesta"
               value={title}
               onChange={e => setTitle(e.target.value)}
               required
+              sx={{
+                minHeight: '80px',
+                width: '100%',
+                '& .MuiOutlinedInput-root': {
+                  background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                  borderRadius: 2,
+                  height: '56px',
+                  '&:hover fieldset': {
+                    borderColor: '#6366f1',
+                    borderWidth: 2
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#6366f1',
+                    borderWidth: 2,
+                    boxShadow: '0 0 0 3px rgba(99, 102, 241, 0.1)'
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  fontWeight: 500,
+                  color: '#374151',
+                  '&.Mui-focused': {
+                    color: '#6366f1'
+                  }
+                }
+              }}
             />
           </Grid>
 
@@ -207,9 +374,32 @@ export default function CompanySurveyForm({ onCreated }) {
               fullWidth
               multiline
               rows={3}
-              label="Descripción"
+              label="Descripción/Notas"
               value={description}
               onChange={e => setDescription(e.target.value)}
+              sx={{
+                width: '100%',
+                '& .MuiOutlinedInput-root': {
+                  background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                  borderRadius: 2,
+                  '&:hover fieldset': {
+                    borderColor: '#6366f1',
+                    borderWidth: 2
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#6366f1',
+                    borderWidth: 2,
+                    boxShadow: '0 0 0 3px rgba(99, 102, 241, 0.1)'
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  fontWeight: 500,
+                  color: '#374151',
+                  '&.Mui-focused': {
+                    color: '#6366f1'
+                  }
+                }
+              }}
             />
           </Grid>
 
@@ -218,10 +408,36 @@ export default function CompanySurveyForm({ onCreated }) {
             <TextField
               fullWidth
               type="datetime-local"
-              label="Fecha de Inicio"
+              label="Fecha Inicio"
               value={startDate}
               onChange={e => setStartDate(e.target.value)}
               InputLabelProps={{ shrink: true }}
+              sx={{
+                minHeight: '80px',
+                width: '100%',
+                '& .MuiOutlinedInput-root': {
+                  background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                  borderRadius: 2,
+                  height: '56px',
+                  minWidth: '250px',
+                  '&:hover fieldset': {
+                    borderColor: '#6366f1',
+                    borderWidth: 2
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#6366f1',
+                    borderWidth: 2,
+                    boxShadow: '0 0 0 3px rgba(99, 102, 241, 0.1)'
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  fontWeight: 500,
+                  color: '#374151',
+                  '&.Mui-focused': {
+                    color: '#6366f1'
+                  }
+                }
+              }}
             />
           </Grid>
 
@@ -229,51 +445,92 @@ export default function CompanySurveyForm({ onCreated }) {
             <TextField
               fullWidth
               type="datetime-local"
-              label="Fecha de Fin"
+              label="Fecha Fin"
               value={endDate}
               onChange={e => setEndDate(e.target.value)}
               InputLabelProps={{ shrink: true }}
+              sx={{
+                minHeight: '80px',
+                width: '100%',
+                '& .MuiOutlinedInput-root': {
+                  background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                  borderRadius: 2,
+                  height: '56px',
+                  minWidth: '250px',
+                  '&:hover fieldset': {
+                    borderColor: '#6366f1',
+                    borderWidth: 2
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#6366f1',
+                    borderWidth: 2,
+                    boxShadow: '0 0 0 3px rgba(99, 102, 241, 0.1)'
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  fontWeight: 500,
+                  color: '#374151',
+                  '&.Mui-focused': {
+                    color: '#6366f1'
+                  }
+                }
+              }}
             />
           </Grid>
 
           {/* Employee Selection */}
           <Grid item xs={12}>
-            <Typography variant="h6" gutterBottom>
+            <Typography 
+              variant="h6" 
+              gutterBottom
+              sx={{
+                fontWeight: 600,
+                color: '#6366f1',
+                mb: 3
+              }}
+            >
               Empleados Seleccionados
             </Typography>
             
             {selectedCompany ? (
               <>
-                <Box sx={{ mb: 2 }}>
-                  <Button 
-                    variant="outlined" 
-                    onClick={() => setEmployeeDialogOpen(true)}
-                    disabled={employees.length === 0}
-                  >
-                    Seleccionar Empleados ({selectedEmployees.length}/{employees.length})
-                  </Button>
-                  {employees.length > 0 && (
+                <Box sx={{
+                  background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
+                  borderRadius: 2,
+                  p: 3,
+                  border: '1px solid rgba(99, 102, 241, 0.1)'
+                }}>
+                  <Box sx={{ mb: 2 }}>
                     <Button 
-                      onClick={handleSelectAllEmployees}
-                      sx={{ ml: 2 }}
+                      variant="outlined" 
+                      onClick={() => setEmployeeDialogOpen(true)}
+                      disabled={employees.length === 0}
                     >
-                      {selectedEmployees.length === employees.length ? "Deseleccionar Todos" : "Seleccionar Todos"}
+                      Seleccionar Empleados ({selectedEmployees.length}/{employees.length})
                     </Button>
+                    {employees.length > 0 && (
+                      <Button 
+                        onClick={handleSelectAllEmployees}
+                        sx={{ ml: 2 }}
+                      >
+                        {selectedEmployees.length === employees.length ? "Deseleccionar Todos" : "Seleccionar Todos"}
+                      </Button>
+                    )}
+                  </Box>
+
+                  {selectedEmployeeNames.length > 0 && (
+                    <Stack direction="row" spacing={1} flexWrap="wrap">
+                      {selectedEmployeeNames.map(employee => (
+                        <Chip 
+                          key={employee.id}
+                          label={employee.name}
+                          onDelete={() => handleEmployeeToggle(employee.id)}
+                          color="primary"
+                        />
+                      ))}
+                    </Stack>
                   )}
                 </Box>
-
-                {selectedEmployeeNames.length > 0 && (
-                  <Stack direction="row" spacing={1} flexWrap="wrap">
-                    {selectedEmployeeNames.map(employee => (
-                      <Chip 
-                        key={employee.id}
-                        label={employee.name}
-                        onDelete={() => handleEmployeeToggle(employee.id)}
-                        color="primary"
-                      />
-                    ))}
-                  </Stack>
-                )}
               </>
             ) : (
               <Typography color="text.secondary">
@@ -284,14 +541,39 @@ export default function CompanySurveyForm({ onCreated }) {
 
           {/* Submit Button */}
           <Grid item xs={12}>
-            <Button 
-              type="submit" 
-              variant="contained" 
-              size="large"
-              disabled={!selectedCompany || !selectedSurvey || selectedEmployees.length === 0}
-            >
-              Crear Encuesta de Empresa
-            </Button>
+            <Box sx={{ textAlign: 'center', pt: 2 }}>
+              <Button 
+                type="submit" 
+                size="large"
+                disabled={!selectedCompany || !selectedSurvey}
+                sx={{
+                  background: !selectedCompany || !selectedSurvey 
+                    ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)'
+                    : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                  color: 'white',
+                  fontWeight: 600,
+                  fontSize: '1.1rem',
+                  px: 6,
+                  py: 2,
+                  borderRadius: 3,
+                  boxShadow: '0 8px 32px rgba(99, 102, 241, 0.3)',
+                  '&:hover': {
+                    background: !selectedCompany || !selectedSurvey 
+                      ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)'
+                      : 'linear-gradient(135deg, #5b5bd6 0%, #7c3aed 100%)',
+                    transform: !selectedCompany || !selectedSurvey ? 'none' : 'translateY(-2px)',
+                    boxShadow: !selectedCompany || !selectedSurvey 
+                      ? '0 8px 32px rgba(99, 102, 241, 0.3)'
+                      : '0 12px 40px rgba(99, 102, 241, 0.4)'
+                  },
+                  '&:disabled': {
+                    color: 'white'
+                  }
+                }}
+              >
+                Crear Encuesta de Empresa
+              </Button>
+            </Box>
           </Grid>
         </Grid>
       </Box>
@@ -338,45 +620,179 @@ export default function CompanySurveyForm({ onCreated }) {
       {/* Survey Details Dialog */}
       <Dialog 
         open={surveyDialogOpen} 
-        onClose={() => setSurveyDialogOpen(false)}
+        onClose={() => {
+          setSurveyDialogOpen(false);
+          setSurveyDetails(null);
+        }}
         maxWidth="md"
         fullWidth
+        PaperProps={{
+          sx: {
+            background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+            borderRadius: 3,
+            border: '1px solid rgba(99, 102, 241, 0.1)',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)'
+          }
+        }}
       >
-        <DialogTitle>
+        <DialogTitle sx={{
+          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+          color: 'white',
+          fontWeight: 600,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1
+        }}>
           Detalles de la Encuesta
         </DialogTitle>
-        <DialogContent>
-          {selectedSurvey && (
+        <DialogContent sx={{ p: 3 }}>
+          {surveyDetails && (
             <>
-              <Typography variant="h6" gutterBottom>
-                {selectedSurveyTitle}
+              <Typography 
+                variant="h6" 
+                gutterBottom
+                sx={{
+                  fontWeight: 600,
+                  color: '#1e293b',
+                  mb: 2
+                }}
+              >
+                {surveyDetails.title}
               </Typography>
-              <Typography variant="body2" paragraph>
-                {surveys.find(s => s.id === selectedSurvey)?.description}
+              <Typography variant="body2" paragraph sx={{ color: '#64748b', lineHeight: 1.6 }}>
+                {surveyDetails.description}
               </Typography>
-              <Divider sx={{ my: 2 }} />
-              <Typography variant="subtitle1" gutterBottom>
+
+              {/* Additional survey info */}
+              <Box sx={{ mb: 3 }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <Typography variant="caption" sx={{ color: '#64748b', display: 'block' }}>
+                      Tipo de Guía
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, color: '#1e293b' }}>
+                      Guía {surveyDetails.guideType || 'No especificado'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="caption" sx={{ color: '#64748b', display: 'block' }}>
+                      Estado
+                    </Typography>
+                    <Chip 
+                      label={surveyDetails.active ? 'Activa' : 'Inactiva'}
+                      size="small"
+                      sx={{ 
+                        backgroundColor: surveyDetails.active ? '#dcfce7' : '#fee2e2',
+                        color: surveyDetails.active ? '#166534' : '#dc2626',
+                        fontWeight: 500
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography variant="caption" sx={{ color: '#64748b', display: 'block' }}>
+                      Fecha de Creación
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, color: '#1e293b' }}>
+                      {surveyDetails.createdAt ? new Date(surveyDetails.createdAt).toLocaleDateString('es-ES', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }) : 'No disponible'}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Box>
+
+              <Divider sx={{ 
+                my: 3,
+                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                height: 2,
+                borderRadius: 1
+              }} />
+              
+              <Typography 
+                variant="subtitle1" 
+                gutterBottom
+                sx={{
+                  fontWeight: 600,
+                  color: '#6366f1',
+                  mb: 2
+                }}
+              >
                 Preguntas:
               </Typography>
-              {surveys.find(s => s.id === selectedSurvey)?.questions?.map((question, index) => (
-                <Box key={index} sx={{ mb: 2 }}>
-                  <Typography variant="body2">
-                    <strong>{index + 1}. {question.text}</strong>
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Tipo: {question.type} | Opciones: {question.options}
-                  </Typography>
-                </Box>
-              ))}
+              {(() => {
+                const questions = surveyDetails?.questions || [];
+                
+                if (!questions || questions.length === 0) {
+                  return (
+                    <Box sx={{ 
+                      p: 3, 
+                      textAlign: 'center',
+                      background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+                      borderRadius: 2,
+                      border: '1px solid rgba(99, 102, 241, 0.1)'
+                    }}>
+                      <Typography variant="h6" sx={{ color: '#64748b', mb: 2, fontWeight: 500 }}>
+                        📝 Preguntas en Desarrollo
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: '#64748b', lineHeight: 1.6 }}>
+                        Esta encuesta está configurada como <strong>Guía {surveyDetails.guideType}</strong> del NOM-035.
+                        Las preguntas específicas para esta evaluación están siendo implementadas en el sistema.
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: '#94a3b8', mt: 2, fontStyle: 'italic' }}>
+                        Próximamente podrás ver aquí todas las preguntas que formarán parte de esta evaluación.
+                      </Typography>
+                    </Box>
+                  );
+                }
+                
+                return questions.map((question, index) => (
+                  <Box 
+                    key={index} 
+                    sx={{ 
+                      mb: 2,
+                      p: 2,
+                      background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
+                      borderRadius: 2,
+                      border: '1px solid rgba(99, 102, 241, 0.1)'
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ fontWeight: 500, color: '#1e293b', mb: 1 }}>
+                      {index + 1}. {question.text || question.question || question.pregunta || 'Pregunta sin texto'}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#64748b' }}>
+                      Tipo: {question.type || question.tipo || 'No especificado'}
+                      {(question.options || question.opciones) && ` | Opciones: ${question.options || question.opciones}`}
+                    </Typography>
+                  </Box>
+                ));
+              })()}
             </>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSurveyDialogOpen(false)}>
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button 
+            onClick={() => {
+              setSurveyDialogOpen(false);
+              setSurveyDetails(null);
+            }}
+            sx={{
+              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+              color: 'white',
+              fontWeight: 500,
+              px: 3,
+              '&:hover': {
+                background: 'linear-gradient(135deg, #5b5bd6 0%, #7c3aed 100%)'
+              }
+            }}
+          >
             Cerrar
           </Button>
         </DialogActions>
       </Dialog>
-    </Paper>
+    </Box>
   );
 }

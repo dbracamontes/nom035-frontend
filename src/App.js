@@ -38,9 +38,32 @@ export default function App() {
   return (
     <Box sx={{ display: "flex" }}>
       <CssBaseline />
-      <AppBar position="fixed" sx={{ zIndex: 1201 }}>
+      <AppBar 
+        position="fixed" 
+        sx={{ 
+          zIndex: 1201,
+          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%)',
+          boxShadow: '0 8px 32px rgba(99, 102, 241, 0.2)',
+          backdropFilter: 'blur(10px)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+        }}
+      >
         <Toolbar>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+          <Typography 
+            variant="h6" 
+            noWrap 
+            component="div" 
+            sx={{ 
+              flexGrow: 1,
+              fontWeight: 600,
+              letterSpacing: '0.5px',
+              background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+            }}
+          >
             {t("app.title")}
           </Typography>
           <LanguageSelector />

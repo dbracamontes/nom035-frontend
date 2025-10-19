@@ -14,7 +14,10 @@ function TabPanel({ children, value, index, ...other }) {
       {...other}
     >
       {value === index && (
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ 
+          p: 4,
+          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)'
+        }}>
           {children}
         </Box>
       )}
@@ -38,25 +41,77 @@ export default function CompanySurveyPage() {
   };
 
   return (
-    <Box sx={{ width: '100%' }}>
-      <Typography variant="h4" gutterBottom>
+    <Box sx={{ 
+      width: '100%',
+      background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+      minHeight: '100vh',
+      p: 3
+    }}>
+      <Typography 
+        variant="h3" 
+        gutterBottom
+        sx={{
+          fontWeight: 700,
+          color: '#1e293b',
+          mb: 4,
+          textAlign: 'center'
+        }}
+      >
         Gestión de Encuestas de Empresa
       </Typography>
       
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs value={tabValue} onChange={handleTabChange} aria-label="company survey tabs">
-          <Tab label="Crear Nueva Encuesta" />
-          <Tab label="Encuestas Creadas" />
-        </Tabs>
+      <Box sx={{ 
+        background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+        borderRadius: 3,
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+        overflow: 'hidden'
+      }}>
+        <Box sx={{ 
+          borderBottom: '1px solid rgba(99, 102, 241, 0.1)',
+          background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)'
+        }}>
+          <Tabs 
+            value={tabValue} 
+            onChange={handleTabChange} 
+            aria-label="company survey tabs"
+            sx={{
+              '& .MuiTab-root': {
+                fontWeight: 600,
+                fontSize: '1rem',
+                py: 3,
+                px: 4,
+                '&.Mui-selected': {
+                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                  color: 'white',
+                  borderRadius: '8px 8px 0 0'
+                },
+                '&:not(.Mui-selected)': {
+                  color: '#64748b',
+                  '&:hover': {
+                    background: 'rgba(99, 102, 241, 0.1)',
+                    color: '#6366f1'
+                  }
+                }
+              },
+              '& .MuiTabs-indicator': {
+                display: 'none'
+              }
+            }}
+          >
+            <Tab label="Crear Nueva Encuesta" />
+            <Tab label="Encuestas Creadas" />
+          </Tabs>
+        </Box>
+      
+        <TabPanel value={tabValue} index={0}>
+          <CompanySurveyForm onCreated={handleSurveyCreated} />
+        </TabPanel>
+        
+        <TabPanel value={tabValue} index={1}>
+          <CompanySurveyList refreshFlag={refreshFlag} />
+        </TabPanel>
       </Box>
-      
-      <TabPanel value={tabValue} index={0}>
-        <CompanySurveyForm onCreated={handleSurveyCreated} />
-      </TabPanel>
-      
-      <TabPanel value={tabValue} index={1}>
-        <CompanySurveyList refreshFlag={refreshFlag} />
-      </TabPanel>
     </Box>
   );
 }
