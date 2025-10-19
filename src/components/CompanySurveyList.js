@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { 
-  Paper, Typography, List, ListItem, ListItemText, 
+  Paper, Typography, 
   IconButton, Chip, Stack, Box, Grid, Card, CardContent,
   CardActions, Button, Dialog, DialogTitle, DialogContent,
   DialogActions, Collapse
@@ -9,24 +9,33 @@ import {
   Delete as DeleteIcon, 
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
-  People as PeopleIcon,
   Assignment as AssignmentIcon,
-  DateRange as DateRangeIcon
+  DateRange as DateRangeIcon,
+  Business as BusinessIcon
 } from '@mui/icons-material';
-import { getCompanySurveys, deleteCompanySurvey } from "../api/nom035";
+import { getCompanySurveys, deleteCompanySurvey, getCompanies, getSurveys } from "../api/nom035";
 
 export default function CompanySurveyList({ refreshFlag }) {
   const [companySurveys, setCompanySurveys] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  const [surveys, setSurveys] = useState([]);
   const [expandedCard, setExpandedCard] = useState(null);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, survey: null });
 
   const fetchCompanySurveys = async () => {
     try {
-      const response = await getCompanySurveys();
-      setCompanySurveys(response.data);
+      const [surveysResponse, companiesResponse, baseSurveysResponse] = await Promise.all([
+        getCompanySurveys(),
+        getCompanies(),
+        getSurveys()
+      ]);
+      
+      setCompanySurveys(surveysResponse.data);
+      setCompanies(companiesResponse.data);
+      setSurveys(baseSurveysResponse.data);
     } catch (error) {
-      console.error("Error fetching company surveys:", error);
-      alert("Error al cargar las encuestas de empresa");
+      console.error("Error fetching data:", error);
+      alert("Error al cargar los datos");
       setCompanySurveys([]);
     }
   };
@@ -50,38 +59,49 @@ export default function CompanySurveyList({ refreshFlag }) {
     setExpandedCard(expandedCard === id ? null : id);
   };
 
+  // Helper functions to get names
+  const getCompanyName = (companyId) => {
+    const company = companies.find(c => c.id === companyId);
+    return company ? company.name : "Empresa no encontrada";
+  };
+
+  const getSurveyTitle = (surveyId) => {
+    const survey = surveys.find(s => s.id === surveyId);
+    return survey ? survey.title : "Encuesta no encontrada";
+  };
+
+  const getSurveyDescription = (surveyId) => {
+    const survey = surveys.find(s => s.id === surveyId);
+    return survey ? survey.description : "Sin descripción";
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return "No especificada";
     return new Date(dateString).toLocaleDateString('es-ES', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      day: 'numeric'
     });
   };
 
-  const getStatusColor = (startDate, endDate) => {
-    const now = new Date();
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    if (now < start) return "warning"; // Pendiente
-    if (now >= start && now <= end) return "success"; // Activa
-    if (now > end) return "error"; // Expirada
+  const getStatusColor = (status, dueDate) => {
+    if (status === "activo") {
+      const now = new Date();
+      const due = new Date(dueDate);
+      if (now > due) return "error"; // Expirada
+      return "success"; // Activa
+    }
     return "default";
   };
 
-  const getStatusText = (startDate, endDate) => {
-    const now = new Date();
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    if (!startDate && !endDate) return "Sin fechas";
-    if (now < start) return "Pendiente";
-    if (now >= start && now <= end) return "Activa";
-    if (now > end) return "Expirada";
-    return "Sin estado";
+  const getStatusText = (status, dueDate) => {
+    if (status === "activo") {
+      const now = new Date();
+      const due = new Date(dueDate);
+      if (now > due) return "Expirada";
+      return "Activa";
+    }
+    return status || "Sin estado";
   };
 
   return (
@@ -101,46 +121,46 @@ export default function CompanySurveyList({ refreshFlag }) {
               <Card>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
-                    {survey.title}
+                    Encuesta #{survey.id}
                   </Typography>
                   
                   <Stack spacing={1} sx={{ mb: 2 }}>
                     <Chip 
-                      label={survey.company?.name || "Sin empresa"}
+                      label={getCompanyName(survey.companyId)}
                       color="primary"
                       size="small"
+                      icon={<BusinessIcon />}
                     />
                     <Chip 
-                      label={getStatusText(survey.startDate, survey.endDate)}
-                      color={getStatusColor(survey.startDate, survey.endDate)}
+                      label={getStatusText(survey.status, survey.dueDate)}
+                      color={getStatusColor(survey.status, survey.dueDate)}
                       size="small"
                     />
                   </Stack>
 
                   <Typography variant="body2" color="text.secondary" paragraph>
-                    {survey.description || "Sin descripción"}
+                    {survey.notes || "Sin notas adicionales"}
                   </Typography>
 
                   <Stack direction="row" spacing={2} sx={{ mb: 1 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <AssignmentIcon sx={{ fontSize: 16, mr: 0.5 }} />
                       <Typography variant="caption">
-                        {survey.survey?.title || "Encuesta base"}
+                        {getSurveyTitle(survey.surveyId)}
                       </Typography>
                     </Box>
                   </Stack>
 
                   <Stack direction="row" spacing={2}>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <PeopleIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                      <DateRangeIcon sx={{ fontSize: 16, mr: 0.5 }} />
                       <Typography variant="caption">
-                        {survey.employeeIds?.length || 0} empleados
+                        Vence: {formatDate(survey.dueDate)}
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <DateRangeIcon sx={{ fontSize: 16, mr: 0.5 }} />
                       <Typography variant="caption">
-                        {formatDate(survey.startDate)}
+                        Progreso: {(survey.completionRate * 100).toFixed(1)}%
                       </Typography>
                     </Box>
                   </Stack>
@@ -167,51 +187,31 @@ export default function CompanySurveyList({ refreshFlag }) {
                 <Collapse in={expandedCard === survey.id}>
                   <CardContent sx={{ pt: 0 }}>
                     <Typography variant="subtitle2" gutterBottom>
-                      Fechas:
+                      Información Detallada:
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 2 }}>
-                      <strong>Inicio:</strong> {formatDate(survey.startDate)}<br />
-                      <strong>Fin:</strong> {formatDate(survey.endDate)}
+                      <strong>ID:</strong> {survey.id}<br />
+                      <strong>Empresa:</strong> {getCompanyName(survey.companyId)} (ID: {survey.companyId})<br />
+                      <strong>Encuesta Base:</strong> {getSurveyTitle(survey.surveyId)} (ID: {survey.surveyId})<br />
+                      <strong>Asignada:</strong> {formatDate(survey.assignedAt)}<br />
+                      <strong>Vencimiento:</strong> {formatDate(survey.dueDate)}<br />
+                      <strong>Versión:</strong> {survey.companyVersion}<br />
+                      <strong>Estado:</strong> {survey.status}<br />
+                      <strong>Progreso:</strong> {(survey.completionRate * 100).toFixed(1)}%
                     </Typography>
 
                     <Typography variant="subtitle2" gutterBottom>
-                      Encuesta Base:
+                      Descripción de la Encuesta Base:
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 2 }}>
-                      {survey.survey?.title}<br />
-                      <span style={{ color: 'text.secondary' }}>
-                        {survey.survey?.description}
-                      </span>
+                      {getSurveyDescription(survey.surveyId)}
                     </Typography>
 
-                    {survey.survey?.questions && (
-                      <>
-                        <Typography variant="subtitle2" gutterBottom>
-                          Preguntas ({survey.survey.questions.length}):
-                        </Typography>
-                        <List dense>
-                          {survey.survey.questions.slice(0, 3).map((question, index) => (
-                            <ListItem key={index} sx={{ py: 0 }}>
-                              <ListItemText 
-                                primary={`${index + 1}. ${question.text}`}
-                                secondary={`Tipo: ${question.type}`}
-                              />
-                            </ListItem>
-                          ))}
-                          {survey.survey.questions.length > 3 && (
-                            <Typography variant="caption" color="text.secondary">
-                              ... y {survey.survey.questions.length - 3} preguntas más
-                            </Typography>
-                          )}
-                        </List>
-                      </>
-                    )}
-
                     <Typography variant="subtitle2" gutterBottom>
-                      Empleados Asignados:
+                      Notas:
                     </Typography>
                     <Typography variant="body2">
-                      {survey.employeeIds?.length || 0} empleados seleccionados
+                      {survey.notes || "Sin notas adicionales"}
                     </Typography>
                   </CardContent>
                 </Collapse>
@@ -231,7 +231,10 @@ export default function CompanySurveyList({ refreshFlag }) {
         </DialogTitle>
         <DialogContent>
           <Typography>
-            ¿Está seguro de que desea eliminar la encuesta "{deleteDialog.survey?.title}"?
+            ¿Está seguro de que desea eliminar la encuesta #{deleteDialog.survey?.id}?
+            <br />
+            Empresa: {deleteDialog.survey && getCompanyName(deleteDialog.survey.companyId)}
+            <br />
             Esta acción no se puede deshacer.
           </Typography>
         </DialogContent>
