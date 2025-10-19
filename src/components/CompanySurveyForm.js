@@ -6,6 +6,7 @@ import {
   Chip, Stack, Divider
 } from "@mui/material";
 import { createCompanySurvey, getCompanies, getEmployeesByCompany, getSurveys, getSurveyById } from "../api/nom035";
+import { getQuestionsByGuideType } from "../data/nom035Questions";
 
 
 export default function CompanySurveyForm({ onCreated }) {
@@ -724,51 +725,101 @@ export default function CompanySurveyForm({ onCreated }) {
                 Preguntas:
               </Typography>
               {(() => {
-                const questions = surveyDetails?.questions || [];
+                // Primero intentamos usar las preguntas de la API
+                let questions = surveyDetails?.questions || [];
+                console.log('🔍 DEBUG surveyDetails:', surveyDetails);
+                console.log('🔍 DEBUG questions from API:', questions);
+                
+                // Si no hay preguntas en la API, usamos las preguntas del NOM-035 según el tipo de guía
+                if (!questions || questions.length === 0) {
+                  const guideType = surveyDetails?.guideType;
+                  console.log('🔍 DEBUG guideType:', guideType);
+                  if (guideType) {
+                    questions = getQuestionsByGuideType(guideType);
+                    console.log('🔍 DEBUG questions from NOM035 data:', questions);
+                  }
+                }
                 
                 if (!questions || questions.length === 0) {
                   return (
                     <Box sx={{ 
                       p: 3, 
                       textAlign: 'center',
-                      background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+                      background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
                       borderRadius: 2,
-                      border: '1px solid rgba(99, 102, 241, 0.1)'
+                      border: '1px solid rgba(239, 68, 68, 0.1)'
                     }}>
-                      <Typography variant="h6" sx={{ color: '#64748b', mb: 2, fontWeight: 500 }}>
-                        📝 Preguntas en Desarrollo
+                      <Typography variant="h6" sx={{ color: '#dc2626', mb: 2, fontWeight: 500 }}>
+                        ⚠️ Tipo de Guía No Reconocido
                       </Typography>
-                      <Typography variant="body2" sx={{ color: '#64748b', lineHeight: 1.6 }}>
-                        Esta encuesta está configurada como <strong>Guía {surveyDetails.guideType}</strong> del NOM-035.
-                        Las preguntas específicas para esta evaluación están siendo implementadas en el sistema.
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: '#94a3b8', mt: 2, fontStyle: 'italic' }}>
-                        Próximamente podrás ver aquí todas las preguntas que formarán parte de esta evaluación.
+                      <Typography variant="body2" sx={{ color: '#7f1d1d', lineHeight: 1.6 }}>
+                        No se pudo determinar el tipo de guía para esta encuesta.
                       </Typography>
                     </Box>
                   );
                 }
                 
-                return questions.map((question, index) => (
-                  <Box 
-                    key={index} 
-                    sx={{ 
-                      mb: 2,
-                      p: 2,
-                      background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
-                      borderRadius: 2,
-                      border: '1px solid rgba(99, 102, 241, 0.1)'
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ fontWeight: 500, color: '#1e293b', mb: 1 }}>
-                      {index + 1}. {question.text || question.question || question.pregunta || 'Pregunta sin texto'}
+                return (
+                  <Box sx={{ maxHeight: '400px', overflowY: 'auto', pr: 1 }}>
+                    <Typography variant="body2" sx={{ color: '#64748b', mb: 2, fontStyle: 'italic' }}>
+                      Mostrando {questions.length} preguntas de la Guía {surveyDetails?.guideType} del NOM-035-STPS-2018
                     </Typography>
-                    <Typography variant="caption" sx={{ color: '#64748b' }}>
-                      Tipo: {question.type || question.tipo || 'No especificado'}
-                      {(question.options || question.opciones) && ` | Opciones: ${question.options || question.opciones}`}
-                    </Typography>
+                    {questions.map((question, index) => (
+                      <Box 
+                        key={question.id || index} 
+                        sx={{ 
+                          mb: 3,
+                          p: 3,
+                          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                          borderRadius: 2,
+                          border: '1px solid rgba(99, 102, 241, 0.15)',
+                          boxShadow: '0 2px 4px rgba(99, 102, 241, 0.05)'
+                        }}
+                      >
+                        <Typography variant="body1" sx={{ fontWeight: 600, color: '#1e293b', mb: 2 }}>
+                          {index + 1}. {question.text || question.question || question.pregunta || 'Pregunta sin texto'}
+                        </Typography>
+                        
+                        {question.category && (
+                          <Chip 
+                            label={question.category}
+                            size="small"
+                            sx={{ 
+                              backgroundColor: '#e0e7ff', 
+                              color: '#3730a3',
+                              fontWeight: 500,
+                              mb: 2
+                            }}
+                          />
+                        )}
+                        
+                        {question.options && Array.isArray(question.options) && (
+                          <Box sx={{ mt: 2 }}>
+                            <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 500, display: 'block', mb: 1 }}>
+                              Opciones de respuesta:
+                            </Typography>
+                            <Stack spacing={1}>
+                              {question.options.map((option, optIndex) => (
+                                <Box key={optIndex} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Typography variant="caption" sx={{ 
+                                    color: '#6366f1', 
+                                    fontWeight: 600,
+                                    minWidth: '20px'
+                                  }}>
+                                    {option.value}:
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ color: '#475569' }}>
+                                    {option.label}
+                                  </Typography>
+                                </Box>
+                              ))}
+                            </Stack>
+                          </Box>
+                        )}
+                      </Box>
+                    ))}
                   </Box>
-                ));
+                );
               })()}
             </>
           )}

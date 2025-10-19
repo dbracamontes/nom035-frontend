@@ -30,9 +30,9 @@ export default function CompanySurveyList({ refreshFlag }) {
         getSurveys()
       ]);
       
-      setCompanySurveys(surveysResponse.data);
-      setCompanies(companiesResponse.data);
-      setSurveys(baseSurveysResponse.data);
+      setCompanySurveys(surveysResponse.data || []);
+      setCompanies(companiesResponse.data || []);
+      setSurveys(baseSurveysResponse.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
       alert("Error al cargar los datos");
