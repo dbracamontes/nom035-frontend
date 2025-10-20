@@ -39,6 +39,7 @@ export const deleteCompany = id => axios.delete(`${API_BASE}/companies/${id}`);
 // Survey endpoints
 export const getSurveys = () => axios.get(`${API_BASE}/surveys`);
 export const getSurveyById = id => axios.get(`${API_BASE}/surveys/${id}`);
+export const getSurveyWithQuestions = id => axios.get(`${API_BASE}/surveys/${id}/questions`);
 export const createSurvey = data => {
   return axios.post(`${API_BASE}/surveys`, JSON.stringify(data), {
     headers: {
@@ -94,7 +95,8 @@ export const getCompanyParticipation = companyId => axios.get(`${API_BASE}/dashb
 
 // Survey Response endpoints
 export const submitSurveyResponse = data => {
-  return axios.post(`${API_BASE}/responses`, JSON.stringify(data), {
+  console.log('📤 API: Sending to /api/responses:', JSON.stringify(data, null, 2));
+  return axios.post(`${API_BASE}/responses`, data, {
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -102,3 +104,15 @@ export const submitSurveyResponse = data => {
   });
 };
 export const getSurveyResponses = () => axios.get(`${API_BASE}/responses`);
+
+// Survey Application endpoints (for managing survey sessions)
+export const createSurveyApplication = data => {
+  console.log('📤 API: Creating survey application:', JSON.stringify(data, null, 2));
+  return axios.post(`${API_BASE}/survey-applications`, data, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    }
+  });
+};
+export const getSurveyApplications = () => axios.get(`${API_BASE}/survey-applications`);

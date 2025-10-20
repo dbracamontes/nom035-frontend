@@ -65,6 +65,24 @@ const resources = {
           "descriptionLabel": "Description",
           "companyLabel": "Company",
           "noCompany": "N/A"
+        },
+        "answer": {
+          "title": "Answer NOM-035 Survey",
+          "selectEmployee": "Select Employee",
+          "selectEmployeePlaceholder": "Select an employee",
+          "selectSurvey": "Select Survey",
+          "selectSurveyPlaceholder": "Select a survey",
+          "submit": "Submit Complete Survey",
+          "progress": "Progress",
+          "moduleComplete": "Module Complete",
+          "totalProgress": "Total Progress",
+          "completeAllQuestions": "Complete all questions to submit the survey",
+          "surveySubmitted": "Survey submitted successfully",
+          "submitError": "Error submitting survey",
+          "nom035Info": "This survey is organized by modules according to NOM-035 standard. You can complete modules in any order.",
+          "questionsLabel": "questions",
+          "nom035Complete": "Complete NOM-035 Survey",
+          "surveyQuestions": "Survey Questions"
         }
       },
       "common": {
@@ -137,6 +155,24 @@ const resources = {
           "descriptionLabel": "Descripción",
           "companyLabel": "Empresa",
           "noCompany": "N/A"
+        },
+        "answer": {
+          "title": "Responder Encuesta NOM-035",
+          "selectEmployee": "Seleccionar Empleado",
+          "selectEmployeePlaceholder": "Seleccione un empleado",
+          "selectSurvey": "Seleccionar Encuesta",
+          "selectSurveyPlaceholder": "Seleccione una encuesta",
+          "submit": "Enviar Encuesta Completa",
+          "progress": "Progreso",
+          "moduleComplete": "Módulo Completo",
+          "totalProgress": "Progreso Total",
+          "completeAllQuestions": "Complete todas las preguntas para enviar la encuesta",
+          "surveySubmitted": "Encuesta enviada exitosamente",
+          "submitError": "Error al enviar la encuesta",
+          "nom035Info": "Esta encuesta está organizada por módulos según la norma NOM-035. Puede completar los módulos en cualquier orden.",
+          "questionsLabel": "preguntas",
+          "nom035Complete": "Encuesta NOM-035 Completa",
+          "surveyQuestions": "Preguntas de la Encuesta"
         }
       },
       "common": {
