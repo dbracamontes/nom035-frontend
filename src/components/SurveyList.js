@@ -4,8 +4,10 @@ import { Paper, Typography, List, ListItem, ListItemText, IconButton, Dialog, Di
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import SurveyForm from "./SurveyForm";
+import { useTranslation } from 'react-i18next';
 
 export default function SurveyList() {
+  const { t } = useTranslation();
   const [surveys, setSurveys] = useState([]);
   const [editSurvey, setEditSurvey] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -38,7 +40,7 @@ export default function SurveyList() {
 
   return (
     <Paper sx={{ p: 2 }}>
-      <Typography variant="h6">Surveys List</Typography>
+      <Typography variant="h6">{t("survey.list.title")}</Typography>
       <List>
         {surveys.map(s => (
           <ListItem key={s.id}
@@ -51,13 +53,13 @@ export default function SurveyList() {
           >
             <ListItemText
               primary={s.title}
-              secondary={`Description: ${s.description || ""} | Company: ${s.company?.name || "N/A"}`}
+              secondary={`${t("survey.list.descriptionLabel")}: ${s.description || ""} | ${t("survey.list.companyLabel")}: ${s.company?.name || t("survey.list.noCompany")}`}
             />
           </ListItem>
         ))}
       </List>
       <Dialog open={dialogOpen} onClose={handleDialogClose} maxWidth="md" fullWidth>
-        <DialogTitle>Edit Survey</DialogTitle>
+        <DialogTitle>{t("survey.list.editSurvey")}</DialogTitle>
         <DialogContent>
           {editSurvey && <SurveyForm survey={editSurvey} onCreated={handleDialogClose} />}
         </DialogContent>

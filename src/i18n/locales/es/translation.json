@@ -42,7 +42,9 @@
       "title": "Lista de Empleados",
       "filterByCompany": "Filtrar por Empresa",
       "allCompanies": "Todas las Empresas",
-      "companyLabel": "Empresa"
+      "companyLabel": "Empresa",
+      "editEmployee": "Editar empleado",
+      "noCompany": "N/A"
     },
     "page": {
       "addEmployee": "Agregar Empleado",

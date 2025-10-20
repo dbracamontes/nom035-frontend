@@ -4,8 +4,10 @@ import EmployeeForm from "./EmployeeForm";
 import { Paper, Typography, List, ListItem, ListItemText, IconButton, MenuItem, TextField, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Button } from "@mui/material";
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import { useTranslation } from 'react-i18next';
 
 export default function EmployeeList({ refreshFlag }) {
+  const { t } = useTranslation();
   const [employees, setEmployees] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState("");
@@ -58,15 +60,15 @@ export default function EmployeeList({ refreshFlag }) {
 
   return (
     <Paper sx={{ p: 2 }}>
-      <Typography variant="h6">Employees List</Typography>
+      <Typography variant="h6">{t("employee.list.title")}</Typography>
       <TextField
         select
-        label="Filter by Company"
+        label={t("employee.list.filterByCompany")}
         value={selectedCompany}
         onChange={e => setSelectedCompany(e.target.value)}
         sx={{ mb: 2, minWidth: 200 }}
       >
-        <MenuItem value="">All Companies</MenuItem>
+        <MenuItem value="">{t("employee.list.allCompanies")}</MenuItem>
         {companies.map(company => (
           <MenuItem key={company.id} value={company.id}>{company.name}</MenuItem>
         ))}
@@ -87,20 +89,20 @@ export default function EmployeeList({ refreshFlag }) {
           >
             <ListItemText
               primary={e.name}
-              secondary={`Company: ${e.companyName || "N/A"} | ${e.department} | ${e.position} | ${e.email}`}
+              secondary={`${t("employee.list.companyLabel")}: ${e.companyName || t("employee.list.noCompany")} | ${e.department} | ${e.position} | ${e.email}`}
             />
           </ListItem>
         ))}
       </List>
       {/* Dialog para editar empleado */}
       <Dialog open={dialogOpen} onClose={handleDialogClose} maxWidth="sm" fullWidth>
-        <DialogTitle>Editar empleado</DialogTitle>
+        <DialogTitle>{t("employee.list.editEmployee")}</DialogTitle>
         <DialogContent>
           <EmployeeForm ref={formRef} employee={editingEmployee} onComplete={handleFormComplete} isEdit />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleDialogClose}>Cancelar</Button>
-          <Button onClick={handleGuardar} variant="contained">Guardar</Button>
+          <Button onClick={handleDialogClose}>{t("common.cancel")}</Button>
+          <Button onClick={handleGuardar} variant="contained">{t("common.save")}</Button>
         </DialogActions>
       </Dialog>
     </Paper>

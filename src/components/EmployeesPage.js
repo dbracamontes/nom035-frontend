@@ -2,8 +2,10 @@ import React, { useRef, useState } from "react";
 import { Button, Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
 import EmployeeForm from "./EmployeeForm";
 import EmployeeList from "./EmployeeList";
+import { useTranslation } from 'react-i18next';
 
 export default function EmployeesPage() {
+  const { t } = useTranslation();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const formCreateRef = useRef();
   const [refreshFlag, setRefreshFlag] = useState(false);
@@ -33,17 +35,17 @@ export default function EmployeesPage() {
   return (
     <>
       <Button variant="contained" color="primary" sx={{ mb: 2 }} onClick={handleCreateOpen}>
-        Agregar empleado
+        {t("employee.page.addEmployee")}
       </Button>
       <EmployeeList refreshFlag={refreshFlag} />
       <Dialog open={createDialogOpen} onClose={handleCreateClose} maxWidth="sm" fullWidth>
-        <DialogTitle>Agregar empleado</DialogTitle>
+        <DialogTitle>{t("employee.page.addEmployee")}</DialogTitle>
         <DialogContent>
           <EmployeeForm ref={formCreateRef} employee={null} onComplete={handleCreateComplete} isEdit={false} />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCreateClose}>Cancelar</Button>
-          <Button onClick={handleGuardarCrear} variant="contained">Guardar</Button>
+          <Button onClick={handleCreateClose}>{t("common.cancel")}</Button>
+          <Button onClick={handleGuardarCrear} variant="contained">{t("common.save")}</Button>
         </DialogActions>
       </Dialog>
     </>

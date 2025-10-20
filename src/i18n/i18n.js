@@ -22,8 +22,57 @@ const resources = {
         "welcomeMessage": "Welcome! Use the sidebar to manage employees, surveys, answers, and view analytics.",
         "platformDescription": "This platform helps organizations comply with NOM-035 by enabling survey management, employee well-being tracking, and risk analytics."
       },
+      "employee": {
+        "form": {
+          "name": "Name",
+          "department": "Department",
+          "position": "Position",
+          "email": "Email",
+          "company": "Company",
+          "validation": {
+            "nameEmailCompanyRequired": "Name, Email, and Company are required."
+          }
+        },
+        "list": {
+          "title": "Employees List",
+          "filterByCompany": "Filter by Company",
+          "allCompanies": "All Companies",
+          "companyLabel": "Company",
+          "editEmployee": "Edit employee",
+          "noCompany": "N/A"
+        },
+        "page": {
+          "addEmployee": "Add Employee",
+          "editEmployee": "Edit Employee"
+        }
+      },
+      "survey": {
+        "form": {
+          "title": "Title",
+          "description": "Description",
+          "company": "Company",
+          "selectCompany": "Select Company",
+          "questionText": "Question Text",
+          "type": "Type",
+          "options": "Options",
+          "answerScores": "Answer Scores (JSON)",
+          "createSurvey": "Create Survey",
+          "updateSurvey": "Update Survey"
+        },
+        "list": {
+          "title": "Surveys List",
+          "editSurvey": "Edit Survey",
+          "descriptionLabel": "Description",
+          "companyLabel": "Company",
+          "noCompany": "N/A"
+        }
+      },
       "common": {
-        "language": "Language"
+        "language": "Language",
+        "cancel": "Cancel",
+        "save": "Save",
+        "edit": "Edit",
+        "delete": "Delete"
       }
     }
   },
@@ -45,8 +94,57 @@ const resources = {
         "welcomeMessage": "¡Bienvenido! Utiliza la barra lateral para gestionar empleados, encuestas, respuestas y ver analíticas.",
         "platformDescription": "Esta plataforma ayuda a las organizaciones a cumplir con la NOM-035 habilitando la gestión de encuestas, seguimiento del bienestar de empleados y análisis de riesgos."
       },
+      "employee": {
+        "form": {
+          "name": "Nombre",
+          "department": "Departamento",
+          "position": "Puesto",
+          "email": "Email",
+          "company": "Empresa",
+          "validation": {
+            "nameEmailCompanyRequired": "Nombre, Email y Empresa son requeridos."
+          }
+        },
+        "list": {
+          "title": "Lista de Empleados",
+          "filterByCompany": "Filtrar por Empresa",
+          "allCompanies": "Todas las Empresas",
+          "companyLabel": "Empresa",
+          "editEmployee": "Editar empleado",
+          "noCompany": "N/A"
+        },
+        "page": {
+          "addEmployee": "Agregar Empleado",
+          "editEmployee": "Editar Empleado"
+        }
+      },
+      "survey": {
+        "form": {
+          "title": "Título",
+          "description": "Descripción",
+          "company": "Empresa",
+          "selectCompany": "Seleccionar Empresa",
+          "questionText": "Texto de la Pregunta",
+          "type": "Tipo",
+          "options": "Opciones",
+          "answerScores": "Puntuaciones de Respuestas (JSON)",
+          "createSurvey": "Crear Encuesta",
+          "updateSurvey": "Actualizar Encuesta"
+        },
+        "list": {
+          "title": "Lista de Encuestas",
+          "editSurvey": "Editar Encuesta",
+          "descriptionLabel": "Descripción",
+          "companyLabel": "Empresa",
+          "noCompany": "N/A"
+        }
+      },
       "common": {
-        "language": "Idioma"
+        "language": "Idioma",
+        "cancel": "Cancelar",
+        "save": "Guardar",
+        "edit": "Editar",
+        "delete": "Eliminar"
       }
     }
   }

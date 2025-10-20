@@ -1,8 +1,10 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { TextField, Box, MenuItem } from "@mui/material";
 import { createEmployee, updateEmployee, getCompanies } from "../api/nom035";
+import { useTranslation } from 'react-i18next';
 
 const EmployeeForm = forwardRef(({ employee, onComplete, isEdit }, ref) => {
+  const { t } = useTranslation();
   const [form, setForm] = useState({ name: "", department: "", position: "", email: "", companyId: "" });
   const [companies, setCompanies] = useState([]);
 
@@ -34,7 +36,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit }, ref) => {
   const submitForm = async () => {
     // Robust validation
     if (!form.name || !form.email || !form.companyId || !companies.find(c => c.id === form.companyId)) {
-      alert("Name, Email, and Company are required.");
+      alert(t("employee.form.validation.nameEmailCompanyRequired"));
       return;
     }
     // Prepare payload without companyId
@@ -55,13 +57,13 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit }, ref) => {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
-      <TextField label="Name" name="name" value={form.name} onChange={handleChange} required fullWidth sx={{ mb: 2 }} />
-      <TextField label="Department" name="department" value={form.department} onChange={handleChange} required fullWidth sx={{ mb: 2 }} />
-      <TextField label="Position" name="position" value={form.position} onChange={handleChange} fullWidth sx={{ mb: 2 }} />
-      <TextField label="Email" name="email" value={form.email} onChange={handleChange} required fullWidth sx={{ mb: 2 }} />
+      <TextField label={t("employee.form.name")} name="name" value={form.name} onChange={handleChange} required fullWidth sx={{ mb: 2 }} />
+      <TextField label={t("employee.form.department")} name="department" value={form.department} onChange={handleChange} required fullWidth sx={{ mb: 2 }} />
+      <TextField label={t("employee.form.position")} name="position" value={form.position} onChange={handleChange} fullWidth sx={{ mb: 2 }} />
+      <TextField label={t("employee.form.email")} name="email" value={form.email} onChange={handleChange} required fullWidth sx={{ mb: 2 }} />
       <TextField
         select
-        label="Company"
+        label={t("employee.form.company")}
         name="companyId"
         value={form.companyId}
         onChange={handleChange}
