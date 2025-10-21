@@ -70,12 +70,116 @@
       "companyLabel": "Empresa"
     },
     "answer": {
+      "title": "Responder Encuesta NOM-035",
       "selectEmployee": "Seleccionar Empleado",
-      "selectAnEmployee": "Seleccionar un empleado",
+      "selectEmployeePlaceholder": "Seleccione un empleado",
       "selectSurvey": "Seleccionar Encuesta",
-      "selectASurvey": "Seleccionar una encuesta",
+      "selectSurveyPlaceholder": "Seleccione una encuesta",
+      "submit": "Enviar Encuesta Completa",
       "submitAnswers": "Enviar Respuestas",
       "submitted": "¡Enviado!"
+    },
+    "results": {
+      "title": "Dashboard de Resultados NOM-035",
+      "filters": {
+        "title": "Filtros de Análisis",
+        "allCompanies": "Todas las empresas",
+        "allSurveys": "Todas las encuestas",
+        "selectCompany": "Seleccionar Empresa",
+        "selectSurvey": "Seleccionar Encuesta"
+      },
+      "stats": {
+        "totalEmployees": "Total Empleados",
+        "employeesRegistered": "Empleados registrados",
+        "haveResponded": "Han Respondido",
+        "participationRate": "% de participación",
+        "pending": "Pendientes",
+        "surveysToComplete": "Encuestas por completar",
+        "totalResponses": "Total Respuestas",
+        "responsesRegistered": "Respuestas registradas"
+      },
+      "tabs": {
+        "participation": "Participación",
+        "moduleResults": "Resultados por Módulo",
+        "riskAnalysis": "Análisis de Riesgo",
+        "responseDetail": "Detalle de Respuestas"
+      },
+      "participation": {
+        "title": "Estadísticas de Participación",
+        "distribution": "Distribución de Participación",
+        "haveResponded": "Han Respondido",
+        "pending": "Pendientes",
+        "progress": "Progreso de Participación",
+        "employeesResponded": "Empleados que han respondido",
+        "completed": "Completadas",
+        "goal": "Meta: Alcanzar 85% de participación para cumplir con NOM-035",
+        "companyTable": {
+          "title": "Resumen por Empresa",
+          "company": "Empresa",
+          "totalEmployees": "Total Empleados",
+          "haveResponded": "Han Respondido",
+          "pending": "Pendientes",
+          "participation": "% Participación",
+          "status": "Estado",
+          "meetsNom": "Cumple NOM-035",
+          "inProgress": "En Progreso",
+          "low": "Bajo",
+          "noCompanies": "No hay empresas registradas"
+        }
+      },
+      "modules": {
+        "title": "Resultados por Módulo NOM-035",
+        "averageScore": "Puntuación Promedio por Módulo",
+        "averageScoreLabel": "Puntuación Promedio",
+        "moduleLabel": "Módulo",
+        "highestRisk": "Módulos de Mayor Riesgo",
+        "detailByModule": "Detalle por Módulo",
+        "score": "Puntuación",
+        "responses": "respuestas registradas",
+        "description": "Descripción",
+        "averageScoreValue": "Puntuación Promedio",
+        "riskDistribution": "Distribución de riesgo"
+      },
+      "risk": {
+        "title": "Análisis de Riesgo Psicosocial",
+        "generalDistribution": "Distribución General de Riesgo",
+        "alertIndicators": "Indicadores de Alerta",
+        "criticalAttention": "Atención Crítica",
+        "highAlert": "Alerta Alta",
+        "favorableSituation": "Situación Favorable",
+        "veryHigh": "Muy Alto",
+        "high": "Alto",
+        "medium": "Medio",
+        "low": "Bajo",
+        "modules": "módulos",
+        "riskMatrix": "Matriz de Riesgo por Módulo",
+        "module": "Módulo",
+        "score": "Puntuación",
+        "riskLevel": "Nivel de Riesgo",
+        "responses": "Respuestas",
+        "recommendation": "Recomendación",
+        "immediateAction": "Acción inmediata",
+        "preventiveMeasures": "Medidas preventivas",
+        "continuousMonitoring": "Monitoreo continuo",
+        "maintainConditions": "Mantener condiciones",
+        "recommendations": {
+          "title": "Recomendaciones según NOM-035",
+          "immediate": {
+            "title": "Acciones Inmediatas (Riesgo Muy Alto/Alto)",
+            "intervention": "• Implementar programa de intervención específico",
+            "evaluation": "• Evaluación médica y psicológica del personal",
+            "workload": "• Revisión de cargas de trabajo y condiciones laborales",
+            "training": "• Capacitación en manejo del estrés y comunicación"
+          },
+          "preventive": {
+            "title": "Medidas Preventivas (Riesgo Medio)",
+            "wellness": "• Programas de bienestar laboral",
+            "skillsWorkshops": "• Talleres de desarrollo de habilidades",
+            "communication": "• Mejora en canales de comunicación",
+            "monitoring": "• Monitoreo periódico de condiciones laborales"
+          }
+        }
+      }
     },
     "responses": {
       "title": "Respuestas de Encuestas",

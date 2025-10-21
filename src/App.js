@@ -6,6 +6,7 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import QuizIcon from '@mui/icons-material/Quiz';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import BusinessIcon from '@mui/icons-material/Business';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
 import LandingPage from "./components/LandingPage";
 import EmployeeForm from "./components/EmployeeForm";
 import EmployeeList from "./components/EmployeeList";
@@ -13,6 +14,7 @@ import SurveyForm from "./components/SurveyForm";
 import SurveyList from "./components/SurveyList";
 import SurveyAnswer from "./components/SurveyAnswer";
 import Dashboard from "./components/Dashboard";
+import SurveyResults from "./components/SurveyResults";
 import SurveyResponsesTable from "./components/SurveyResponsesTable";
 import EmployeesPage from "./components/EmployeesPage";
 import CompanySurveyPage from "./components/CompanySurveyPage";
@@ -32,6 +34,7 @@ export default function App() {
     { text: t("navigation.surveys"), icon: <AssignmentIcon />, component: <><SurveyForm /><SurveyList /></> },
     { text: t("navigation.companySurveys"), icon: <BusinessIcon />, component: <CompanySurveyPage /> },
     { text: t("navigation.answerSurvey"), icon: <QuizIcon />, component: <SurveyAnswer /> },
+    { text: "📊 Dashboard de Resultados", icon: <AnalyticsIcon />, component: <SurveyResults /> },
     { text: t("navigation.surveyResponses"), icon: <TableChartIcon />, component: <SurveyResponsesTable /> }
   ];
 

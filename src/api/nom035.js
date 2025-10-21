@@ -116,3 +116,67 @@ export const createSurveyApplication = data => {
   });
 };
 export const getSurveyApplications = () => axios.get(`${API_BASE}/survey-applications`);
+
+// Statistics and Analytics endpoints
+export const getResponseStatistics = () => {
+  console.log('📊 API: Getting response statistics');
+  return axios.get(`${API_BASE}/responses/statistics`);
+};
+
+export const getParticipationStatistics = (companyId = null, surveyId = null) => {
+  let url = `${API_BASE}/responses/participation`;
+  const params = new URLSearchParams();
+  
+  if (companyId) params.append('companyId', companyId);
+  if (surveyId) params.append('surveyId', surveyId);
+  
+  if (params.toString()) {
+    url += `?${params.toString()}`;
+  }
+  
+  console.log('📊 API: Getting participation statistics:', url);
+  return axios.get(url);
+};
+
+export const getModuleStatistics = (surveyId = null) => {
+  let url = `${API_BASE}/responses/modules`;
+  
+  if (surveyId) {
+    url += `?surveyId=${surveyId}`;
+  }
+  
+  console.log('📊 API: Getting module statistics:', url);
+  return axios.get(url);
+};
+
+export const getRiskAnalysis = (companyId = null, surveyId = null) => {
+  let url = `${API_BASE}/responses/risk-analysis`;
+  const params = new URLSearchParams();
+  
+  if (companyId) params.append('companyId', companyId);
+  if (surveyId) params.append('surveyId', surveyId);
+  
+  if (params.toString()) {
+    url += `?${params.toString()}`;
+  }
+  
+  console.log('📊 API: Getting risk analysis:', url);
+  return axios.get(url);
+};
+
+// Response details with filters
+export const getFilteredResponses = (filters = {}) => {
+  let url = `${API_BASE}/responses/filtered`;
+  const params = new URLSearchParams();
+  
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) params.append(key, value);
+  });
+  
+  if (params.toString()) {
+    url += `?${params.toString()}`;
+  }
+  
+  console.log('📊 API: Getting filtered responses:', url);
+  return axios.get(url);
+};
