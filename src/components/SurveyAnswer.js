@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { getSurveys, getEmployees, submitSurveyResponse, getSurveyById, getSurveyWithQuestions, createSurveyApplication } from "../api/nom035";
+import React, { useState, useEffect, useCallback } from "react";
+import { getSurveys, getEmployees, submitSurveyResponse, getSurveyById, getSurveyWithQuestions, createSurveyApplication, getSurveyApplications, getSurveyResponses, getCompanySurveyById, getSurveyApplicationCheck } from "../api/nom035";
 import { 
   Box, Button, TextField, Paper, MenuItem, Typography, 
   Card, CardContent, LinearProgress,
@@ -78,6 +78,8 @@ export default function SurveyAnswer() {
   const [employees, setEmployees] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState("");
   const [expandedModule, setExpandedModule] = useState(null);
+  const [existingApplication, setExistingApplication] = useState(null);
+  const [formDisabled, setFormDisabled] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -123,6 +125,174 @@ export default function SurveyAnswer() {
 
     loadData();
   }, []);
+  
+  // Check if the selected employee already has an application for the selected survey
+  // const checkExistingSubmission = async (employeeId = selectedEmployee, surveyObj = selectedSurvey) => {
+  const checkExistingSubmission = useCallback(async (employeeId = selectedEmployee, surveyObj = selectedSurvey) => {
+    setExistingApplication(null);
+    setFormDisabled(false);
+
+    if (!employeeId || !surveyObj) return;
+
+    try {
+      // Fast path: ask backend to resolve existence/completion
+      try {
+        const chk = await getSurveyApplicationCheck(employeeId, surveyObj.id);
+        const data = chk.data || {};
+        if (data.found) {
+          const appLite = {
+            id: data.applicationId,
+            status: data.status,
+            completedAt: data.completedAt,
+          };
+          setExistingApplication(appLite);
+
+          // If backend says completed or counts show all answered, disable immediately
+          if (data.completed || (data.questionsCount > 0 && data.responsesCount >= data.questionsCount)) {
+            setFormDisabled(true);
+          }
+
+          // Load responses for this application to prefill
+          const responsesRes = await getSurveyResponses();
+          const responses = responsesRes.data || [];
+          const filtered = responses.filter(r => {
+            const rid = r.surveyApplicationId ?? r.survey_application_id ?? r.surveyApplication?.id ?? r.survey_application;
+            return parseInt(rid) === parseInt(data.applicationId);
+          });
+
+          const prevAnswers = {};
+          filtered.forEach(r => {
+            const qid = r.questionId ?? r.question_id ?? r.question?.id;
+            const optId = r.optionAnswerId ?? r.option_answer_id ?? r.optionAnswer?.id ?? r.option_answer;
+            const free = r.free_text ?? r.textAnswer ?? r.freeText ?? r.text_answer ?? r.freeTextAnswer ?? r.textAnswer;
+            const val = r.value ?? r.valueAnswer ?? r.score;
+            if (optId) {
+              const q = surveyObj.questions?.find(qq => String(qq.id) === String(qid));
+              let optText = null;
+              if (q) {
+                if (Array.isArray(q.options)) {
+                  const found = q.options.find(o => String(o.id) === String(optId) || String(o.value) === String(optId));
+                  if (found) optText = found.text ?? found.value ?? String(found);
+                } else if (typeof q.options === 'string') {
+                  const mapping = {1: 'Siempre', 2: 'Casi siempre', 3: 'Algunas veces', 4: 'Casi nunca', 5: 'Nunca'};
+                  optText = mapping[optId] || mapping[val] || String(optId);
+                }
+              }
+              prevAnswers[qid] = optText || String(optId);
+            } else if (free) {
+              prevAnswers[qid] = free;
+            } else if (val) {
+              const mapping = {1: 'Siempre', 2: 'Casi siempre', 3: 'Algunas veces', 4: 'Casi nunca', 5: 'Nunca'};
+              prevAnswers[qid] = mapping[val] || String(val);
+            }
+          });
+          setAnswers(prevAnswers);
+
+          // Done with fast path
+          return;
+        }
+      } catch (ignored) {}
+
+      // Fallback: scan applications and derive surveyId via companySurvey if needed
+       const appsRes = await getSurveyApplications();
+       const apps = appsRes.data || [];
+
+       // Build mapping from companySurveyId -> surveyId for apps that reference companySurvey
+       const csIds = apps.map(a => a.companySurveyId ?? a.company_survey_id ?? a.companySurvey ?? a.company_survey).filter(Boolean).map(id => parseInt(id));
+       const uniqueCsIds = [...new Set(csIds)];
+       const csIdToSurveyId = {};
+       if (uniqueCsIds.length > 0) {
+         await Promise.all(uniqueCsIds.map(async (csId) => {
+           try {
+             const csRes = await getCompanySurveyById(csId);
+             const cs = csRes.data || csRes;
+             csIdToSurveyId[csId] = cs.surveyId ?? cs.survey_id ?? (cs.survey?.id);
+           } catch (err) {
+             console.warn('Could not fetch companySurvey for id', csId, err?.message || err);
+           }
+         }));
+       }
+
+       // Try to find matching application by employee + survey
+       const match = apps.find(a => {
+         const appEmployeeId = a.employeeId ?? a.employee_id ?? a.employee?.id;
+         let appSurveyId = a.surveyId ?? a.survey_id ?? null;
+
+         const csId = a.companySurveyId ?? a.company_survey_id ?? a.companySurvey ?? a.company_survey;
+         if (!appSurveyId && csId) {
+           const parsed = parseInt(csId);
+           if (!isNaN(parsed)) appSurveyId = csIdToSurveyId[parsed] ?? null;
+         }
+
+         try {
+           return parseInt(appEmployeeId) === parseInt(employeeId) && parseInt(appSurveyId) === parseInt(surveyObj.id);
+         } catch (e) {
+           return false;
+         }
+       });
+
+       if (match) {
+         setExistingApplication(match);
+
+         // Load responses and filter by application id
+         const responsesRes = await getSurveyResponses();
+         const responses = responsesRes.data || [];
+         const appId = match.id ?? match.applicationId ?? match.surveyApplicationId;
+         const filtered = responses.filter(r => {
+           const rid = r.surveyApplicationId ?? r.survey_application_id ?? r.surveyApplication?.id ?? r.survey_application;
+           return parseInt(rid) === parseInt(appId);
+         });
+
+         // Prefill answers map so fields show existing values
+         const prevAnswers = {};
+         filtered.forEach(r => {
+           const qid = r.questionId ?? r.question_id ?? r.question?.id;
+           const optId = r.optionAnswerId ?? r.option_answer_id ?? r.optionAnswer?.id ?? r.option_answer;
+           const free = r.free_text ?? r.textAnswer ?? r.freeText ?? r.text_answer ?? r.freeTextAnswer ?? r.textAnswer;
+           const val = r.value ?? r.valueAnswer ?? r.score;
+
+           if (optId) {
+             // Try to map option id to text using selectedSurvey questions if available
+             const q = surveyObj.questions?.find(qq => String(qq.id) === String(qid));
+             let optText = null;
+             if (q) {
+               if (Array.isArray(q.options)) {
+                 const found = q.options.find(o => String(o.id) === String(optId) || String(o.value) === String(optId));
+                 if (found) optText = found.text ?? found.value ?? String(found);
+               } else if (typeof q.options === 'string') {
+                 const mapping = {1: 'Siempre', 2: 'Casi siempre', 3: 'Algunas veces', 4: 'Casi nunca', 5: 'Nunca'};
+                 optText = mapping[optId] || mapping[val] || String(optId);
+               }
+             }
+             prevAnswers[qid] = optText || String(optId);
+           } else if (free) {
+             prevAnswers[qid] = free;
+           } else if (val) {
+             const mapping = {1: 'Siempre', 2: 'Casi siempre', 3: 'Algunas veces', 4: 'Casi nunca', 5: 'Nunca'};
+             prevAnswers[qid] = mapping[val] || String(val);
+           }
+         });
+
+         setAnswers(prevAnswers);
+
+         // Disable form if status is completed, or completedAt exists, or all questions already answered
+         const status = (match.status ?? match.state ?? match.statusApplication ?? '').toString();
+         const completedAt = match.completedAt ?? match.completed_at;
+         const allAnswered = Array.isArray(surveyObj?.questions) && surveyObj.questions.length > 0 && filtered.length >= surveyObj.questions.length;
+         const statusLc = status.toLowerCase();
+         if (statusLc.includes('complet') || statusLc.includes('finaliz') || completedAt || allAnswered) {
+           setFormDisabled(true);
+         }
+       }
+    } catch (err) {
+      console.error('Error in checkExistingSubmission:', err);
+    }
+  }, [selectedEmployee, selectedSurvey]);
+  
+  // When selected employee or survey changes, check for existing submission
+  useEffect(() => {
+    checkExistingSubmission();
+  }, [checkExistingSubmission]);
 
   const handleSurveySelect = async (id) => {
     try {
@@ -149,7 +319,9 @@ export default function SurveyAnswer() {
         setSelectedSurvey(completeSurvey);
         setAnswers({});
         setExpandedModule(1);
-        return;
+        // Immediately check if this employee already submitted this survey
+        checkExistingSubmission(selectedEmployee, completeSurvey);
+         return;
       } catch (questionsError) {
         console.log('❌ getSurveyWithQuestions failed:', questionsError.response?.status);
       }
@@ -172,6 +344,8 @@ export default function SurveyAnswer() {
       
       setAnswers({});
       setExpandedModule(1);
+      // Re-run check in case selectedSurvey changed
+      checkExistingSubmission();
     } catch (error) {
       console.error('💥 Error loading survey details:', error);
       // Fallback to basic survey data with test questions
@@ -239,7 +413,11 @@ export default function SurveyAnswer() {
   const handleSubmit = async e => {
     e.preventDefault();
     if (!selectedEmployee || !selectedSurvey) return;
-    
+    if (formDisabled && existingApplication) {
+      alert('Esta evaluación ya fue enviada para este empleado. Revisión en modo lectura.');
+      return;
+    }
+
     try {
       console.log('🚀 Starting survey submission process...');
       console.log('📝 Employee ID:', selectedEmployee);
@@ -417,12 +595,13 @@ export default function SurveyAnswer() {
               <RadioGroup
                 value={answers[question.id] || ""}
                 onChange={e => handleAnswerChange(question.id, e.target.value)}
+                disabled={formDisabled}
               >
                 {questionOptions.map((option, optIndex) => (
                   <FormControlLabel
                     key={optIndex}
                     value={option}
-                    control={<Radio />}
+                    control={<Radio disabled={formDisabled} />}
                     label={option}
                   />
                 ))}
@@ -437,6 +616,7 @@ export default function SurveyAnswer() {
               onChange={e => handleAnswerChange(question.id, e.target.value)}
               placeholder="Escriba su respuesta aquí..."
               variant="outlined"
+              disabled={formDisabled}
             />
           )}
         </CardContent>
@@ -450,6 +630,24 @@ export default function SurveyAnswer() {
         {t('survey.answer.title') || 'Responder Encuesta NOM-035'}
       </Typography>
 
+      {formDisabled && existingApplication && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          Esta evaluación ya fue enviada para este empleado. Modo lectura activo.
+          {(() => {
+            const st = existingApplication.status ?? existingApplication.state ?? existingApplication.statusApplication;
+            const started = existingApplication.startedAt ?? existingApplication.started_at;
+            const completed = existingApplication.completedAt ?? existingApplication.completed_at;
+            return (
+              <>
+                {st ? <> Estado: <strong>{st}</strong>.</> : null}
+                {started ? <> Inicio: {started}.</> : null}
+                {completed ? <> Fin: {completed}.</> : null}
+              </>
+            );
+          })()}
+        </Alert>
+      )}
+
       {/* Selección de Empleado y Encuesta */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Grid container spacing={3}>
@@ -460,7 +658,7 @@ export default function SurveyAnswer() {
               sx={{ minWidth: 520 }}
               label={t('survey.answer.selectEmployee') || "Seleccionar Empleado"}
               value={selectedEmployee}
-              onChange={e => setSelectedEmployee(e.target.value)}
+              onChange={e => { setSelectedEmployee(e.target.value); checkExistingSubmission(e.target.value, selectedSurvey); }}
               variant="outlined"
               SelectProps={{ MenuProps: MENU_PROPS }}
             >
@@ -625,7 +823,7 @@ export default function SurveyAnswer() {
               onClick={handleSubmit}
               variant="contained" 
               size="large"
-              disabled={!selectedEmployee || getTotalProgress() < 100}
+              disabled={!selectedEmployee || getTotalProgress() < 100 || formDisabled}
               sx={{ 
                 px: 6, 
                 py: 2,

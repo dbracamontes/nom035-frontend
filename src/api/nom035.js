@@ -116,6 +116,10 @@ export const createSurveyApplication = data => {
   });
 };
 export const getSurveyApplications = () => axios.get(`${API_BASE}/survey-applications`);
+export const getSurveyApplicationCheck = (employeeId, surveyId) => {
+  const params = new URLSearchParams({ employeeId: String(employeeId), surveyId: String(surveyId) });
+  return axios.get(`${API_BASE}/survey-applications/check?${params.toString()}`);
+};
 
 // Statistics and Analytics endpoints
 export const getResponseStatistics = () => {
