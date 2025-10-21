@@ -59,6 +59,17 @@ const NOM035_MODULES = {
   }
 };
 
+// Menu props to make select dropdowns wider and taller so content is visible
+const MENU_PROPS = {
+  PaperProps: {
+    style: {
+      minWidth: 520, // increased width so long content is visible
+      maxHeight: 600, // allow taller dropdowns
+      padding: '8px'
+    }
+  }
+};
+
 export default function SurveyAnswer() {
   const { t } = useTranslation();
   const [surveys, setSurveys] = useState([]);
@@ -69,14 +80,48 @@ export default function SurveyAnswer() {
   const [expandedModule, setExpandedModule] = useState(null);
 
   useEffect(() => {
-    getSurveys().then(res => {
-      console.log('Surveys loaded:', res.data);
-      setSurveys(res.data);
-    });
-    getEmployees().then(res => {
-      console.log('Employees loaded:', res.data);
-      setEmployees(res.data);
-    });
+    const loadData = async () => {
+      try {
+        const surveysRes = await getSurveys();
+        const surveysData = surveysRes.data || [];
+
+        // Fetch questions for each survey so we can show accurate counts in the dropdown
+        const surveysWithQuestions = await Promise.all(surveysData.map(async (s) => {
+          try {
+            const qRes = await getSurveyWithQuestions(s.id);
+            const qs = Array.isArray(qRes.data) ? qRes.data : (qRes.data?.questions || []);
+            return { ...s, questions: qs };
+          } catch (err) {
+            // Fallback: try the regular survey endpoint which may include questions
+            try {
+              const sRes = await getSurveyById(s.id);
+              const sd = sRes.data || {};
+              const qs = sd.questions || [];
+              return { ...s, questions: qs };
+            } catch (err2) {
+              return { ...s, questions: s.questions || [] };
+            }
+          }
+        }));
+
+        console.log('Surveys loaded with questions:', surveysWithQuestions);
+        setSurveys(surveysWithQuestions);
+      } catch (err) {
+        console.error('Error loading surveys:', err);
+        setSurveys([]);
+      }
+
+      try {
+        const empRes = await getEmployees();
+        console.log('Employees loaded:', empRes.data);
+        setEmployees(empRes.data);
+      } catch (err) {
+        console.error('Error loading employees:', err);
+        setEmployees([]);
+      }
+    };
+
+    loadData();
   }, []);
 
   const handleSurveySelect = async (id) => {
@@ -412,14 +457,16 @@ export default function SurveyAnswer() {
             <TextField
               select
               fullWidth
+              sx={{ minWidth: 520 }}
               label={t('survey.answer.selectEmployee') || "Seleccionar Empleado"}
               value={selectedEmployee}
               onChange={e => setSelectedEmployee(e.target.value)}
               variant="outlined"
+              SelectProps={{ MenuProps: MENU_PROPS }}
             >
-              <MenuItem value="">{t('survey.answer.selectEmployeePlaceholder') || "Seleccione un empleado"}</MenuItem>
+              <MenuItem value="" sx={{ whiteSpace: 'normal', minHeight: 48 }}>{t('survey.answer.selectEmployeePlaceholder') || "Seleccione un empleado"}</MenuItem>
               {employees.map(emp => (
-                <MenuItem key={emp.id} value={emp.id}>
+                <MenuItem key={emp.id} value={emp.id} sx={{ whiteSpace: 'normal', minHeight: 48 }}>
                   {emp.name} ({emp.email})
                 </MenuItem>
               ))}
@@ -430,14 +477,16 @@ export default function SurveyAnswer() {
             <TextField
               select
               fullWidth
+              sx={{ minWidth: 520 }}
               label={t('survey.answer.selectSurvey') || "Seleccionar Encuesta"}
               value={selectedSurvey ? selectedSurvey.id : ""}
               onChange={e => handleSurveySelect(Number(e.target.value))}
               variant="outlined"
+              SelectProps={{ MenuProps: MENU_PROPS }}
             >
-              <MenuItem value="">{t('survey.answer.selectSurveyPlaceholder') || "Seleccione una encuesta"}</MenuItem>
+              <MenuItem value="" sx={{ whiteSpace: 'normal', minHeight: 48 }}>{t('survey.answer.selectSurveyPlaceholder') || "Seleccione una encuesta"}</MenuItem>
               {surveys.map(s => (
-                <MenuItem key={s.id} value={s.id}>
+                <MenuItem key={s.id} value={s.id} sx={{ whiteSpace: 'normal', minHeight: 48 }}>
                   {s.title} ({s.questions?.length || 0} preguntas)
                 </MenuItem>
               ))}
