@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { getSurveys, getEmployees, submitSurveyResponse, getSurveyById, getSurveyWithQuestions, createSurveyApplication, getSurveyApplications, getSurveyResponses, getCompanySurveyById, getSurveyApplicationCheck } from "../api/nom035";
+import { getSurveys, getEmployees, submitSurveyResponse, getSurveyById, getSurveyWithQuestions, createSurveyApplication, getSurveyApplications, getSurveyResponsesByApplication, getCompanySurveyById, getSurveyApplicationCheck } from "../api/nom035";
 import { 
   Box, Button, TextField, Paper, MenuItem, Typography, 
   Card, CardContent, LinearProgress,
@@ -12,52 +12,6 @@ import {
   Assignment as AssignmentIcon 
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
-
-// Definición de módulos NOM-035
-const NOM035_MODULES = {
-  1: {
-    name: "Condiciones en el ambiente de trabajo",
-    description: "Condiciones peligrosas e inseguras, deficientes e insalubres",
-    color: "#e3f2fd",
-    questionRange: [1, 8]
-  },
-  2: {
-    name: "Cargas de trabajo", 
-    description: "Cargas cuantitativas, ritmo de trabajo, cargas mentales",
-    color: "#f3e5f5",
-    questionRange: [9, 20]
-  },
-  3: {
-    name: "Falta de control y autonomía",
-    description: "Iniciativa, influencia, participación y manejo del cambio",
-    color: "#e8f5e8", 
-    questionRange: [21, 32]
-  },
-  4: {
-    name: "Jornada de trabajo y rotación de turnos",
-    description: "Jornadas extensas, trabajo nocturno, rotación de turnos",
-    color: "#fff3e0",
-    questionRange: [33, 40]
-  },
-  5: {
-    name: "Interferencia en la relación trabajo-familia", 
-    description: "Tiempo limitado, atención a responsabilidades familiares",
-    color: "#fce4ec",
-    questionRange: [41, 48]
-  },
-  6: {
-    name: "Liderazgo y relaciones en el trabajo",
-    description: "Características del liderazgo, relaciones sociales",
-    color: "#e1f5fe",
-    questionRange: [49, 65]
-  },
-  7: {
-    name: "Violencia laboral",
-    description: "Violencia psicológica, acoso, malos tratos",
-    color: "#ffebee", 
-    questionRange: [66, 73]
-  }
-};
 
 // Menu props to make select dropdowns wider and taller so content is visible
 const MENU_PROPS = {
@@ -81,6 +35,74 @@ export default function SurveyAnswer() {
   const [existingApplication, setExistingApplication] = useState(null);
   const [formDisabled, setFormDisabled] = useState(false);
 
+  // Helper to consistently read answers by string keys
+  const getAnswer = (qid) => answers[String(qid)] || "";
+
+  // Canonicalize any incoming label or token to the five NOM-035 labels
+  const canonicalLabels = ['Siempre','Casi siempre','Algunas veces','Casi nunca','Nunca'];
+  const labelSynonyms = {
+    // Spanish
+    'siempre': 'Siempre',
+    'casi siempre': 'Casi siempre',
+    'frecuente': 'Casi siempre',
+    'frecuentemente': 'Casi siempre',
+    'muy frecuente': 'Casi siempre',
+    'algunas veces': 'Algunas veces',
+    'a veces': 'Algunas veces',
+    'ocasionalmente': 'Algunas veces',
+    'regularmente': 'Algunas veces',
+    'casi nunca': 'Casi nunca',
+    'rara vez': 'Casi nunca',
+    'raramente': 'Casi nunca',
+    'pocas veces': 'Casi nunca',
+    'nunca': 'Nunca',
+    // English fallbacks
+    'always': 'Siempre',
+    'almost always': 'Casi siempre',
+    'sometimes': 'Algunas veces',
+    'almost never': 'Casi nunca',
+    'never': 'Nunca',
+    // Numeric strings
+    '1': 'Siempre',
+    '2': 'Casi siempre',
+    '3': 'Algunas veces',
+    '4': 'Casi nunca',
+    '5': 'Nunca'
+  };
+  const canonicalizeLabel = (input) => {
+    if (input == null) return null;
+    const s = String(input).trim();
+    if (s === '') return '';
+    // If already exact match, keep it
+    if (canonicalLabels.includes(s)) return s;
+    const lower = s.toLowerCase();
+    if (labelSynonyms[lower]) return labelSynonyms[lower];
+    // If a number (score), map 1..5
+    const n = Number(s);
+    if (!Number.isNaN(n) && n >= 1 && n <= 5) return canonicalLabels[n - 1];
+    return s; // fallback (will be rare)
+  };
+
+  // Normalize stored response pieces into the exact option label used by the UI
+  const normalizeResponseLabel = (question, optId, free, val) => {
+    // If free-text exists, prefer it (but canonicalize just in case)
+    if (free) return String(free);
+
+    // If optId is provided, try canonicalizing it first
+    if (optId != null) {
+      const canon = canonicalizeLabel(optId);
+      if (canon != null) return canon;
+    }
+
+    // If value/score provided, canonicalize that
+    if (val != null) {
+      const canon = canonicalizeLabel(val);
+      if (canon != null) return canon;
+    }
+
+    return null;
+  };
+  
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -152,13 +174,9 @@ export default function SurveyAnswer() {
             setFormDisabled(true);
           }
 
-          // Load responses for this application to prefill
-          const responsesRes = await getSurveyResponses();
-          const responses = responsesRes.data || [];
-          const filtered = responses.filter(r => {
-            const rid = r.surveyApplicationId ?? r.survey_application_id ?? r.surveyApplication?.id ?? r.survey_application;
-            return parseInt(rid) === parseInt(data.applicationId);
-          });
+          // Load responses for this application to prefill (server-filtered)
+          const responsesRes = await getSurveyResponsesByApplication(data.applicationId);
+          const filtered = responsesRes.data || [];
 
           const prevAnswers = {};
           filtered.forEach(r => {
@@ -166,25 +184,11 @@ export default function SurveyAnswer() {
             const optId = r.optionAnswerId ?? r.option_answer_id ?? r.optionAnswer?.id ?? r.option_answer;
             const free = r.free_text ?? r.textAnswer ?? r.freeText ?? r.text_answer ?? r.freeTextAnswer ?? r.textAnswer;
             const val = r.value ?? r.valueAnswer ?? r.score;
-            if (optId) {
-              const q = surveyObj.questions?.find(qq => String(qq.id) === String(qid));
-              let optText = null;
-              if (q) {
-                if (Array.isArray(q.options)) {
-                  const found = q.options.find(o => String(o.id) === String(optId) || String(o.value) === String(optId));
-                  if (found) optText = found.text ?? found.value ?? String(found);
-                } else if (typeof q.options === 'string') {
-                  const mapping = {1: 'Siempre', 2: 'Casi siempre', 3: 'Algunas veces', 4: 'Casi nunca', 5: 'Nunca'};
-                  optText = mapping[optId] || mapping[val] || String(optId);
-                }
-              }
-              prevAnswers[qid] = optText || String(optId);
-            } else if (free) {
-              prevAnswers[qid] = free;
-            } else if (val) {
-              const mapping = {1: 'Siempre', 2: 'Casi siempre', 3: 'Algunas veces', 4: 'Casi nunca', 5: 'Nunca'};
-              prevAnswers[qid] = mapping[val] || String(val);
-            }
+
+            // Normalize to exact option label used in the UI (avoid mixing numbers and labels)
+            const q = surveyObj.questions?.find(qq => String(qq.id) === String(qid));
+            const label = normalizeResponseLabel(q, optId, free, val);
+            if (label != null) prevAnswers[String(qid)] = label;
           });
           setAnswers(prevAnswers);
 
@@ -234,14 +238,10 @@ export default function SurveyAnswer() {
        if (match) {
          setExistingApplication(match);
 
-         // Load responses and filter by application id
-         const responsesRes = await getSurveyResponses();
-         const responses = responsesRes.data || [];
+         // Load responses for this application (server-filtered)
          const appId = match.id ?? match.applicationId ?? match.surveyApplicationId;
-         const filtered = responses.filter(r => {
-           const rid = r.surveyApplicationId ?? r.survey_application_id ?? r.surveyApplication?.id ?? r.survey_application;
-           return parseInt(rid) === parseInt(appId);
-         });
+         const responsesRes = await getSurveyResponsesByApplication(appId);
+         const filtered = responsesRes.data || [];
 
          // Prefill answers map so fields show existing values
          const prevAnswers = {};
@@ -251,26 +251,10 @@ export default function SurveyAnswer() {
            const free = r.free_text ?? r.textAnswer ?? r.freeText ?? r.text_answer ?? r.freeTextAnswer ?? r.textAnswer;
            const val = r.value ?? r.valueAnswer ?? r.score;
 
-           if (optId) {
-             // Try to map option id to text using selectedSurvey questions if available
-             const q = surveyObj.questions?.find(qq => String(qq.id) === String(qid));
-             let optText = null;
-             if (q) {
-               if (Array.isArray(q.options)) {
-                 const found = q.options.find(o => String(o.id) === String(optId) || String(o.value) === String(optId));
-                 if (found) optText = found.text ?? found.value ?? String(found);
-               } else if (typeof q.options === 'string') {
-                 const mapping = {1: 'Siempre', 2: 'Casi siempre', 3: 'Algunas veces', 4: 'Casi nunca', 5: 'Nunca'};
-                 optText = mapping[optId] || mapping[val] || String(optId);
-               }
-             }
-             prevAnswers[qid] = optText || String(optId);
-           } else if (free) {
-             prevAnswers[qid] = free;
-           } else if (val) {
-             const mapping = {1: 'Siempre', 2: 'Casi siempre', 3: 'Algunas veces', 4: 'Casi nunca', 5: 'Nunca'};
-             prevAnswers[qid] = mapping[val] || String(val);
-           }
+           // Normalize to exact option label used in the UI (avoid mixing numbers and labels)
+           const q = surveyObj.questions?.find(qq => String(qq.id) === String(qid));
+           const label = normalizeResponseLabel(q, optId, free, val);
+           if (label != null) prevAnswers[String(qid)] = label;
          });
 
          setAnswers(prevAnswers);
@@ -376,37 +360,23 @@ export default function SurveyAnswer() {
     return sampleQuestions;
   };
 
-  const handleAnswerChange = (qid, value) => setAnswers({ ...answers, [qid]: value });
+  const handleAnswerChange = (qid, value) => setAnswers(prev => ({ ...prev, [String(qid)]: value }));
 
-  // Obtener preguntas por módulo
-  const getQuestionsByModule = (moduleNum) => {
-    if (!selectedSurvey?.questions) return [];
-    const module = NOM035_MODULES[moduleNum];
-    if (!module) return selectedSurvey.questions;
-    
-    // Si hay 73 preguntas, usar rango por posición
-    if (selectedSurvey.questions.length >= 70) {
-      const [start, end] = module.questionRange;
-      return selectedSurvey.questions.slice(start - 1, end);
-    }
-    
-    // Si son menos preguntas, mostrar todas (encuesta personalizada)
-    return selectedSurvey.questions;
-  };
-
-  // Verificar si un módulo está completo
-  const isModuleComplete = (moduleNum) => {
-    const moduleQuestions = getQuestionsByModule(moduleNum);
-    return moduleQuestions.every(q => answers[q.id] && answers[q.id].trim() !== "");
+  // If backend supplies selectedSurvey.modules, each module should include its questions
+  // Helper to check completion of a module object
+  const isModuleComplete = (module) => {
+    if (!module || !Array.isArray(module.questions)) return false;
+    return module.questions.every(q => {
+      const v = answers[q.id] ?? answers[String(q.id)] ?? '';
+      return String(v).trim() !== '';
+    });
   };
 
   // Calcular progreso total
   const getTotalProgress = () => {
     if (!selectedSurvey?.questions) return 0;
     const totalQuestions = selectedSurvey.questions.length;
-    const answeredQuestions = Object.keys(answers).filter(
-      qid => answers[qid] && answers[qid].trim() !== ""
-    ).length;
+    const answeredQuestions = selectedSurvey.questions.filter(q => String(getAnswer(q.id)).trim() !== "").length;
     return Math.round((answeredQuestions / totalQuestions) * 100);
   };
 
@@ -448,11 +418,11 @@ export default function SurveyAnswer() {
       const responses = [];
       
       for (const question of selectedSurvey.questions) {
-        const userAnswer = answers[question.id];
-        if (userAnswer && userAnswer.trim() !== "") {
-          
+        const raw = answers[question.id];
+        const userAnswer = canonicalizeLabel(raw); // ensure canonical before submit
+        if (userAnswer && String(userAnswer).trim() !== "") {
           // Determinar si es una respuesta de opción múltiple o texto libre
-          const isMultipleChoice = question.type === 'single-choice' || question.type === 'likert' || question.options;
+          const isMultipleChoice = true; // Forzamos NOM-035
           
           if (isMultipleChoice) {
             // Para preguntas de opción múltiple, necesitamos encontrar el optionAnswerId
@@ -465,12 +435,11 @@ export default function SurveyAnswer() {
               textAnswer: null
             });
           } else {
-            // Para preguntas de texto libre
             responses.push({
               surveyApplicationId: surveyApplicationId,
               questionId: parseInt(question.id),
               optionAnswerId: null,
-              textAnswer: userAnswer
+              textAnswer: String(userAnswer)
             });
           }
         }
@@ -523,7 +492,7 @@ export default function SurveyAnswer() {
 
   // Función auxiliar para mapear respuestas de texto a IDs de opciones
   const getOptionAnswerId = (answerText) => {
-    // Mapeo para opciones estándar NOM-035
+    const canon = canonicalizeLabel(answerText);
     const optionMapping = {
       'Siempre': 1,
       'Casi siempre': 2,
@@ -531,15 +500,14 @@ export default function SurveyAnswer() {
       'Casi nunca': 4,
       'Nunca': 5
     };
-    
-    return optionMapping[answerText] || 1; // Default a "Siempre" si no se encuentra
+    return optionMapping[canon] || 1; // Default a "Siempre" si no se encuentra
   };
 
   // Renderizar pregunta individual
   const renderQuestion = (question, index) => {
     console.log('🔍 Rendering question:', question);
     
-    // Opciones estándar NOM-035
+    // Opciones estándar NOM-035 (forzadas para este survey)
     const nom035Options = [
       'Siempre',
       'Casi siempre', 
@@ -548,40 +516,11 @@ export default function SurveyAnswer() {
       'Nunca'
     ];
     
-    // Manejar diferentes formatos de opciones
-    let questionOptions = [];
-    
-    // Para preguntas tipo 'likert' o sin opciones definidas, usar siempre las estándar de NOM-035
-    if (question.type === 'likert' || !question.options || (Array.isArray(question.options) && question.options.length === 0)) {
-      console.log('📝 Using standard NOM-035 options for likert question');
-      questionOptions = nom035Options;
-    } else if (question.options) {
-      if (typeof question.options === 'string') {
-        questionOptions = question.options.split(',').map(opt => opt.trim());
-      } else if (Array.isArray(question.options)) {
-        // Si las opciones son objetos con estructura {id, value, text, sortOrder}
-        questionOptions = question.options.map(opt => {
-          if (typeof opt === 'object' && opt.text) {
-            return opt.text; // Usar la propiedad 'text' del objeto
-          } else if (typeof opt === 'object' && opt.value) {
-            return opt.value; // O usar 'value' si no hay 'text'
-          } else {
-            return String(opt); // Convertir a string si es otro tipo
-          }
-        });
-      } else {
-        console.log('⚠️ Unknown options format:', question.options);
-        questionOptions = nom035Options; // Usar opciones por defecto
-      }
-    } else {
-      // Si no hay opciones definidas, usar las estándar de NOM-035
-      questionOptions = nom035Options;
-    }
-    
-    console.log('📋 Final options for question:', questionOptions);
+    // Para este survey, forzamos siempre opciones NOM-035 sin importar el backend
+    const questionOptions = nom035Options;
     
     // Para encuestas NOM-035, forzar siempre opciones múltiples
-    const useMultipleChoice = true; // Siempre usar opción múltiple para NOM-035
+    const useMultipleChoice = true;
     
     return (
       <Card key={question.id} sx={{ mb: 2, border: '1px solid #e0e0e0' }}>
@@ -593,8 +532,8 @@ export default function SurveyAnswer() {
           {useMultipleChoice && questionOptions.length > 0 ? (
             <FormControl component="fieldset">
               <RadioGroup
-                value={answers[question.id] || ""}
-                onChange={e => handleAnswerChange(question.id, e.target.value)}
+                value={canonicalizeLabel(getAnswer(question.id))}
+                onChange={e => handleAnswerChange(question.id, canonicalizeLabel(e.target.value))}
                 disabled={formDisabled}
               >
                 {questionOptions.map((option, optIndex) => (
@@ -612,7 +551,7 @@ export default function SurveyAnswer() {
               fullWidth
               multiline
               rows={2}
-              value={answers[question.id] || ""}
+              value={getAnswer(question.id)}
               onChange={e => handleAnswerChange(question.id, e.target.value)}
               placeholder="Escriba su respuesta aquí..."
               variant="outlined"
@@ -741,79 +680,50 @@ export default function SurveyAnswer() {
         </Paper>
       )}
 
-      {/* Módulos de Preguntas */}
+      {/* Módulos de Preguntas: usar módulos del backend si existen, si no mostrar lista plana */}
       {selectedSurvey && selectedSurvey.questions && (
         <Box>
-          {selectedSurvey.questions.length >= 70 ? (
-            // Vista por módulos para encuestas completas NOM-035
+          {Array.isArray(selectedSurvey.modules) && selectedSurvey.modules.length > 0 ? (
             <Box>
               <Alert severity="info" sx={{ mb: 3 }}>
                 <Typography variant="body2">
-                  Esta encuesta está organizada por módulos según la norma NOM-035. 
-                  Puede completar los módulos en cualquier orden.
+                  Esta encuesta está organizada por módulos. Puede navegar entre módulos.
                 </Typography>
               </Alert>
-              
-              {Object.entries(NOM035_MODULES).map(([moduleNum, module]) => {
-                const moduleQuestions = getQuestionsByModule(parseInt(moduleNum));
-                const isComplete = isModuleComplete(parseInt(moduleNum));
-                const hasQuestions = moduleQuestions.length > 0;
-                
-                if (!hasQuestions) return null;
-                
+
+              {selectedSurvey.modules.map((module, idx) => {
+                const moduleId = module.id ?? idx;
+                const moduleQuestions = Array.isArray(module.questions) && module.questions.length > 0
+                  ? module.questions
+                  : // if module provides questionIds, resolve them from selectedSurvey.questions
+                    (Array.isArray(module.questionIds) ? selectedSurvey.questions.filter(q => module.questionIds.includes(q.id) || module.questionIds.includes(String(q.id))) : []);
+
+                if (!moduleQuestions || moduleQuestions.length === 0) return null;
+
+                const complete = isModuleComplete({ questions: moduleQuestions });
+
                 return (
-                  <Accordion 
-                    key={moduleNum}
-                    expanded={expandedModule === parseInt(moduleNum)}
-                    onChange={(e, isExpanded) => setExpandedModule(isExpanded ? parseInt(moduleNum) : null)}
-                    sx={{ mb: 2, border: '1px solid #e0e0e0' }}
-                  >
-                    <AccordionSummary 
-                      expandIcon={<ExpandMoreIcon />}
-                      sx={{ 
-                        backgroundColor: module.color,
-                        '&:hover': { backgroundColor: module.color + 'dd' }
-                      }}
-                    >
+                  <Accordion key={String(moduleId)} expanded={expandedModule === String(moduleId) || expandedModule === moduleId} onChange={(e, isExpanded) => setExpandedModule(isExpanded ? moduleId : null)} sx={{ mb: 2, border: '1px solid #e0e0e0' }}>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ backgroundColor: module.color ?? '#f5f5f5', '&:hover': { backgroundColor: (module.color ?? '#f5f5f5') + 'dd' } }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                          Módulo {moduleNum}: {module.name}
-                        </Typography>
-                        {isComplete && (
-                          <CheckCircleIcon color="success" />
-                        )}
-                        <Box sx={{ marginLeft: 'auto', mr: 2 }}>
-                          <Chip 
-                            label={`${moduleQuestions.length} preguntas`}
-                            size="small"
-                            variant="outlined"
-                          />
-                        </Box>
+                        <Typography variant="h6" sx={{ fontWeight: 600 }}>{module.name ?? `Módulo ${idx+1}`}</Typography>
+                        {complete && (<CheckCircleIcon color="success" />)}
+                        <Box sx={{ marginLeft: 'auto', mr: 2 }}><Chip label={`${moduleQuestions.length} preguntas`} size="small" variant="outlined"/></Box>
                       </Box>
                     </AccordionSummary>
-                    
                     <AccordionDetails sx={{ p: 3 }}>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                        {module.description}
-                      </Typography>
-                      
-                      {moduleQuestions.map((question, index) => 
-                        renderQuestion(question, index)
-                      )}
+                      {module.description ? <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>{module.description}</Typography> : null}
+                      {moduleQuestions.map((question, index) => renderQuestion(question, index))}
                     </AccordionDetails>
                   </Accordion>
                 );
               })}
             </Box>
           ) : (
-            // Vista simple para encuestas personalizadas
+            // Fallback: flat list of questions
             <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-                Preguntas de la Encuesta
-              </Typography>
-              {selectedSurvey.questions.map((question, index) => 
-                renderQuestion(question, index)
-              )}
+              <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>Preguntas de la Encuesta</Typography>
+              {selectedSurvey.questions.map((question, index) => renderQuestion(question, index))}
             </Paper>
           )}
           

@@ -103,7 +103,11 @@ export const submitSurveyResponse = data => {
     }
   });
 };
+// Get all responses (legacy)
 export const getSurveyResponses = () => axios.get(`${API_BASE}/responses`);
+
+// Get responses for a specific survey application (preferred when you have an application id)
+export const getSurveyResponsesByApplication = (surveyApplicationId) => axios.get(`${API_BASE}/responses/survey-application/${surveyApplicationId}`);
 
 // Survey Application endpoints (for managing survey sessions)
 export const createSurveyApplication = data => {
