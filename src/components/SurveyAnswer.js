@@ -622,9 +622,9 @@ export default function SurveyAnswer() {
               SelectProps={{ MenuProps: MENU_PROPS }}
             >
               <MenuItem value="" sx={{ whiteSpace: 'normal', minHeight: 48 }}>{t('survey.answer.selectSurveyPlaceholder') || "Seleccione una encuesta"}</MenuItem>
-              {surveys.map(s => (
+              {surveys.filter(Boolean).map(s => (
                 <MenuItem key={s.id} value={s.id} sx={{ whiteSpace: 'normal', minHeight: 48 }}>
-                  {s.title} ({s.questions?.length || 0} preguntas)
+                  {(s.title || s.name || `Encuesta ${s.id}`)} ({s.questions?.length || 0} preguntas)
                 </MenuItem>
               ))}
             </TextField>
@@ -638,10 +638,10 @@ export default function SurveyAnswer() {
           <Grid container spacing={3} alignItems="center">
             <Grid item xs={12} md={8}>
               <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
-                {selectedSurvey.title}
+                {selectedSurvey.title || selectedSurvey.name || `Encuesta ${selectedSurvey.id}`}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {selectedSurvey.description}
+                {selectedSurvey.description || ''}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 <Chip 

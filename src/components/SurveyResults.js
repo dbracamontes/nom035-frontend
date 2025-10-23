@@ -382,9 +382,9 @@ export default function SurveyResults() {
               InputProps={{ style: { fontSize: 16 } }}
             >
               <MenuItem value="">Todas las encuestas</MenuItem>
-              {surveys.map(survey => (
+              {surveys.filter(Boolean).map(survey => (
                 <MenuItem key={survey.id} value={survey.id}>
-                  {survey.title}
+                  {survey.title || survey.name || `Encuesta ${survey.id}`}
                 </MenuItem>
               ))}
             </TextField>

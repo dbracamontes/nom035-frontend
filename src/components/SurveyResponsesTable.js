@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { getSurveyResponses, getSurveys, getEmployees } from "../api/nom035";
+import { getSurveyResponses, getSurveys, getEmployees, getSurveyApplications } from "../api/nom035";
 import { DataGrid } from "@mui/x-data-grid";
-import { Button, TextField, MenuItem } from "@mui/material";
+import { Button, TextField, MenuItem, Box } from "@mui/material";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
@@ -11,39 +11,101 @@ export default function SurveyResponsesTable() {
   const [rows, setRows] = useState([]);
   const [surveys, setSurveys] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [applications, setApplications] = useState([]);
   const [selectedSurvey, setSelectedSurvey] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState("");
 
-  useEffect(() => {
-    getSurveys().then(res => setSurveys(res.data));
-    getEmployees().then(res => setEmployees(res.data));
-    fetchResponses();
-  }, []);
-
-  const fetchResponses = () => {
-    getSurveyResponses().then(res => {
-      let data = res.data;
-      if (selectedSurvey) {
-        data = data.filter(r => r.survey.id === Number(selectedSurvey));
-      }
-      if (selectedEmployee) {
-        data = data.filter(r => r.employee.id === Number(selectedEmployee));
-      }
-      setRows(data.map((r, idx) => ({
-        id: idx,
-        survey: r.survey.title,
-        employee: r.employee.name,
-        riskLevel: r.riskLevel,
-        date: r.submittedAt,
-        answers: r.answers ? r.answers.map(a => `${a.question.text}: ${a.answer}`).join("; ") : ""
-      })));
-    });
+  // Helpers to safely extract fields regardless of backend shape
+  const toNum = (v) => {
+    const n = Number(v);
+    return Number.isNaN(n) ? null : n;
+  };
+  const findSurveyTitle = (sid) => {
+    if (sid == null) return "(Unknown survey)";
+    const s = surveys.find(x => toNum(x?.id) === toNum(sid));
+    return s?.title || s?.name || `Survey ${sid}`;
+  };
+  const findEmployeeName = (eid) => {
+    if (eid == null) return "(Unknown)";
+    const e = employees.find(x => toNum(x?.id) === toNum(eid));
+    return e?.name || e?.email || `#${eid}`;
   };
 
   useEffect(() => {
-    fetchResponses();
+    // Load reference data and build table rows
+    Promise.all([
+      getSurveys().then(res => res.data || []).catch(() => []),
+      getEmployees().then(res => res.data || []).catch(() => []),
+      getSurveyApplications().then(res => res.data || []).catch(() => []),
+      getSurveyResponses().then(res => res.data || []).catch(() => [])
+    ]).then(([surveysData, employeesData, appsData, responsesData]) => {
+      setSurveys(Array.isArray(surveysData) ? surveysData : []);
+      setEmployees(Array.isArray(employeesData) ? employeesData : []);
+      setApplications(Array.isArray(appsData) ? appsData : []);
+
+      buildRows(appsData, responsesData, surveysData, employeesData);
+    });
     // eslint-disable-next-line
-  }, [selectedSurvey, selectedEmployee]);
+  }, []);
+
+  useEffect(() => {
+    // Rebuild rows when filters or reference data change
+    if (!applications) return;
+    getSurveyResponses().then(res => {
+      const responsesData = Array.isArray(res.data) ? res.data : [];
+      buildRows(applications, responsesData, surveys, employees);
+    }).catch(() => buildRows(applications, [], surveys, employees));
+    // eslint-disable-next-line
+  }, [selectedSurvey, selectedEmployee, surveys, employees, applications]);
+
+  const buildRows = (appsData, responsesData, surveysData, employeesData) => {
+    const validApps = Array.isArray(appsData) ? appsData : [];
+    const validResponses = Array.isArray(responsesData) ? responsesData : [];
+
+    // Group responses by surveyApplicationId
+    const byApp = new Map();
+    for (const r of validResponses) {
+      const appId = toNum(r?.surveyApplicationId);
+      if (appId == null) continue;
+      if (!byApp.has(appId)) byApp.set(appId, []);
+      byApp.get(appId).push(r);
+    }
+
+    // Filter apps by selected filters
+    let apps = validApps;
+    if (selectedSurvey) {
+      const sel = toNum(selectedSurvey);
+      apps = apps.filter(a => toNum(a?.surveyId) === sel);
+    }
+    if (selectedEmployee) {
+      const selE = toNum(selectedEmployee);
+      apps = apps.filter(a => toNum(a?.employeeId) === selE);
+    }
+
+    const mapped = apps.map(app => {
+      const appId = app?.id;
+      const surveyId = app?.surveyId;
+      const employeeId = app?.employeeId;
+      const answersArr = byApp.get(toNum(appId)) || [];
+      const answersPreview = answersArr.slice(0, 5).map(a => {
+        const q = a?.questionId != null ? `Q${a.questionId}` : 'Q?';
+        const val = a?.textAnswer ?? a?.optionAnswerId ?? '';
+        return `${q}: ${val}`;
+      }).join("; ");
+      const answersSuffix = answersArr.length > 5 ? `; +${answersArr.length - 5} más` : '';
+
+      return {
+        id: appId,
+        survey: findSurveyTitle(surveyId),
+        employee: findEmployeeName(employeeId),
+        riskLevel: app?.riskLevel || '',
+        date: app?.completedAt || app?.startedAt || '',
+        answers: answersPreview + answersSuffix
+      };
+    });
+
+    setRows(mapped);
+  };
 
   const exportExcel = () => {
     const ws = XLSX.utils.json_to_sheet(rows);
@@ -66,36 +128,44 @@ export default function SurveyResponsesTable() {
 
   return (
     <div style={{ height: 500, width: "100%" }}>
-      <TextField
-        select
-        label="Filter by Survey"
-        value={selectedSurvey}
-        onChange={e => setSelectedSurvey(e.target.value)}
-        sx={{ mb: 2, mr: 2, minWidth: 200 }}
-      >
-        <MenuItem value="">All Surveys</MenuItem>
-        {surveys.map(s => <MenuItem key={s.id} value={s.id}>{s.title}</MenuItem>)}
-      </TextField>
-      <TextField
-        select
-        label="Filter by Employee"
-        value={selectedEmployee}
-        onChange={e => setSelectedEmployee(e.target.value)}
-        sx={{ mb: 2, minWidth: 200 }}
-      >
-        <MenuItem value="">All Employees</MenuItem>
-        {employees.map(emp => <MenuItem key={emp.id} value={emp.id}>{emp.name}</MenuItem>)}
-      </TextField>
-      <Button variant="contained" sx={{ mb: 2, mr: 2 }} onClick={exportExcel}>Export Table (Excel)</Button>
-      <Button variant="contained" sx={{ mb: 2 }} onClick={exportPDF}>Export Table (PDF)</Button>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2, mb: 2 }}>
+        <TextField
+          select
+          size="small"
+          label="Filter by Survey"
+          value={selectedSurvey}
+          onChange={e => setSelectedSurvey(e.target.value)}
+          sx={{ minWidth: 240 }}
+        >
+          <MenuItem value="">All Surveys</MenuItem>
+          {surveys.filter(Boolean).map(s => <MenuItem key={s.id} value={s.id}>{s.title || s.name || `Survey ${s.id}`}</MenuItem>)}
+        </TextField>
+
+        <TextField
+          select
+          size="small"
+          label="Filter by Employee"
+          value={selectedEmployee}
+          onChange={e => setSelectedEmployee(e.target.value)}
+          sx={{ minWidth: 240 }}
+        >
+          <MenuItem value="">All Employees</MenuItem>
+          {employees.filter(Boolean).map(emp => <MenuItem key={emp.id} value={emp.id}>{emp.name || emp.email || `#${emp.id}`}</MenuItem>)}
+        </TextField>
+
+        <Box sx={{ flexGrow: 1 }} />
+
+        <Button variant="contained" size="small" onClick={exportExcel}>Export Table (Excel)</Button>
+        <Button variant="contained" size="small" onClick={exportPDF}>Export Table (PDF)</Button>
+      </Box>
       <DataGrid
         rows={rows}
         columns={[
-          { field: "survey", headerName: "Survey", width: 180 },
-          { field: "employee", headerName: "Employee", width: 180 },
-          { field: "riskLevel", headerName: "Risk Level", width: 120 },
-          { field: "date", headerName: "Date", width: 160 },
-          { field: "answers", headerName: "Answers", width: 400 }
+          { field: "survey", headerName: "Survey", width: 200 },
+          { field: "employee", headerName: "Employee", width: 200 },
+          { field: "riskLevel", headerName: "Risk Level", width: 140 },
+          { field: "date", headerName: "Date", width: 200 },
+          { field: "answers", headerName: "Answers", width: 500 }
         ]}
         pageSize={10}
         rowsPerPageOptions={[10, 20, 50]}
