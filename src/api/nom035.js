@@ -26,6 +26,12 @@ export const createEmployee = data => {
     }
   });
 };
+// Utilidad para obtener credenciales guardadas
+function getAuthHeader() {
+  const creds = sessionStorage.getItem('auth');
+  if (!creds) return {};
+  return { Authorization: 'Basic ' + creds };
+}
 export const updateEmployee = (id, data) => axios.put(`${API_BASE}/employees/${id}`, data);
 export const deleteEmployee = id => axios.delete(`${API_BASE}/employees/${id}`);
 
@@ -52,6 +58,27 @@ export const updateSurvey = (id, data) => axios.put(`${API_BASE}/surveys/${id}`,
 export const deleteSurvey = id => axios.delete(`${API_BASE}/surveys/${id}`);
 
 // CompanySurvey endpoints
+
+// Interceptor para agregar Authorization a cada request (debe ir después de getAuthHeader)
+axios.interceptors.request.use(
+  (config) => {
+    const auth = getAuthHeader();
+    if (auth.Authorization) config.headers.Authorization = auth.Authorization;
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Interceptor para manejar 401/403 globalmente
+axios.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+      window.location.href = '/login';
+    }
+    return Promise.reject(err);
+  }
+);
 export const getCompanySurveys = () => axios.get(`${API_BASE}/company-surveys`);
 export const getCompanySurveyById = id => axios.get(`${API_BASE}/company-surveys/${id}`);
 export const getCompanySurveysByCompany = companyId => axios.get(`${API_BASE}/company-surveys/company/${companyId}`);
