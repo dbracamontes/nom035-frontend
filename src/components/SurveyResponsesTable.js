@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from 'react-i18next';
 import { getSurveyResponses, getSurveys, getEmployees, getSurveyApplications } from "../api/nom035";
 import { DataGrid } from "@mui/x-data-grid";
 import { Button, TextField, MenuItem, Box } from "@mui/material";
@@ -8,6 +9,7 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 
 export default function SurveyResponsesTable() {
+  const { t } = useTranslation();
   const [rows, setRows] = useState([]);
   const [surveys, setSurveys] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -129,43 +131,44 @@ export default function SurveyResponsesTable() {
   return (
     <div style={{ height: 500, width: "100%" }}>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2, mb: 2 }}>
+
         <TextField
           select
           size="small"
-          label="Filter by Survey"
+          label={t('responses.filterBySurvey')}
           value={selectedSurvey}
           onChange={e => setSelectedSurvey(e.target.value)}
           sx={{ minWidth: 240 }}
         >
-          <MenuItem value="">All Surveys</MenuItem>
-          {surveys.filter(Boolean).map(s => <MenuItem key={s.id} value={s.id}>{s.title || s.name || `Survey ${s.id}`}</MenuItem>)}
+          <MenuItem value="">{t('responses.allSurveys')}</MenuItem>
+          {surveys.filter(Boolean).map(s => <MenuItem key={s.id} value={s.id}>{s.title || s.name || `${t('responses.survey')} ${s.id}`}</MenuItem>)}
         </TextField>
 
         <TextField
           select
           size="small"
-          label="Filter by Employee"
+          label={t('responses.filterByEmployee')}
           value={selectedEmployee}
           onChange={e => setSelectedEmployee(e.target.value)}
           sx={{ minWidth: 240 }}
         >
-          <MenuItem value="">All Employees</MenuItem>
+          <MenuItem value="">{t('responses.allEmployees')}</MenuItem>
           {employees.filter(Boolean).map(emp => <MenuItem key={emp.id} value={emp.id}>{emp.name || emp.email || `#${emp.id}`}</MenuItem>)}
         </TextField>
 
         <Box sx={{ flexGrow: 1 }} />
 
-        <Button variant="contained" size="small" onClick={exportExcel}>Export Table (Excel)</Button>
-        <Button variant="contained" size="small" onClick={exportPDF}>Export Table (PDF)</Button>
+  <Button variant="contained" size="small" onClick={exportExcel}>{t('responses.exportToExcel')}</Button>
+  <Button variant="contained" size="small" onClick={exportPDF}>{t('responses.exportToPDF')}</Button>
       </Box>
       <DataGrid
         rows={rows}
         columns={[
-          { field: "survey", headerName: "Survey", width: 200 },
-          { field: "employee", headerName: "Employee", width: 200 },
-          { field: "riskLevel", headerName: "Risk Level", width: 140 },
-          { field: "date", headerName: "Date", width: 200 },
-          { field: "answers", headerName: "Answers", width: 500 }
+          { field: "survey", headerName: t('responses.survey'), width: 200 },
+          { field: "employee", headerName: t('responses.employee'), width: 200 },
+          { field: "riskLevel", headerName: t('responses.riskLevel'), width: 140 },
+          { field: "date", headerName: t('responses.date'), width: 200 },
+          { field: "answers", headerName: t('responses.answers'), width: 500 }
         ]}
         pageSize={10}
         rowsPerPageOptions={[10, 20, 50]}

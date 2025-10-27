@@ -3,12 +3,12 @@
     "title": "NOM-035 Survey Platform"
   },
   "navigation": {
-    "landing": "Landing",
-    "dashboard": "Dashboard",
-    "employees": "Employees",
-    "surveys": "Surveys",
-    "companySurveys": "Company Surveys",
-    "answerSurvey": "Answer Survey",
+  "landing": "Landing",
+  "dashboard": "Dashboard",
+  "employees": "Employees",
+  "surveys": "Surveys",
+  "companySurveys": "Company Surveys",
+  "answerSurvey": "Answer Survey",
   "surveyResponses": "Survey Responses",
   "resultsDashboard": "NOM-035 Results Dashboard"
   },
@@ -21,7 +21,6 @@
     "riskByFactor": "Risk by Factor",
     "exportRiskExcel": "Export Risk by Factor to Excel",
     "participationBySurvey": "Participation by Survey",
-    "surveyTitle": "Survey Title",
     "completionRate": "Completion Rate (%)",
     "employees": "Employees",
     "total": "Total",
@@ -71,27 +70,32 @@
       "companyLabel": "Company"
     },
     "answer": {
+      "title": "Answer NOM-035 Survey",
+      "selectEmployeePlaceholder": "Select an employee",
+      "selectSurveyPlaceholder": "Select a survey",
       "selectEmployee": "Select Employee",
       "selectAnEmployee": "Select an employee",
       "selectSurvey": "Select Survey",
       "selectASurvey": "Select a survey",
       "submitAnswers": "Submit Answers",
       "submitted": "Submitted!"
-    },
-    "responses": {
-      "title": "Survey Responses",
-      "filterBySurvey": "Filter by Survey",
-      "allSurveys": "All Surveys",
-      "filterByEmployee": "Filter by Employee",
-      "allEmployees": "All Employees",
-      "exportToExcel": "Export to Excel",
-      "exportToPDF": "Export to PDF",
-      "survey": "Survey",
-      "employee": "Employee",
-      "riskLevel": "Risk Level",
-      "date": "Date",
-      "answers": "Answers"
     }
+  },
+  "responses": {
+  "title": "Survey Responses",
+  "filterBySurvey": "Filter by Survey",
+  "allSurveys": "All Surveys",
+  "filterByEmployee": "Filter by Employee",
+  "allEmployees": "All Employees",
+  "survey": "Survey",
+  "employee": "Employee",
+  "riskLevel": "Risk Level",
+  "date": "Date",
+  "answers": "Answers",
+  "noRows": "No rows",
+  "rowsPerPage": "Rows per page:",
+  "exportToExcel": "Export to Excel",
+  "exportToPDF": "Export to PDF"
   },
   "common": {
     "cancel": "Cancel",

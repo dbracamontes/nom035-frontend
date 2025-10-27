@@ -1,0 +1,106 @@
+{
+  "app": {
+    "title": "Plataforma de Encuestas NOM-035"
+  },
+  "navigation": {
+    "landing": "Inicio",
+    "dashboard": "Panel de Control",
+    "employees": "Empleados",
+    "surveys": "Encuestas",
+    "companySurveys": "Encuestas de Empresa",
+    "answerSurvey": "Responder Encuesta",
+    "surveyResponses": "Respuestas de Encuestas",
+    "resultsDashboard": "Dashboard de Resultados NOM-035"
+  },
+  "landing": {
+    "welcomeMessage": "¡Bienvenido! Utiliza la barra lateral para gestionar empleados, encuestas, respuestas y ver analíticas.",
+    "platformDescription": "Esta plataforma ayuda a las organizaciones a cumplir con la NOM-035 habilitando la gestión de encuestas, seguimiento del bienestar de empleados y análisis de riesgos."
+  },
+  "dashboard": {
+  "title": "Panel de Control",
+  "riskByFactor": "Riesgo por Factor",
+  "exportRiskExcel": "Exportar Riesgo por Factor a Excel",
+  "participationBySurvey": "Participación por Encuesta",
+  "completionRate": "Tasa de Finalización (%)",
+  "employees": "Empleados",
+  "total": "Total",
+  "surveyStatusCounts": "Conteo de Estados de Encuestas",
+  "surveys": "Encuestas"
+  },
+  "employee": {
+    "form": {
+      "name": "Nombre",
+      "department": "Departamento",
+      "position": "Puesto",
+      "email": "Email",
+      "company": "Empresa",
+      "validation": {
+        "nameEmailCompanyRequired": "Nombre, Email y Empresa son requeridos."
+      }
+    },
+    "list": {
+      "title": "Lista de Empleados",
+      "filterByCompany": "Filtrar por Empresa",
+      "allCompanies": "Todas las Empresas",
+      "companyLabel": "Empresa",
+      "editEmployee": "Editar empleado",
+      "noCompany": "N/A"
+    },
+    "page": {
+      "addEmployee": "Agregar Empleado",
+      "editEmployee": "Editar Empleado"
+    }
+  },
+  "survey": {
+    "form": {
+      "title": "Título",
+      "description": "Descripción",
+      "selectCompany": "Seleccionar Empresa",
+      "questionText": "Texto de la Pregunta",
+      "type": "Tipo",
+      "options": "Opciones",
+      "answerScores": "Puntuaciones de Respuestas (JSON)",
+      "createSurvey": "Crear Encuesta",
+      "updateSurvey": "Actualizar Encuesta"
+    },
+    "list": {
+      "title": "Lista de Encuestas",
+      "editSurvey": "Editar Encuesta",
+      "descriptionLabel": "Descripción",
+      "companyLabel": "Empresa"
+    },
+    "answer": {
+      "title": "Responder Encuesta NOM-035",
+      "selectEmployeePlaceholder": "Seleccione un empleado",
+      "selectSurveyPlaceholder": "Seleccione una encuesta",
+      "selectEmployee": "Seleccionar Empleado",
+      "selectAnEmployee": "Seleccione un empleado",
+      "selectSurvey": "Seleccionar Encuesta",
+      "selectASurvey": "Seleccione una encuesta",
+      "submitAnswers": "Enviar Respuestas",
+      "submitted": "¡Enviado!"
+    }
+  },
+  "responses": {
+  "title": "Respuestas de Encuestas",
+  "filterBySurvey": "Filtrar por Encuesta",
+  "allSurveys": "Todas las Encuestas",
+  "filterByEmployee": "Filtrar por Empleado",
+  "allEmployees": "Todos los Empleados",
+  "survey": "Encuesta",
+  "employee": "Empleado",
+  "riskLevel": "Nivel de Riesgo",
+  "date": "Fecha",
+  "answers": "Respuestas",
+  "rowsPerPage": "Filas por página:",
+  "exportToExcel": "Exportar a Excel",
+  "exportToPDF": "Exportar a PDF"
+  },
+  "common": {
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "language": "Idioma"
+  }
+}

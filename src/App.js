@@ -34,7 +34,7 @@ export default function App() {
     { text: t("navigation.surveys"), icon: <AssignmentIcon />, component: <><SurveyForm /><SurveyList /></> },
     { text: t("navigation.companySurveys"), icon: <BusinessIcon />, component: <CompanySurveyPage /> },
     { text: t("navigation.answerSurvey"), icon: <QuizIcon />, component: <SurveyAnswer /> },
-    { text: "📊 Dashboard de Resultados", icon: <AnalyticsIcon />, component: <SurveyResults /> },
+    { text: t("navigation.resultsDashboard"), icon: <AnalyticsIcon />, component: <SurveyResults /> },
     { text: t("navigation.surveyResponses"), icon: <TableChartIcon />, component: <SurveyResponsesTable /> }
   ];
 

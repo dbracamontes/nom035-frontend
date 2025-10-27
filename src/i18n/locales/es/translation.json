@@ -9,7 +9,8 @@
     "surveys": "Encuestas",
     "companySurveys": "Encuestas de Empresa",
     "answerSurvey": "Responder Encuesta",
-    "surveyResponses": "Respuestas de Encuestas"
+  "surveyResponses": "Respuestas de Encuestas",
+  "resultsDashboard": "Dashboard de Resultados NOM-035"
   },
   "landing": {
     "welcomeMessage": "¡Bienvenido! Utiliza la barra lateral para gestionar empleados, encuestas, respuestas y ver analíticas.",
