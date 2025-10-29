@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { getSurveys, getEmployees, submitSurveyResponse, getSurveyById, getSurveyWithQuestions, createSurveyApplication, getSurveyApplications, getSurveyResponsesByApplication, getCompanySurveyById, getSurveyApplicationCheck } from "../api/nom035";
+import { getSurveys, getEmployees, submitSurveyResponse, getSurveyById, getSurveyWithQuestions, createSurveyApplication, getSurveyApplications, getSurveyResponsesByApplication, getCompanySurveyById, getSurveyApplicationCheck, getFilteredResponses } from "../api/nom035";
 import { 
   Box, Button, TextField, Paper, MenuItem, Typography, 
   Card, CardContent, LinearProgress,
@@ -267,11 +267,52 @@ export default function SurveyAnswer() {
          if (statusLc.includes('complet') || statusLc.includes('finaliz') || completedAt || allAnswered) {
            setFormDisabled(true);
          }
+       } else {
+         // No direct matching application found: try filtered responses (employee + survey)
+         console.log('⚠️ No survey application found, checking filtered responses...');
+         try {
+           const filteredRes = await getFilteredResponses({ employeeId: String(employeeId), surveyId: String(surveyObj.id) });
+           const filtered = filteredRes.data || [];
+           console.log('📊 Filtered responses found:', filtered.length);
+           
+           if (filtered.length > 0) {
+             // Prefill answers from any existing responses
+             const prevAnswers = {};
+             filtered.forEach(r => {
+               const qid = r.questionId ?? r.question_id ?? r.question?.id;
+               const optId = r.optionAnswerId ?? r.option_answer_id ?? r.optionAnswer?.id ?? r.option_answer;
+               const free = r.free_text ?? r.textAnswer ?? r.freeText ?? r.text_answer ?? r.freeTextAnswer ?? r.textAnswer;
+               const val = r.value ?? r.valueAnswer ?? r.score;
+               const q = surveyObj.questions?.find(qq => String(qq.id) === String(qid));
+               const label = normalizeResponseLabel(q, optId, free, val);
+               if (label != null) prevAnswers[String(qid)] = label;
+             });
+
+             setAnswers(prevAnswers);
+             setExistingApplication({ foundResponses: true, responsesCount: filtered.length, status: 'completado' });
+
+             // Disable form if we have responses covering the survey
+             const totalQuestionsCount = Array.isArray(surveyObj.questions) ? surveyObj.questions.length : 0;
+             
+             console.log(`📈 Coverage: ${filtered.length} responses for ${totalQuestionsCount} questions`);
+             
+             if (totalQuestionsCount > 0 && filtered.length >= totalQuestionsCount) {
+               console.log('🔒 Disabling form - all questions answered');
+               setFormDisabled(true);
+             } else if (filtered.length > 0) {
+               // Partial responses exist - disable form to prevent duplicates
+               console.log('🔒 Disabling form - partial responses found (preventing duplicates)');
+               setFormDisabled(true);
+             }
+           }
+         } catch (err) {
+           console.warn('Could not check filtered responses fallback', err);
+         }
        }
     } catch (err) {
       console.error('Error in checkExistingSubmission:', err);
     }
-  }, [selectedEmployee, selectedSurvey]);
+  }, [selectedEmployee, selectedSurvey, expandedModule]);
   
   // When selected employee or survey changes, check for existing submission
   useEffect(() => {
