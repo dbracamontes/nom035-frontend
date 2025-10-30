@@ -503,9 +503,13 @@ export default function SurveyAnswer() {
       
       console.log('✅ All responses submitted successfully:', results);
       alert("¡Encuesta enviada exitosamente!");
-      setAnswers({});
-      setSelectedSurvey(null);
-      setSelectedEmployee("");
+      
+      // Instead of clearing the form, reload the check to show read-only mode
+      // Keep the employee and survey selected so user can see the completed state
+      await checkExistingSubmission(selectedEmployee, selectedSurvey);
+      
+      // Scroll to top to show the warning message
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       
     } catch (error) {
       console.error("💥 Error al enviar encuesta:", error);
