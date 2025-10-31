@@ -40,7 +40,22 @@ function LoginPage({ onLogin }) {
           fullWidth
           margin="normal"
         />
-        <Button type="submit" variant="contained" color="primary" fullWidth sx={{ mt: 2, background: theme => theme.palette.primary.main }} disabled={loading}>
+        <Button
+          type="submit"
+          variant="contained"
+          color="primary"
+          fullWidth
+          sx={{
+            mt: 2,
+            color: '#fff',
+            background: theme => theme.palette.primary.main,
+            transition: 'background 0.3s',
+            '&:hover': {
+              background: theme => theme.palette.secondary.main
+            }
+          }}
+          disabled={loading}
+        >
           {loading ? 'Entrando...' : 'Entrar'}
         </Button>
       </form>
