@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { 
-  getSurveyResponses, getCompanies, getSurveys, getEmployees,
-  getCompanyDashboard, getCompanyRisk, getCompanyParticipation,
-  getResponseStatistics, getParticipationStatistics, getModuleStatistics, getRiskAnalysis
+  getSurveyResponses, getCompanies, getSurveys, getEmployees
 } from "../api/nom035";
 import { 
   Box, Typography, Paper, Tab, Tabs, Grid, Card, CardContent, 
@@ -17,7 +15,6 @@ import {
   ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar, PieChart, Pie, Cell
 } from 'recharts';
 import { 
-  Dashboard as DashboardIcon, 
   TrendingUp as TrendingUpIcon,
   People as PeopleIcon,
   Assessment as AssessmentIcon,

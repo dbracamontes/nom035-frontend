@@ -1,6 +1,11 @@
 import axios from 'axios';
 
-const API_BASE = "http://localhost:8080/api";
+// Base URL configured via .env (REACT_APP_API_URL)
+const API_ROOT = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+const API_BASE = `${API_ROOT}/api`;
+
+// Obtener el usuario autenticado actual
+export const getCurrentUser = () => axios.get(`${API_BASE}/me`);
 
 // Add request interceptor to ensure proper headers
 axios.interceptors.request.use(
@@ -8,7 +13,7 @@ axios.interceptors.request.use(
     if (config.method === 'post' || config.method === 'put') {
       config.headers['Content-Type'] = 'application/json';
     }
-    console.log('Request config:', config);
+    // console.log('Request config:', config);
     return config;
   },
   (error) => Promise.reject(error)
@@ -74,7 +79,21 @@ axios.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response && (err.response.status === 401 || err.response.status === 403)) {
-      window.location.href = '/login';
+      // Don't force-redirect to /login when the failing request is the current-user check
+      // or when the user is already on the login page — this prevents redirect loops.
+      try {
+        const reqUrl = (err.config && err.config.url) ? err.config.url : '';
+        const isMeCheck = reqUrl.includes('/api/me') || reqUrl.endsWith('/api/me');
+        const pathname = (typeof window !== 'undefined' && window.location && window.location.pathname) ? window.location.pathname : '';
+        const alreadyOnLogin = pathname === '/login' || pathname === '/';
+
+        if (!isMeCheck && !alreadyOnLogin) {
+          window.location.href = '/login';
+        }
+      } catch (e) {
+        // If anything unexpected happens, avoid blocking the error — rethrow it.
+        console.error('Error handling auth redirect:', e);
+      }
     }
     return Promise.reject(err);
   }
@@ -98,7 +117,7 @@ export const createCompanySurvey = async (data) => {
   
   console.log('Payload final:', payload);
   
-  const response = await fetch('http://localhost:8080/api/company-surveys', {
+  const response = await fetch(`${API_BASE}/company-surveys`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'

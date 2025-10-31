@@ -1,0 +1,4 @@
+2025-10-29T18:23:23.966Z Using chokidar for watching
+2025-10-29T18:23:23.976Z watch-debug started. Logging to C:\Users\Lenovo\Documents\GitHub\nom035-frontend\watch-log.txt
+2025-10-29T18:23:23.977Z PID 15824
+2025-10-29T18:23:23.978Z Press Ctrl+C to stop.

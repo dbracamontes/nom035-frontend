@@ -10,30 +10,57 @@ export default function EmployeeList({ refreshFlag }) {
   const { t } = useTranslation();
   const [employees, setEmployees] = useState([]);
   const [companies, setCompanies] = useState([]);
+  const [error, setError] = useState(null);
   const [selectedCompany, setSelectedCompany] = useState("");
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const formRef = useRef();
 
   useEffect(() => {
-    getCompanies().then(res => setCompanies(res.data));
-  }, []);
+    setError(null);
+    getCompanies()
+      .then(res => setCompanies(res.data))
+      .catch(err => {
+        console.error('Error fetching companies:', err);
+        setCompanies([]);
+        setError(t('employee.list.errorFetchCompanies') || 'No se pudieron cargar las empresas.');
+      });
+  }, [t]);
 
   const fetchEmployees = useCallback(() => {
+    setError(null);
     if (selectedCompany) {
-      getEmployeesByCompany(selectedCompany).then(res => setEmployees(res.data));
+      getEmployeesByCompany(selectedCompany)
+        .then(res => setEmployees(res.data))
+        .catch(err => {
+          console.error('Error fetching employees by company:', err);
+          setEmployees([]);
+          setError(t('employee.list.errorFetchEmployees') || 'No se pudieron cargar los empleados.');
+        });
     } else {
-      getEmployees().then(res => setEmployees(res.data));
+      getEmployees()
+        .then(res => setEmployees(res.data))
+        .catch(err => {
+          console.error('Error fetching employees:', err);
+          setEmployees([]);
+          setError(t('employee.list.errorFetchEmployees') || 'No se pudieron cargar los empleados.');
+        });
     }
-  }, [selectedCompany]);
+  }, [selectedCompany, t]);
 
   useEffect(() => {
     fetchEmployees();
   }, [fetchEmployees, refreshFlag]);
 
   const handleDelete = async (id) => {
-    await deleteEmployee(id);
-    fetchEmployees();
+    setError(null);
+    try {
+      await deleteEmployee(id);
+      fetchEmployees();
+    } catch (err) {
+      console.error('Error deleting employee:', err);
+      setError(t('employee.list.errorDelete') || 'Error al eliminar el empleado.');
+    }
   };
 
   const handleEdit = (employee) => {
@@ -73,6 +100,7 @@ export default function EmployeeList({ refreshFlag }) {
           <MenuItem key={company.id} value={company.id}>{company.name}</MenuItem>
         ))}
       </TextField>
+      {error && <Typography color="error" sx={{ mb: 2 }}>{error}</Typography>}
       <List>
         {employees.map(e => (
           <ListItem key={e.id}

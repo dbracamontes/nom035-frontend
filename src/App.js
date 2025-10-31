@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import { Box, CssBaseline, Drawer, Toolbar, AppBar, Typography, List, ListItem, ListItemIcon, ListItemText } from "@mui/material";
+import React, { useState, useContext } from "react";
+import { Box, CssBaseline, Drawer, Toolbar, AppBar, Typography, List, ListItem, ListItemIcon, ListItemText, ThemeProvider } from "@mui/material";
+import theme from "./theme";
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
 import AssignmentIcon from '@mui/icons-material/Assignment';
@@ -19,14 +20,20 @@ import SurveyResponsesTable from "./components/SurveyResponsesTable";
 import EmployeesPage from "./components/EmployeesPage";
 import CompanySurveyPage from "./components/CompanySurveyPage";
 import LanguageSelector from "./components/LanguageSelector";
+import LoginPage from "./components/LoginPage";
 import { useTranslation } from 'react-i18next';
+import { UserContext } from "./context/UserContext";
+import { Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
+
 
 const drawerWidth = 220;
 
 export default function App() {
   const { t } = useTranslation();
+  const { user, login, loading } = useContext(UserContext);
   const [selected, setSelected] = useState(0);
-
+  const location = useLocation();
+  // Opciones de menú
   const menuOptions = [
     { text: t("navigation.landing"), icon: <DashboardIcon />, component: <LandingPage /> },
     { text: t("navigation.dashboard"), icon: <DashboardIcon />, component: <Dashboard /> },
@@ -38,66 +45,86 @@ export default function App() {
     { text: t("navigation.surveyResponses"), icon: <TableChartIcon />, component: <SurveyResponsesTable /> }
   ];
 
+  // Si está cargando, mostrar pantalla de carga
+  if (loading) return <div>Cargando...</div>;
+
+  // Si no está autenticado y no está en /login, redirigir a /login
+  if (!user && location.pathname !== "/login") {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Si está autenticado y está en /login, redirigir a home
+  if (user && location.pathname === "/login") {
+    return <Navigate to="/" replace />;
+  }
+
   return (
-    <Box sx={{ display: "flex" }}>
-      <CssBaseline />
-      <AppBar 
-        position="fixed" 
-        sx={{ 
-          zIndex: 1201,
-          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%)',
-          boxShadow: '0 8px 32px rgba(99, 102, 241, 0.2)',
-          backdropFilter: 'blur(10px)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
-        }}
-      >
-        <Toolbar>
-          <Typography 
-            variant="h6" 
-            noWrap 
-            component="div" 
-            sx={{ 
-              flexGrow: 1,
-              fontWeight: 600,
-              letterSpacing: '0.5px',
-              background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
-            }}
-          >
-            {t("app.title")}
-          </Typography>
-          <LanguageSelector />
-        </Toolbar>
-      </AppBar>
-      <Drawer
-        variant="permanent"
-        sx={{
-          width: drawerWidth,
-          [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: "border-box" }
-        }}
-      >
-        <Toolbar />
-        <List>
-          {menuOptions.map((option, idx) => (
-            <ListItem
-              button
-              key={option.text}
-              selected={selected === idx}
-              onClick={() => setSelected(idx)}
+    <ThemeProvider theme={theme}>
+      <Routes>
+        <Route path="/login" element={<LoginPage onLogin={login} />} />
+        <Route path="/*" element={
+          <Box sx={{ display: "flex" }}>
+            <CssBaseline />
+            <AppBar 
+              position="fixed" 
+              sx={{ 
+                zIndex: 1201,
+                background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.light} 50%, ${theme.palette.primary.main} 100%)`,
+                boxShadow: '0 8px 32px rgba(99, 102, 241, 0.2)',
+                backdropFilter: 'blur(10px)',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+              }}
             >
-              <ListItemIcon>{option.icon}</ListItemIcon>
-              <ListItemText primary={option.text} />
-            </ListItem>
-          ))}
-        </List>
-      </Drawer>
-      <Box component="main" sx={{ flexGrow: 1, bgcolor: "#f5f5f5", p: 3, minHeight: "100vh" }}>
-        <Toolbar />
-        {menuOptions[selected].component}
-      </Box>
-    </Box>
+              <Toolbar>
+                <Typography 
+                  variant="h6" 
+                  noWrap 
+                  component="div" 
+                  sx={{ 
+                    flexGrow: 1,
+                    fontWeight: 600,
+                    letterSpacing: '0.5px',
+                    background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+                  }}
+                >
+                  {t("app.title")}
+                </Typography>
+                <LanguageSelector />
+              </Toolbar>
+            </AppBar>
+            <Drawer
+              variant="permanent"
+              sx={{
+                width: drawerWidth,
+                [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: "border-box" }
+              }}
+            >
+              <Toolbar />
+              <List>
+                {menuOptions.map((option, idx) => (
+                  <ListItem
+                    button
+                    key={option.text}
+                    selected={selected === idx}
+                    onClick={() => setSelected(idx)}
+                  >
+                    <ListItemIcon>{option.icon}</ListItemIcon>
+                    <ListItemText primary={option.text} />
+                  </ListItem>
+                ))}
+              </List>
+            </Drawer>
+            <Box component="main" sx={{ flexGrow: 1, bgcolor: theme.palette.background.default, p: 3, minHeight: "100vh" }}>
+              <Toolbar />
+              {menuOptions[selected].component}
+            </Box>
+          </Box>
+        } />
+      </Routes>
+    </ThemeProvider>
   );
 }

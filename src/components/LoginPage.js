@@ -1,13 +1,22 @@
 import React, { useState } from 'react';
 import { Button, TextField, Paper, Typography, Alert } from '@mui/material';
 
-function LoginPage({ onLogin, error }) {
+
+function LoginPage({ onLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onLogin(username, password);
+    setLoading(true);
+    setError(null);
+    const result = await onLogin(username, password);
+    setLoading(false);
+    if (!result.success) {
+      setError(result.error || 'Error de autenticación');
+    }
   };
 
   return (
@@ -31,8 +40,8 @@ function LoginPage({ onLogin, error }) {
           fullWidth
           margin="normal"
         />
-        <Button type="submit" variant="contained" color="primary" fullWidth sx={{ mt: 2 }}>
-          Entrar
+        <Button type="submit" variant="contained" color="primary" fullWidth sx={{ mt: 2, background: theme => theme.palette.primary.main }} disabled={loading}>
+          {loading ? 'Entrando...' : 'Entrar'}
         </Button>
       </form>
     </Paper>
