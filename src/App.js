@@ -19,6 +19,7 @@ import SurveyResults from "./components/SurveyResults";
 import SurveyResponsesTable from "./components/SurveyResponsesTable";
 import EmployeesPage from "./components/EmployeesPage";
 import CompanySurveyPage from "./components/CompanySurveyPage";
+import CompaniesPage from "./components/CompaniesPage";
 import LanguageSelector from "./components/LanguageSelector";
 import LoginPage from "./components/LoginPage";
 import { useTranslation } from 'react-i18next';
@@ -37,6 +38,7 @@ export default function App() {
   const menuOptions = [
     { text: t("navigation.landing"), icon: <DashboardIcon />, component: <LandingPage /> },
     { text: t("navigation.dashboard"), icon: <DashboardIcon />, component: <Dashboard /> },
+    { text: t("navigation.companies"), icon: <BusinessIcon />, component: <CompaniesPage /> },
     { text: t("navigation.employees"), icon: <PeopleIcon />, component: <EmployeesPage /> },
     { text: t("navigation.surveys"), icon: <AssignmentIcon />, component: <><SurveyForm /><SurveyList /></> },
     { text: t("navigation.companySurveys"), icon: <BusinessIcon />, component: <CompanySurveyPage /> },

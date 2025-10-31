@@ -5,6 +5,7 @@
   "navigation": {
     "landing": "Inicio",
     "dashboard": "Panel de Control",
+    "companies": "Empresas",
     "employees": "Empleados",
     "surveys": "Encuestas",
     "companySurveys": "Encuestas de Empresa",
@@ -50,6 +51,16 @@
     "page": {
       "addEmployee": "Agregar Empleado",
       "editEmployee": "Editar Empleado"
+    }
+  },
+  "companies": {
+    "title": "Gestión de Empresas",
+    "list": {
+      "title": "Lista de Empresas"
+    },
+    "form": {
+      "createTitle": "Crear Nueva Empresa",
+      "editTitle": "Editar Empresa"
     }
   },
   "survey": {
