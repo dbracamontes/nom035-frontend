@@ -24,7 +24,7 @@ export const getEmployees = () => axios.get(`${API_BASE}/employees`);
 export const getEmployeeById = id => axios.get(`${API_BASE}/employees/${id}`);
 export const getEmployeesByCompany = companyId => axios.get(`${API_BASE}/employees/company/${companyId}`);
 export const createEmployee = data => {
-  return axios.post(`${API_BASE}/employees`, JSON.stringify(data), {
+  return axios.post(`${API_BASE}/employees`, data, {
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -83,7 +83,7 @@ axios.interceptors.response.use(
       // or when the user is already on the login page — this prevents redirect loops.
       try {
         const reqUrl = (err.config && err.config.url) ? err.config.url : '';
-        const isMeCheck = reqUrl.includes('/api/me') || reqUrl.endsWith('/api/me');
+  const isMeCheck = reqUrl.includes('/api/users/me') || reqUrl.endsWith('/api/users/me');
         const pathname = (typeof window !== 'undefined' && window.location && window.location.pathname) ? window.location.pathname : '';
         const alreadyOnLogin = pathname === '/login' || pathname === '/';
 

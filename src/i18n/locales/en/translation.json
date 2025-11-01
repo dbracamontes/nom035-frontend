@@ -37,6 +37,10 @@
       "company": "Company",
       "validation": {
         "nameEmailCompanyRequired": "Name, Email, and Company are required."
+      },
+      "error": {
+        "generic": "An error occurred while creating the employee. Please try again or contact the administrator.",
+        "forbidden": "Access denied: you do not have sufficient permissions for this action."
       }
     },
     "list": {

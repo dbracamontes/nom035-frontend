@@ -38,6 +38,10 @@
       "company": "Empresa",
       "validation": {
         "nameEmailCompanyRequired": "Nombre, Email y Empresa son requeridos."
+      },
+      "error": {
+        "generic": "Ocurrió un error al crear el empleado. Intenta de nuevo o contacta al administrador.",
+        "forbidden": "Acceso denegado: no tienes permisos suficientes para esta acción."
       }
     },
     "list": {

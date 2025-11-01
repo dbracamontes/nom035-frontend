@@ -42,13 +42,23 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit }, ref) => {
     // Prepare payload without companyId
     const { companyId, ...rest } = form;
     const payload = { ...rest, company: { id: companyId } };
-    if (isEdit && employee && employee.id) {
-      await updateEmployee(employee.id, payload);
-    } else {
-      await createEmployee(payload);
+    try {
+      if (isEdit && employee && employee.id) {
+        await updateEmployee(employee.id, payload);
+      } else {
+        await createEmployee(payload);
+      }
+      setForm({ name: "", department: "", position: "", email: "", companyId: companies[0]?.id || "" });
+      if (onComplete) onComplete();
+    } catch (err) {
+      let msg = t("employee.form.error.generic");
+      if (err && err.response && err.response.data && err.response.data.error) {
+        msg = err.response.data.error;
+      } else if (err && err.response && err.response.status === 403) {
+        msg = t("employee.form.error.forbidden", "Acceso denegado: no tienes permisos suficientes para esta acción.");
+      }
+      alert(msg);
     }
-    setForm({ name: "", department: "", position: "", email: "", companyId: companies[0]?.id || "" });
-    if (onComplete) onComplete();
   };
 
   useImperativeHandle(ref, () => ({
