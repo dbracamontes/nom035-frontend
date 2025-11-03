@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { getEmployees, getEmployeesByCompany, getCompanies, deleteEmployee } from "../api/nom035";
 import EmployeeForm from "./EmployeeForm";
-import { Paper, Typography, List, ListItem, ListItemText, IconButton, MenuItem, TextField, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Button } from "@mui/material";
+import { Paper, Typography, List, ListItem, ListItemText, IconButton, MenuItem, TextField, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Button, Snackbar, Alert } from "@mui/material";
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import { useTranslation } from 'react-i18next';
@@ -14,7 +14,11 @@ export default function EmployeeList({ refreshFlag }) {
   const [selectedCompany, setSelectedCompany] = useState("");
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [successMsg, setSuccessMsg] = useState("");
   const formRef = useRef();
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState(null);
 
   useEffect(() => {
     setError(null);
@@ -52,15 +56,30 @@ export default function EmployeeList({ refreshFlag }) {
     fetchEmployees();
   }, [fetchEmployees, refreshFlag]);
 
-  const handleDelete = async (id) => {
+  const handleDelete = async () => {
+    if (!employeeToDelete) return;
     setError(null);
     try {
-      await deleteEmployee(id);
+      await deleteEmployee(employeeToDelete);
       fetchEmployees();
+      setSuccessMsg(t('employee.list.successDelete', 'Empleado eliminado exitosamente'));
+      setSuccessOpen(true);
     } catch (err) {
       console.error('Error deleting employee:', err);
       setError(t('employee.list.errorDelete') || 'Error al eliminar el empleado.');
     }
+    setConfirmDeleteOpen(false);
+    setEmployeeToDelete(null);
+  };
+
+  const handleDeleteClick = (id) => {
+    setEmployeeToDelete(id);
+    setConfirmDeleteOpen(true);
+  };
+
+  const handleCancelDelete = () => {
+    setConfirmDeleteOpen(false);
+    setEmployeeToDelete(null);
   };
 
   const handleEdit = (employee) => {
@@ -77,6 +96,8 @@ export default function EmployeeList({ refreshFlag }) {
     setDialogOpen(false);
     setEditingEmployee(null);
     fetchEmployees();
+    setSuccessMsg(t('employee.list.successEdit', 'Empleado editado exitosamente'));
+    setSuccessOpen(true);
   };
 
   const handleGuardar = () => {
@@ -109,7 +130,7 @@ export default function EmployeeList({ refreshFlag }) {
                 <IconButton edge="end" aria-label="edit" onClick={() => handleEdit(e)}>
                   <EditIcon />
                 </IconButton>
-                <IconButton edge="end" aria-label="delete" onClick={() => handleDelete(e.id)}>
+                <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteClick(e.id)}>
                   <DeleteIcon />
                 </IconButton>
               </Stack>
@@ -131,6 +152,18 @@ export default function EmployeeList({ refreshFlag }) {
         <DialogActions>
           <Button onClick={handleDialogClose}>{t("common.cancel")}</Button>
           <Button onClick={handleGuardar} variant="contained">{t("common.save")}</Button>
+        </DialogActions>
+      </Dialog>
+      <Snackbar open={successOpen} autoHideDuration={3000} onClose={() => setSuccessOpen(false)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        <Alert onClose={() => setSuccessOpen(false)} severity="success" sx={{ width: '100%' }}>
+          {successMsg}
+        </Alert>
+      </Snackbar>
+      <Dialog open={confirmDeleteOpen} onClose={handleCancelDelete}>
+        <DialogTitle>{t('employee.list.confirmDeleteTitle', '¿Está seguro de borrar este empleado?')}</DialogTitle>
+        <DialogActions>
+          <Button onClick={handleCancelDelete}>{t('common.cancel', 'Cancelar')}</Button>
+          <Button onClick={handleDelete} color="success" variant="contained">{t('common.confirm', 'Confirmar')}</Button>
         </DialogActions>
       </Dialog>
     </Paper>
