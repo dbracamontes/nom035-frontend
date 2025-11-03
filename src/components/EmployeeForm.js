@@ -1,5 +1,5 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from "react";
-import { TextField, Box, MenuItem } from "@mui/material";
+import { TextField, Box, MenuItem, Snackbar, Alert } from "@mui/material";
 import { createEmployee, updateEmployee, getCompanies } from "../api/nom035";
 import { useTranslation } from 'react-i18next';
 
@@ -49,7 +49,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit }, ref) => {
         await createEmployee(payload);
       }
       setForm({ name: "", department: "", position: "", email: "", companyId: companies[0]?.id || "" });
-      if (onComplete) onComplete();
+  if (onComplete) onComplete();
     } catch (err) {
       let msg = t("employee.form.error.generic");
       if (err && err.response && err.response.data && err.response.data.error) {
@@ -58,7 +58,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit }, ref) => {
         msg = t("employee.form.error.forbidden", "Acceso denegado: no tienes permisos suficientes para esta acción.");
       }
       alert(msg);
-    }
+  }
   };
 
   useImperativeHandle(ref, () => ({
@@ -66,26 +66,28 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit }, ref) => {
   }));
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
-      <TextField label={t("employee.form.name")} name="name" value={form.name} onChange={handleChange} required fullWidth sx={{ mb: 2 }} />
-      <TextField label={t("employee.form.department")} name="department" value={form.department} onChange={handleChange} required fullWidth sx={{ mb: 2 }} />
-      <TextField label={t("employee.form.position")} name="position" value={form.position} onChange={handleChange} fullWidth sx={{ mb: 2 }} />
-      <TextField label={t("employee.form.email")} name="email" value={form.email} onChange={handleChange} required fullWidth sx={{ mb: 2 }} />
-      <TextField
-        select
-        label={t("employee.form.company")}
-        name="companyId"
-        value={form.companyId}
-        onChange={handleChange}
-        required
-        sx={{ minWidth: 120, mb: 2 }}
-        fullWidth
-      >
-        {companies.map(company => (
-          <MenuItem key={company.id} value={company.id}>{company.name}</MenuItem>
-        ))}
-      </TextField>
-    </Box>
+    <>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+        <TextField label={t("employee.form.name")} name="name" value={form.name} onChange={handleChange} required fullWidth sx={{ mb: 2 }} />
+        <TextField label={t("employee.form.department")} name="department" value={form.department} onChange={handleChange} required fullWidth sx={{ mb: 2 }} />
+        <TextField label={t("employee.form.position")} name="position" value={form.position} onChange={handleChange} fullWidth sx={{ mb: 2 }} />
+        <TextField label={t("employee.form.email")} name="email" value={form.email} onChange={handleChange} required fullWidth sx={{ mb: 2 }} />
+        <TextField
+          select
+          label={t("employee.form.company")}
+          name="companyId"
+          value={form.companyId}
+          onChange={handleChange}
+          required
+          sx={{ minWidth: 120, mb: 2 }}
+          fullWidth
+        >
+          {companies.map(company => (
+            <MenuItem key={company.id} value={company.id}>{company.name}</MenuItem>
+          ))}
+        </TextField>
+      </Box>
+    </>
   );
 });
 
