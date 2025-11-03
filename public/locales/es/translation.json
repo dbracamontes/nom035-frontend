@@ -5,6 +5,7 @@
   "navigation": {
     "landing": "Inicio",
     "dashboard": "Panel de Control",
+    "companies": "Empresas",
     "employees": "Empleados",
     "surveys": "Encuestas",
     "companySurveys": "Encuestas de Empresa",
@@ -26,6 +27,21 @@
   "total": "Total",
   "surveyStatusCounts": "Conteo de Estados de Encuestas",
   "surveys": "Encuestas"
+  },
+  "companies": {
+    "title": "Gestión de Empresas",
+    "form": {
+      "createTitle": "Crear Nueva Empresa",
+      "editTitle": "Editar Empresa",
+      "name": "Nombre",
+      "taxId": "RFC",
+      "address": "Dirección",
+      "phone": "Teléfono",
+      "email": "Email"
+    },
+    "list": {
+      "title": "Lista de Empresas"
+    }
   },
   "employee": {
     "form": {

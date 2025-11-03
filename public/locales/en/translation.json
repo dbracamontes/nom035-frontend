@@ -5,6 +5,7 @@
   "navigation": {
   "landing": "Landing",
   "dashboard": "Dashboard",
+  "companies": "Companies",
   "employees": "Employees",
   "surveys": "Surveys",
   "companySurveys": "Company Surveys",
@@ -26,6 +27,21 @@
     "total": "Total",
     "surveyStatusCounts": "Survey Status Counts",
     "surveys": "Surveys"
+  },
+  "companies": {
+    "title": "Company Management",
+    "form": {
+      "createTitle": "Create New Company",
+      "editTitle": "Edit Company",
+      "name": "Name",
+      "taxId": "Tax ID",
+      "address": "Address",
+      "phone": "Phone",
+      "email": "Email"
+    },
+    "list": {
+      "title": "Companies List"
+    }
   },
   "employee": {
     "form": {
