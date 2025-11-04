@@ -32,6 +32,7 @@ export default function EmployeeSurveyAnswer() {
   const [existingApplication, setExistingApplication] = useState(null);
   const [formDisabled, setFormDisabled] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [completedSurveys, setCompletedSurveys] = useState({}); // { [surveyId]: true }
 
   const getAnswer = (qid) => answers[String(qid)] || "";
 
@@ -94,25 +95,70 @@ export default function EmployeeSurveyAnswer() {
         const surveysRes = await getSurveys();
         const surveysData = surveysRes.data || [];
 
-        const surveysWithQuestions = await Promise.all(surveysData.map(async (s) => {
-          try {
-            const qRes = await getSurveyWithQuestions(s.id);
-            const qs = Array.isArray(qRes.data) ? qRes.data : (qRes.data?.questions || []);
-            return { ...s, questions: qs };
-          } catch (err) {
+        const surveysWithQuestions = await Promise.all(
+          surveysData.map(async (s) => {
             try {
-              const sRes = await getSurveyById(s.id);
-              const sd = sRes.data || {};
-              const qs = sd.questions || [];
+              const qRes = await getSurveyWithQuestions(s.id);
+              const qs = Array.isArray(qRes.data) ? qRes.data : (qRes.data?.questions || []);
               return { ...s, questions: qs };
-            } catch (err2) {
-              return { ...s, questions: s.questions || [] };
+            } catch (err) {
+              try {
+                const sRes = await getSurveyById(s.id);
+                const sd = sRes.data || {};
+                const qs = sd.questions || [];
+                return { ...s, questions: qs };
+              } catch (err2) {
+                return { ...s, questions: s.questions || [] };
+              }
             }
-          }
-        }));
+          })
+        );
 
         console.log('Surveys loaded with questions:', surveysWithQuestions);
         setSurveys(surveysWithQuestions);
+
+        // Compute completed surveys for current employee
+        try {
+          const appsRes = await getSurveyApplications();
+          const apps = appsRes.data || [];
+          const csIds = apps.map(a => a.companySurveyId ?? a.company_survey_id ?? a.companySurvey ?? a.company_survey)
+                            .filter(Boolean)
+                            .map(id => parseInt(id));
+          const uniqueCsIds = [...new Set(csIds)];
+          const csIdToSurveyId = {};
+          if (uniqueCsIds.length > 0) {
+            await Promise.all(uniqueCsIds.map(async (csId) => {
+              try {
+                const csRes = await getCompanySurveyById(csId);
+                const cs = csRes.data || csRes;
+                csIdToSurveyId[csId] = cs.surveyId ?? cs.survey_id ?? (cs.survey?.id);
+              } catch (err) {
+                console.warn('Could not fetch companySurvey for id', csId, err?.message || err);
+              }
+            }));
+          }
+
+          const completedMap = {};
+          const toLower = (s) => (s || '').toString().toLowerCase();
+          apps.forEach(a => {
+            const st = toLower(a.status);
+            const completed = !!a.completedAt || st === 'completado' || st === 'completada' || st === 'completed';
+            if (!completed) return;
+            let appSurveyId = a.surveyId ?? a.survey_id ?? null;
+            if (!appSurveyId) {
+              const csId = a.companySurveyId ?? a.company_survey_id ?? a.companySurvey ?? a.company_survey;
+              const parsed = parseInt(csId);
+              if (!isNaN(parsed)) appSurveyId = csIdToSurveyId[parsed] ?? null;
+            }
+            if (appSurveyId != null) {
+              const sid = parseInt(appSurveyId);
+              if (!isNaN(sid)) completedMap[sid] = true;
+            }
+          });
+          setCompletedSurveys(completedMap);
+        } catch (e) {
+          console.warn('Could not compute completed surveys:', e?.message || e);
+        }
       } catch (err) {
         console.error('Error loading surveys:', err);
         setSurveys([]);
@@ -125,7 +171,7 @@ export default function EmployeeSurveyAnswer() {
   const checkExistingSubmission = useCallback(async (surveyObj = selectedSurvey) => {
     setExistingApplication(null);
     // NO resetear formDisabled aquí - solo se debe establecer en true si está completada
-    // setFormDisabled(false); ← REMOVIDO
+    // setFormDisabled(false); REMOVIDO
 
     if (!surveyObj) return;
 
@@ -148,7 +194,8 @@ export default function EmployeeSurveyAnswer() {
         }));
       }
 
-      const match = apps.find(a => {
+      // Recolectar TODAS las apps para esta encuesta y seleccionar la más relevante
+      const matches = apps.filter(a => {
         let appSurveyId = a.surveyId ?? a.survey_id ?? null;
         const csId = a.companySurveyId ?? a.company_survey_id ?? a.companySurvey ?? a.company_survey;
         if (!appSurveyId && csId) {
@@ -162,6 +209,29 @@ export default function EmployeeSurveyAnswer() {
           return false;
         }
       });
+
+      // Elegir preferentemente una app completada; si no, la de id más alto
+      const toLower = (s) => (s || '').toString().toLowerCase();
+      const isCompleted = (a) => {
+        const st = toLower(a.status);
+        return !!a.completedAt || st === 'completado' || st === 'completada' || st === 'completed';
+      };
+
+      let match = null;
+      if (matches.length > 0) {
+        const completedMatches = matches.filter(isCompleted)
+          .sort((a, b) => {
+            const ad = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+            const bd = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+            if (bd !== ad) return bd - ad; // más reciente primero
+            return (b.id ?? 0) - (a.id ?? 0);
+          });
+        if (completedMatches.length > 0) {
+          match = completedMatches[0];
+        } else {
+          match = matches.slice().sort((a, b) => (b.id ?? 0) - (a.id ?? 0))[0];
+        }
+      }
 
       if (match) {
         setExistingApplication(match);
@@ -285,6 +355,10 @@ export default function EmployeeSurveyAnswer() {
       console.log('🔒 Setting formDisabled to true...');
       setShowSuccessMessage(true);
       setFormDisabled(true);
+      // Marcar encuesta seleccionada como completada para mostrar distintivo en el dropdown
+      if (selectedSurvey?.id) {
+        setCompletedSurveys(prev => ({ ...prev, [selectedSurvey.id]: true }));
+      }
       
       // Paso 4: Recargar la información de la encuesta para reflejar el estado completado
       console.log('🔄 Reloading survey application data...');
@@ -363,10 +437,13 @@ export default function EmployeeSurveyAnswer() {
                       {survey.description}
                     </Typography>
                   )}
-                  <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+                  <Box sx={{ display: 'flex', gap: 1, mt: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
                     <Chip label={`${survey.questions?.length || 0} preguntas`} size="small" color="primary" variant="outlined" />
                     {survey.guideType && (
                       <Chip label={survey.guideType} size="small" color="secondary" variant="outlined" />
+                    )}
+                    {completedSurveys[survey.id] && (
+                      <Chip label="Completada" size="small" color="success" variant="filled" />
                     )}
                   </Box>
                 </Box>
