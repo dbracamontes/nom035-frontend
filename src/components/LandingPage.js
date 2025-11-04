@@ -17,16 +17,7 @@ export default function LandingPage() {
         <Typography variant="body1" sx={{ mt: 2 }}>
           {t("landing.platformDescription")}
         </Typography>
-        {user && (
-          <Button 
-            variant="contained" 
-            color="primary" 
-            sx={{ mt: 3, color: '#fff' }} 
-            onClick={logout}
-          >
-            Cerrar sesión
-          </Button>
-        )}
+        {/* Botón de cerrar sesión removido, ahora está en la AppBar */}
       </Paper>
     </Box>
   );

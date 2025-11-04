@@ -77,6 +77,17 @@ export default function CompanySurveyList({ refreshFlag }) {
 
   const formatDate = (dateString) => {
     if (!dateString) return "No especificada";
+    // Si el formato es YYYY-MM-DD, parsear manualmente como local para evitar desfase por zona horaria
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      const [year, month, day] = dateString.split('-');
+      const date = new Date(Number(year), Number(month) - 1, Number(day));
+      return date.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+    // Si no, usar el parseo estándar
     return new Date(dateString).toLocaleDateString('es-ES', {
       year: 'numeric',
       month: 'short',
@@ -413,46 +424,51 @@ export default function CompanySurveyList({ refreshFlag }) {
 
       {/* Delete Confirmation Dialog */}
       <Dialog 
-        open={deleteDialog.open} 
+        open={deleteDialog.open}
         onClose={() => setDeleteDialog({ open: false, survey: null })}
+        maxWidth="xs"
+        fullWidth
         PaperProps={{
           sx: {
             background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
             borderRadius: 3,
             border: '1px solid rgba(99, 102, 241, 0.1)',
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)'
+            boxShadow: '0 8px 32px rgba(99, 102, 241, 0.08)'
           }
         }}
       >
         <DialogTitle sx={{
-          background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
           color: 'white',
-          fontWeight: 600,
-          display: 'flex',
-          alignItems: 'center'
+          fontWeight: 700,
+          fontSize: '1.1rem',
+          textAlign: 'center',
+          py: 1.5
         }}>
-          ⚠️ Confirmar Eliminación
+          Confirmar eliminación de encuesta
         </DialogTitle>
         <DialogContent sx={{ p: 3 }}>
-          <Typography sx={{ color: '#475569', lineHeight: 1.6 }}>
+          <Typography sx={{ color: '#475569', fontWeight: 500, fontSize: '0.98rem', textAlign: 'center', mb: 1.2 }}>
             ¿Está seguro de que desea eliminar la encuesta <strong>#{deleteDialog.survey?.id}</strong>?
-            <br />
+          </Typography>
+          <Typography sx={{ color: '#6366f1', fontWeight: 500, textAlign: 'center', mb: 0.7, fontSize: '0.95rem' }}>
             <strong>Empresa:</strong> {deleteDialog.survey && getCompanyName(deleteDialog.survey.companyId)}
-            <br />
-            <br />
-            <Typography component="span" sx={{ color: '#ef4444', fontWeight: 500 }}>
-              ⚠️ Esta acción no se puede deshacer.
-            </Typography>
+          </Typography>
+          <Typography sx={{ color: '#ef4444', fontWeight: 600, textAlign: 'center', fontSize: '0.93rem' }}>
+            Esta acción no se puede deshacer.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ p: 3, pt: 0 }}>
+        <DialogActions sx={{ p: 3, pt: 0, justifyContent: 'center' }}>
           <Button 
             onClick={() => setDeleteDialog({ open: false, survey: null })}
             sx={{
               background: 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
               color: 'white',
-              fontWeight: 500,
-              px: 3,
+              fontWeight: 600,
+              fontSize: '1rem',
+              px: 4,
+              borderRadius: 2,
+              boxShadow: '0 2px 8px rgba(99, 102, 241, 0.08)',
               '&:hover': {
                 background: 'linear-gradient(135deg, #4b5563 0%, #374151 100%)'
               }
@@ -463,16 +479,19 @@ export default function CompanySurveyList({ refreshFlag }) {
           <Button 
             onClick={() => handleDelete(deleteDialog.survey?.id)}
             sx={{
-              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
               color: 'white',
-              fontWeight: 500,
-              px: 3,
+              fontWeight: 600,
+              fontSize: '1rem',
+              px: 4,
+              borderRadius: 2,
+              boxShadow: '0 2px 8px rgba(99, 102, 241, 0.08)',
               '&:hover': {
-                background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'
+                background: 'linear-gradient(135deg, #5b5bd6 0%, #7c3aed 100%)'
               }
             }}
           >
-            🗑️ Eliminar
+            Confirmar
           </Button>
         </DialogActions>
       </Dialog>

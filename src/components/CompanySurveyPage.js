@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Box, Tab, Tabs, Typography } from "@mui/material";
+import { Box, Tab, Tabs, Typography, Snackbar, Alert } from "@mui/material";
 import CompanySurveyForm from "./CompanySurveyForm";
 import CompanySurveyList from "./CompanySurveyList";
 import { useTranslation } from 'react-i18next';
@@ -19,6 +19,7 @@ function TabPanel({ children, value, index, ...other }) {
 }
 
 export default function CompanySurveyPage() {
+  const [successOpen, setSuccessOpen] = useState(false);
   const { t } = useTranslation();
   const [tabValue, setTabValue] = useState(0);
   const [refreshFlag, setRefreshFlag] = useState(0);
@@ -29,8 +30,11 @@ export default function CompanySurveyPage() {
 
   const handleSurveyCreated = () => {
     setRefreshFlag(prev => prev + 1);
-    // Cambiar a la pestaña de lista después de crear
-    setTabValue(1);
+    setSuccessOpen(true);
+    // Esperar 1800ms antes de cambiar de pestaña para mostrar el mensaje
+    setTimeout(() => {
+      setTabValue(1);
+    }, 1800);
   };
 
   return (
@@ -99,6 +103,11 @@ export default function CompanySurveyPage() {
       
         <TabPanel value={tabValue} index={0}>
           <CompanySurveyForm onCreated={handleSurveyCreated} />
+  <Snackbar open={successOpen} autoHideDuration={5000} onClose={() => setSuccessOpen(false)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        <Alert onClose={() => setSuccessOpen(false)} severity="success" sx={{ width: '100%' }}>
+          {t("companySurvey.form.success", "Encuesta de empresa creada exitosamente")}
+        </Alert>
+      </Snackbar>
         </TabPanel>
         
         <TabPanel value={tabValue} index={1}>

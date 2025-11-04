@@ -104,7 +104,6 @@ export const getCompanySurveysByCompany = companyId => axios.get(`${API_BASE}/co
 export const getCompanySurveysBySurvey = surveyId => axios.get(`${API_BASE}/company-surveys/survey/${surveyId}`);
 export const createCompanySurvey = async (data) => {
   console.log('Enviando datos a company-surveys:', data);
-  
   const payload = {
     companyId: data.companyId,
     surveyId: data.surveyId,
@@ -114,22 +113,23 @@ export const createCompanySurvey = async (data) => {
     completionRate: data.completionRate || 0.0,
     notes: data.notes || "Desde frontend"
   };
-  
   console.log('Payload final:', payload);
-  
-  const response = await fetch(`${API_BASE}/company-surveys`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
-  
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+  const auth = getAuthHeader();
+  try {
+    const response = await axios.post(`${API_BASE}/company-surveys`, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...auth
+      }
+    });
+    return response.data;
+  } catch (err) {
+    if (err.response) {
+      throw new Error(`HTTP error! status: ${err.response.status}`);
+    } else {
+      throw err;
+    }
   }
-  
-  return response.json();
 };
 export const updateCompanySurvey = (id, data) => axios.put(`${API_BASE}/company-surveys/${id}`, data);
 export const deleteCompanySurvey = id => axios.delete(`${API_BASE}/company-surveys/${id}`);

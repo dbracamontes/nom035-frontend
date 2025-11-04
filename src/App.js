@@ -1,5 +1,5 @@
 import React, { useState, useContext } from "react";
-import { Box, CssBaseline, Drawer, Toolbar, AppBar, Typography, List, ListItem, ListItemIcon, ListItemText, ThemeProvider } from "@mui/material";
+import { Box, CssBaseline, Drawer, Toolbar, AppBar, Typography, List, ListItem, ListItemIcon, ListItemText, ThemeProvider, IconButton, Button, Avatar, Stack } from "@mui/material";
 import theme from "./theme";
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
@@ -31,7 +31,7 @@ const drawerWidth = 220;
 
 export default function App() {
   const { t } = useTranslation();
-  const { user, login, loading } = useContext(UserContext);
+  const { user, login, logout, loading } = useContext(UserContext);
   const [selected, setSelected] = useState(0);
   const location = useLocation();
   // Opciones de menú
@@ -95,6 +95,25 @@ export default function App() {
                 >
                   {t("app.title")}
                 </Typography>
+                {user && (
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Avatar sx={{ bgcolor: '#06b6d4', color: '#fff', width: 32, height: 32, fontSize: 16 }}>
+                      {user.name ? user.name[0] : (user.username ? user.username[0] : (user.email ? user.email[0] : 'U'))}
+                    </Avatar>
+                    <Box sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'right' }}>
+                      <Typography variant="body2" sx={{ fontWeight: 500, color: '#fff' }}>
+                        {user.name || user.username || user.email || 'Usuario'}
+                      </Typography>
+                      {user.email && (
+                        <Typography variant="caption" sx={{ color: '#e0e7ef' }}>{user.email}</Typography>
+                      )}
+                    </Box>
+                    <Button color="inherit" onClick={logout} sx={{ ml: 1, fontWeight: 500 }}>
+                      {t('common.logout', 'Cerrar sesión')}
+                    </Button>
+                  </Stack>
+                )}
+                {/* Solo el selector de idioma en la AppBar */}
                 <LanguageSelector />
               </Toolbar>
             </AppBar>

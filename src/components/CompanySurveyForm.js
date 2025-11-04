@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { 
-  TextField, Button, Box, MenuItem, Typography, 
+import {
+  TextField, Button, Box, MenuItem, Typography,
   FormControlLabel, Checkbox, List, ListItem, ListItemText,
   Dialog, DialogTitle, DialogContent, DialogActions, Grid,
-  Chip, Stack, Divider
+  Chip, Stack, Divider, Snackbar, Alert
 } from "@mui/material";
+import { useTranslation } from 'react-i18next';
 import { createCompanySurvey, getCompanies, getEmployeesByCompany, getSurveys, getSurveyById } from "../api/nom035";
 import { getQuestionsByGuideType } from "../data/nom035Questions";
 
@@ -73,6 +74,7 @@ export default function CompanySurveyForm({ onCreated }) {
   const [companies, setCompanies] = useState([]);
   const [surveys, setSurveys] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const { t } = useTranslation();
   
   // Form state
   const [selectedCompany, setSelectedCompany] = useState("");
@@ -127,19 +129,33 @@ export default function CompanySurveyForm({ onCreated }) {
     }
   };
 
+  const [errorOpen, setErrorOpen] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!selectedCompany || !selectedSurvey) {
       alert("Por favor complete todos los campos requeridos");
       return;
     }
 
-    // Usando el formato JSON que requiere el backend
+    // Get local date from datetime-local input (avoid timezone issues)
+    let dueDateStr = "2025-12-15";
+    if (endDate) {
+      // Create a Date object from the input value (which is local time)
+      const dt = new Date(endDate);
+      // Format as YYYY-MM-DD in local time
+      const yyyy = dt.getFullYear();
+      const mm = String(dt.getMonth() + 1).padStart(2, '0');
+      const dd = String(dt.getDate()).padStart(2, '0');
+      dueDateStr = `${yyyy}-${mm}-${dd}`;
+    }
+
     const payload = {
       companyId: parseInt(selectedCompany),
       surveyId: parseInt(selectedSurvey),
-      dueDate: endDate ? endDate.split('T')[0] : "2025-12-15",
+      dueDate: dueDateStr,
       companyVersion: "v1",
       status: "activo",
       completionRate: 0.0,
@@ -152,7 +168,7 @@ export default function CompanySurveyForm({ onCreated }) {
     try {
       const response = await createCompanySurvey(payload);
       console.log("Respuesta del servidor:", response);
-      
+
       // Reset form
       setTitle("");
       setDescription("");
@@ -161,35 +177,12 @@ export default function CompanySurveyForm({ onCreated }) {
       setSelectedCompany("");
       setSelectedSurvey("");
       setSelectedEmployees([]);
-      
+
       if (onCreated) onCreated();
-      alert("Encuesta de empresa creada exitosamente");
     } catch (error) {
       console.error("Error creating company survey:", error);
-      
-      let errorMessage = "Error al crear la encuesta de empresa";
-      if (error.response) {
-        console.error("Error response:", error.response.data);
-        console.error("Error status:", error.response.status);
-        
-        if (error.response.status === 400) {
-          errorMessage += `\nError 400: Datos inválidos - ${JSON.stringify(error.response.data)}`;
-        } else if (error.response.status === 415) {
-          errorMessage += "\nError 415: Problema con Content-Type. Verifica el controlador del backend.";
-          errorMessage += "\nPosibles causas:";
-          errorMessage += "\n- El backend no acepta application/json";
-          errorMessage += "\n- Falta @RequestBody en el controlador";
-          errorMessage += "\n- Problema con la serialización de datos";
-        } else {
-          errorMessage += `\nError ${error.response.status}: ${JSON.stringify(error.response.data)}`;
-        }
-      } else if (error.request) {
-        errorMessage += "\nNo se pudo conectar con el servidor. ¿Está ejecutándose en puerto 8080?";
-      } else {
-        errorMessage += `\n${error.message}`;
-      }
-      
-      alert(errorMessage);
+      setErrorMsg("Error al crear la encuesta de empresa");
+      setErrorOpen(true);
     }
   };
 
@@ -212,17 +205,18 @@ export default function CompanySurveyForm({ onCreated }) {
   const selectedEmployeeNames = employees.filter(emp => selectedEmployees.includes(emp.id));
 
   return (
-    <Box 
-      component="form" 
-      onSubmit={handleSubmit}
-      sx={{ 
-        background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-        borderRadius: 2,
-        p: 4,
-        border: '1px solid rgba(99, 102, 241, 0.08)',
-        boxShadow: '0 2px 8px rgba(99, 102, 241, 0.05)'
-      }}
-    >
+    <>
+      <Box 
+        component="form" 
+        onSubmit={handleSubmit}
+        sx={{ 
+          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+          borderRadius: 2,
+          p: 4,
+          border: '1px solid rgba(99, 102, 241, 0.08)',
+          boxShadow: '0 2px 8px rgba(99, 102, 241, 0.05)'
+        }}
+      >
       <Box
         sx={{
           display: 'grid',
@@ -725,6 +719,12 @@ export default function CompanySurveyForm({ onCreated }) {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+      </Box>
+      <Snackbar open={errorOpen} autoHideDuration={4000} onClose={() => setErrorOpen(false)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        <Alert onClose={() => setErrorOpen(false)} severity="error" sx={{ width: '100%' }}>
+          {errorMsg}
+        </Alert>
+      </Snackbar>
+    </>
   );
 }
