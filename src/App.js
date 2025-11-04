@@ -14,6 +14,7 @@ import EmployeeList from "./components/EmployeeList";
 import SurveyForm from "./components/SurveyForm";
 import SurveyList from "./components/SurveyList";
 import SurveyAnswer from "./components/SurveyAnswer";
+import EmployeeSurveyAnswer from "./components/EmployeeSurveyAnswer";
 import Dashboard from "./components/Dashboard";
 import SurveyResults from "./components/SurveyResults";
 import SurveyResponsesTable from "./components/SurveyResponsesTable";
@@ -34,18 +35,30 @@ export default function App() {
   const { user, login, logout, loading } = useContext(UserContext);
   const [selected, setSelected] = useState(0);
   const location = useLocation();
-  // Opciones de menú
-  const menuOptions = [
-    { text: t("navigation.landing"), icon: <DashboardIcon />, component: <LandingPage /> },
-    { text: t("navigation.dashboard"), icon: <DashboardIcon />, component: <Dashboard /> },
-    { text: t("navigation.companies"), icon: <BusinessIcon />, component: <CompaniesPage /> },
-    { text: t("navigation.employees"), icon: <PeopleIcon />, component: <EmployeesPage /> },
-    { text: t("navigation.surveys"), icon: <AssignmentIcon />, component: <><SurveyForm /><SurveyList /></> },
-    { text: t("navigation.companySurveys"), icon: <BusinessIcon />, component: <CompanySurveyPage /> },
-    { text: t("navigation.answerSurvey"), icon: <QuizIcon />, component: <SurveyAnswer /> },
-    { text: t("navigation.resultsDashboard"), icon: <AnalyticsIcon />, component: <SurveyResults /> },
-    { text: t("navigation.surveyResponses"), icon: <TableChartIcon />, component: <SurveyResponsesTable /> }
+  // Función para verificar si el usuario tiene un rol específico
+  const hasRole = (roleName) => {
+    if (!user || !user.roles) return false;
+    return user.roles.some(role => role.authority === roleName);
+  };
+
+  // Opciones de menú completas
+  const allMenuOptions = [
+    // ROLE_ADMIN - Acceso completo al sistema
+    { text: t("navigation.dashboard"), icon: <DashboardIcon />, component: <Dashboard />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
+    { text: t("navigation.companies"), icon: <BusinessIcon />, component: <CompaniesPage />, roles: ['ROLE_ADMIN'] },
+    { text: t("navigation.employees"), icon: <PeopleIcon />, component: <EmployeesPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
+    { text: t("navigation.surveys"), icon: <AssignmentIcon />, component: <><SurveyForm /><SurveyList /></>, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
+    { text: t("navigation.companySurveys"), icon: <BusinessIcon />, component: <CompanySurveyPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
+    // ROLE_EMPLOYEE - Solo responder encuestas asignadas (componente simplificado)
+    { text: t("navigation.answerSurvey"), icon: <QuizIcon />, component: <EmployeeSurveyAnswer />, roles: ['ROLE_EMPLOYEE'] },
+    { text: t("navigation.resultsDashboard"), icon: <AnalyticsIcon />, component: <SurveyResults />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
+    { text: t("navigation.surveyResponses"), icon: <TableChartIcon />, component: <SurveyResponsesTable />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] }
   ];
+
+  // Filtrar opciones de menú según el rol del usuario
+  const menuOptions = user ? allMenuOptions.filter(option => 
+    option.roles.some(role => hasRole(role))
+  ) : allMenuOptions;
 
   // Si está cargando, mostrar pantalla de carga
   if (loading) return <div>Cargando...</div>;
