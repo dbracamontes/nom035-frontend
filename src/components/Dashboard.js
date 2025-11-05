@@ -53,6 +53,10 @@ import theme from "../theme";
 const COLORS = [theme.palette.primary.dark, theme.palette.primary.light, theme.palette.primary.main, theme.palette.secondary.main];
 
 export default function Dashboard() {
+  // ...existing code...
+  // ...existing code...
+  // ...existing code...
+  // (El log de riskByFactor se mueve después de todos los useState y hooks)
   const { user, loading } = useContext(UserContext);
   const navigate = useNavigate();
 
@@ -60,8 +64,19 @@ export default function Dashboard() {
   const [riskByFactor, setRiskByFactor] = useState({});
   const [participation, setParticipation] = useState([]);
   const [companies, setCompanies] = useState([]);
-  const [selectedCompany, setSelectedCompany] = useState(1);
+  // selectedCompany inicia vacío y se setea al primer id válido cuando companies carga
+  const [selectedCompany, setSelectedCompany] = useState("");
   const [dashboardLoading, setDashboardLoading] = useState(false);
+  // Hooks para mostrar todos o top 5
+  const [showAllRisk, setShowAllRisk] = useState(false);
+  const [showAllParticipation, setShowAllParticipation] = useState(false);
+
+  // Log para depuración: mostrar los nombres de los factores que llegan del backend
+  useEffect(() => {
+    if (riskByFactor && Object.keys(riskByFactor).length > 0) {
+      console.log('Factores recibidos en riskByFactor:', Object.keys(riskByFactor));
+    }
+  }, [riskByFactor]);
 
   const fetchData = async (companyId) => {
     setDashboardLoading(true);
@@ -71,6 +86,10 @@ export default function Dashboard() {
         getCompanyRisk(companyId),
         getCompanyParticipation(companyId)
       ]);
+      // Log de datos crudos para depuración
+      console.log('DASHBOARD DATA:', dashboardRes.data);
+      console.log('RISK BY FACTOR:', riskRes.data);
+      console.log('PARTICIPATION:', participationRes.data);
       setDashboard(dashboardRes.data);
       setRiskByFactor(riskRes.data);
       setParticipation(participationRes.data);
@@ -92,43 +111,65 @@ export default function Dashboard() {
   }, [loading, user, navigate]);
 
   useEffect(() => {
-    getCompanies().then((res) => setCompanies(res.data)).catch(() => setCompanies([]));
-  }, []);
+    getCompanies().then((res) => {
+      setCompanies(res.data);
+      // Si no hay empresa seleccionada, setear la primera (como string)
+      if (res.data && res.data.length > 0 && (!selectedCompany || !res.data.some(c => String(c.id) === String(selectedCompany)))) {
+        setSelectedCompany(String(res.data[0].id));
+      }
+    }).catch(() => setCompanies([]));
+  }, [selectedCompany]);
 
   useEffect(() => {
     if (selectedCompany) fetchData(selectedCompany);
   }, [selectedCompany]);
 
   if (loading || !user) return <div>Cargando...</div>;
-
   const pieData = Object.keys(riskByFactor || {}).map((key) => ({ name: key, value: riskByFactor[key] }));
   const barData = (participation || []).map((item) => ({
     name: item.surveyTitle?.length > 15 ? item.surveyTitle.substring(0, 15) + "..." : item.surveyTitle,
     completionRate: item.completionRate,
     fullName: item.surveyTitle
   }));
-
+  // Mostrar siempre los factores clave de la NOM-035
+  const factoresClave = [
+    'Sobrecarga',
+    'Horas extra',
+    'Órdenes contradictorias', // Falta de control
+    'Violencia presenciada',   // Violencia
+    'Organización del jefe'    // Liderazgo negativo
+  ];
+  const pieDataLimited = showAllRisk
+    ? pieData
+    : factoresClave
+        .map(factor => pieData.find(d => d.name === factor))
+        .filter(Boolean);
+  const barDataLimited = showAllParticipation ? barData : barData.slice(0, 5);
   const stats = {
     totalEmployees: dashboard.employees?.length || 0,
     totalSurveys: dashboard.surveys?.length || 0,
     avgCompletion: participation.length > 0 ? (participation.reduce((a, b) => a + b.completionRate, 0) / participation.length).toFixed(1) : 0,
     highRiskFactors: pieData.filter((p) => p.value > 70).length
   };
+  // Altura dinámica para las gráficas (debe ir después de definir los datos limitados)
+  const pieChartHeight = Math.max(360, (pieDataLimited.length || 1) * 60);
+  const barChartHeight = Math.max(360, (barDataLimited.length || 1) * 60);
 
   const exportRiskExcel = () => {
     const ws = XLSX.utils.json_to_sheet(pieData.map((d) => ({ Factor: d.name, AverageRisk: d.value })));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "RiskByFactor");
     const buf = XLSX.write(wb, { type: "array", bookType: "xlsx" });
-    saveAs(new Blob([buf], { type: "application/octet-stream" }), "risk_by_factor.xlsx");
+    saveAs(new Blob([buf], { type: "application/octet-stream" }), "riesgo_por_factor.xlsx");
   };
 
+  // Exportar participación a Excel
   const exportParticipationExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(participation || []);
+    const ws = XLSX.utils.json_to_sheet(barData.map((d) => ({ Encuesta: d.fullName, Participacion: d.completionRate })));
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Participation");
+    XLSX.utils.book_append_sheet(wb, ws, "Participacion");
     const buf = XLSX.write(wb, { type: "array", bookType: "xlsx" });
-    saveAs(new Blob([buf], { type: "application/octet-stream" }), "participation_report.xlsx");
+    saveAs(new Blob([buf], { type: "application/octet-stream" }), "participacion_por_encuesta.xlsx");
   };
 
   const StatCard = ({ title, value, icon, subtitle, trend }) => (
@@ -157,9 +198,14 @@ export default function Dashboard() {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <FormControl sx={{ minWidth: 240 }}>
           <InputLabel>Seleccionar Empresa</InputLabel>
-          <Select value={selectedCompany} label="Seleccionar Empresa" onChange={(e) => setSelectedCompany(e.target.value)}>
+          <Select
+            value={selectedCompany}
+            label="Seleccionar Empresa"
+            onChange={(e) => setSelectedCompany(String(e.target.value))}
+            MenuProps={{ PaperProps: { style: { maxHeight: 300 } } }}
+          >
             {companies.map((c) => (
-              <MenuItem key={c.id} value={c.id}><BusinessIcon sx={{ mr: 1 }} />{c.name}</MenuItem>
+              <MenuItem key={c.id} value={String(c.id)}><BusinessIcon sx={{ mr: 1 }} />{c.name}</MenuItem>
             ))}
           </Select>
         </FormControl>
@@ -171,28 +217,35 @@ export default function Dashboard() {
 
       {dashboardLoading && <LinearProgress sx={{ mb: 2 }} />}
 
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}><StatCard title="Total Empleados" value={stats.totalEmployees} icon={<PeopleIcon />} subtitle="Personal registrado" trend="+2% este mes" /></Grid>
-        <Grid item xs={12} sm={6} md={3}><StatCard title="Encuestas Activas" value={stats.totalSurveys} icon={<AssignmentIcon />} subtitle="En el sistema" trend="3 nuevas esta semana" /></Grid>
-        <Grid item xs={12} sm={6} md={3}><StatCard title="Participación" value={`${stats.avgCompletion}%`} icon={<TrendingUpIcon />} subtitle="Promedio general" trend="↗ Mejorando" /></Grid>
-        <Grid item xs={12} sm={6} md={3}><StatCard title="Factores de Riesgo" value={stats.highRiskFactors} icon={<WarningIcon />} subtitle="Requieren atención" trend={stats.highRiskFactors > 0 ? '⚠ Revisar' : '✓ Bajo control'} /></Grid>
+      <Grid container columnSpacing={2} rowSpacing={2} sx={{ mb: 3 }}>
+        <Grid><StatCard title="Total Empleados" value={stats.totalEmployees} icon={<PeopleIcon />} subtitle="Personal registrado" trend="+2% este mes" /></Grid>
+        <Grid><StatCard title="Encuestas Activas" value={stats.totalSurveys} icon={<AssignmentIcon />} subtitle="En el sistema" trend="3 nuevas esta semana" /></Grid>
+        <Grid><StatCard title="Participación" value={`${stats.avgCompletion}%`} icon={<TrendingUpIcon />} subtitle="Promedio general" trend="↗ Mejorando" /></Grid>
+        <Grid><StatCard title="Factores de Riesgo" value={stats.highRiskFactors} icon={<WarningIcon />} subtitle="Requieren atención" trend={stats.highRiskFactors > 0 ? '⚠ Revisar' : '✓ Bajo control'} /></Grid>
       </Grid>
 
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={6}>
+      <Grid container columnSpacing={2} rowSpacing={2}>
+        <Grid sx={{ flex: 1, minWidth: 0 }}>
           <Paper sx={{ p: 2, height: 440 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
               <Box>
                 <Typography variant="h6">Riesgo por Factor</Typography>
                 <Typography variant="body2" color="text.secondary">Distribución de niveles de riesgo psicosocial</Typography>
               </Box>
-              <Button variant="text" startIcon={<DownloadIcon />} onClick={exportRiskExcel}>Exportar</Button>
+              <Box>
+                <Button variant="text" startIcon={<DownloadIcon />} onClick={exportRiskExcel}>Exportar</Button>
+                {pieData.length > 5 && (
+                  <Button size="small" sx={{ ml: 1 }} onClick={() => setShowAllRisk(v => !v)}>
+                    {showAllRisk ? 'Ver menos' : 'Ver todos'}
+                  </Button>
+                )}
+              </Box>
             </Box>
             {pieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={360}>
+              <ResponsiveContainer width="100%" height={pieChartHeight}>
                 <PieChart>
-                  <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={40} outerRadius={100} label>
-                    {pieData.map((entry, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  <Pie data={pieDataLimited} dataKey="value" nameKey="name" innerRadius={40} outerRadius={100} label>
+                    {pieDataLimited.map((entry, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                   </Pie>
                   <RechartsTooltip />
                   <Legend />
@@ -204,18 +257,25 @@ export default function Dashboard() {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={6}>
+        <Grid sx={{ flex: 1, minWidth: 0 }}>
           <Paper sx={{ p: 2, height: 440 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
               <Box>
                 <Typography variant="h6">Participación por Encuesta</Typography>
                 <Typography variant="body2" color="text.secondary">Porcentaje de participación en cada evaluación</Typography>
               </Box>
-              <Button variant="text" startIcon={<DownloadIcon />} onClick={exportParticipationExcel}>Exportar</Button>
+              <Box>
+                <Button variant="text" startIcon={<DownloadIcon />} onClick={exportParticipationExcel}>Exportar</Button>
+                {barData.length > 5 && (
+                  <Button size="small" sx={{ ml: 1 }} onClick={() => setShowAllParticipation(v => !v)}>
+                    {showAllParticipation ? 'Ver menos' : 'Ver todos'}
+                  </Button>
+                )}
+              </Box>
             </Box>
             {barData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={360}>
-                <BarChart data={barData} margin={{ top: 10, right: 20, left: 0, bottom: 60 }}>
+              <ResponsiveContainer width="100%" height={barChartHeight}>
+                <BarChart data={barDataLimited} margin={{ top: 10, right: 20, left: 0, bottom: 60 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" angle={-45} textAnchor="end" interval={0} height={80} />
                   <YAxis />
