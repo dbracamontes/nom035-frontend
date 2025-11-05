@@ -26,7 +26,49 @@
     "employees": "Employees",
     "total": "Total",
     "surveyStatusCounts": "Survey Status Counts",
-    "surveys": "Surveys"
+    "surveys": "Surveys",
+    "risk": {
+      "title": "Psychosocial Risk Analysis",
+      "generalDistribution": "General Risk Distribution",
+      "alertIndicators": "Alert Indicators",
+      "criticalAttention": "Critical Attention",
+      "highAlert": "High Alert",
+      "favorableSituation": "Favorable Situation",
+      "veryHigh": "Very High",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "modules": "modules",
+      "riskMatrix": "Risk Matrix by Module",
+      "module": "Module",
+      "score": "Score",
+      "riskLevel": "Risk Level",
+      "responses": "Responses",
+      "recommendation": "Recommendation",
+      "immediateAction": "Immediate action",
+      "preventiveMeasures": "Preventive measures",
+      "continuousMonitoring": "Continuous monitoring",
+      "maintainConditions": "Maintain conditions",
+  "moduleDescription": "This module evaluates psychosocial risk factors related to {{module}}. A score of {{score}} indicates a {{risk}} risk level.",
+  "favorableSituationText": "Most modules show low risk.",
+  "recommendations": {
+        "title": "Recommendations according to NOM-035",
+        "immediate": {
+          "title": "Immediate Actions (Very High/High Risk)",
+          "intervention": "• Implement a specific intervention program",
+          "evaluation": "• Medical and psychological evaluation of staff",
+          "workload": "• Review of workloads and working conditions",
+          "training": "• Training in stress management and communication"
+        },
+        "preventive": {
+          "title": "Preventive Measures (Medium Risk)",
+          "wellness": "• Workplace wellness programs",
+          "skillsWorkshops": "• Skills development workshops",
+          "communication": "• Improvement in communication channels",
+          "monitoring": "• Periodic monitoring of working conditions"
+        }
+      }
+    }
   },
   "employee": {
     "form": {

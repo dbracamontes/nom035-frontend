@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { Box, CssBaseline, Drawer, Toolbar, AppBar, Typography, List, ListItem, ListItemIcon, ListItemText, ThemeProvider, IconButton, Button, Avatar, Stack } from "@mui/material";
 import theme from "./theme";
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -31,7 +31,11 @@ import { Routes, Route, useNavigate, useLocation, Navigate } from "react-router-
 const drawerWidth = 220;
 
 export default function App() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  // Forzar idioma español al montar la app
+  useEffect(() => {
+    i18n.changeLanguage('es');
+  }, [i18n]);
   const { user, login, logout, loading } = useContext(UserContext);
   const [selected, setSelected] = useState(0);
   const location = useLocation();

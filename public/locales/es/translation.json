@@ -18,15 +18,57 @@
     "platformDescription": "Esta plataforma ayuda a las organizaciones a cumplir con la NOM-035 habilitando la gestión de encuestas, seguimiento del bienestar de empleados y análisis de riesgos."
   },
   "dashboard": {
-  "title": "Panel de Control",
-  "riskByFactor": "Riesgo por Factor",
-  "exportRiskExcel": "Exportar Riesgo por Factor a Excel",
-  "participationBySurvey": "Participación por Encuesta",
-  "completionRate": "Tasa de Finalización (%)",
-  "employees": "Empleados",
-  "total": "Total",
-  "surveyStatusCounts": "Conteo de Estados de Encuestas",
-  "surveys": "Encuestas"
+    "title": "Panel de Control",
+    "riskByFactor": "Riesgo por Factor",
+    "exportRiskExcel": "Exportar Riesgo por Factor a Excel",
+    "participationBySurvey": "Participación por Encuesta",
+    "completionRate": "Tasa de Finalización (%)",
+    "employees": "Empleados",
+    "total": "Total",
+    "surveyStatusCounts": "Conteo de Estados de Encuestas",
+    "surveys": "Encuestas",
+    "risk": {
+      "title": "Análisis de Riesgo Psicosocial",
+      "generalDistribution": "Distribución General de Riesgo",
+      "alertIndicators": "Indicadores de Alerta",
+      "criticalAttention": "Atención Crítica",
+      "highAlert": "Alerta Alta",
+      "favorableSituation": "Situación Favorable",
+      "veryHigh": "Muy Alto",
+      "high": "Alto",
+      "medium": "Medio",
+      "low": "Bajo",
+      "modules": "módulos",
+      "riskMatrix": "Matriz de Riesgo por Módulo",
+      "module": "Módulo",
+      "score": "Puntuación",
+      "riskLevel": "Nivel de Riesgo",
+      "responses": "Respuestas",
+      "recommendation": "Recomendación",
+      "immediateAction": "Acción inmediata",
+      "preventiveMeasures": "Medidas preventivas",
+      "continuousMonitoring": "Monitoreo continuo",
+      "maintainConditions": "Mantener condiciones",
+      "moduleDescription": "Este módulo evalúa los factores de riesgo psicosocial relacionados con {{module}}. Una puntuación de {{score}} indica un nivel de riesgo {{risk}}.",
+      "favorableSituationText": "La mayoría de módulos presenta riesgo bajo.",
+      "recommendations": {
+        "title": "Recomendaciones según NOM-035",
+        "immediate": {
+          "title": "Acciones Inmediatas (Riesgo Muy Alto/Alto)",
+          "intervention": "• Implementar programa de intervención específico",
+          "evaluation": "• Evaluación médica y psicológica del personal",
+          "workload": "• Revisión de cargas de trabajo y condiciones laborales",
+          "training": "• Capacitación en manejo del estrés y comunicación"
+        },
+        "preventive": {
+          "title": "Medidas Preventivas (Riesgo Medio)",
+          "wellness": "• Programas de bienestar laboral",
+          "skillsWorkshops": "• Talleres de desarrollo de habilidades",
+          "communication": "• Mejora en canales de comunicación",
+          "monitoring": "• Monitoreo periódico de condiciones laborales"
+        }
+      }
+    }
   },
   "companies": {
     "title": "Gestión de Empresas",

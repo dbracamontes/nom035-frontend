@@ -711,7 +711,7 @@ export default function SurveyResults() {
                                   #{index + 1}
                                 </Typography>
                                 <Chip 
-                                  label={module.riskLevel}
+                                  label={t(`dashboard.risk.${module.riskLevel}`)}
                                   size="small"
                                   color={
                                     module.riskLevel === 'veryHigh' ? 'error' :
@@ -770,9 +770,7 @@ export default function SurveyResults() {
                           />
                           
                           <Chip 
-                            label={module.riskLevel === 'veryHigh' ? 'Riesgo Muy Alto' :
-                                   module.riskLevel === 'high' ? 'Riesgo Alto' :
-                                   module.riskLevel === 'medium' ? 'Riesgo Medio' : 'Riesgo Bajo'}
+                       label={t(`dashboard.risk.${module.riskLevel}`)}
                             color={
                               module.riskLevel === 'veryHigh' ? 'error' :
                               module.riskLevel === 'high' ? 'error' :
@@ -791,12 +789,11 @@ export default function SurveyResults() {
                             </Typography>
                             
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                              Este módulo evalúa los factores de riesgo psicosocial relacionados con {module.name.toLowerCase()}.
-                              Una puntuación de {module.averageScore} indica un nivel de riesgo {
-                                module.riskLevel === 'veryHigh' ? 'muy alto' :
-                                module.riskLevel === 'high' ? 'alto' :
-                                module.riskLevel === 'medium' ? 'medio' : 'bajo'
-                              }.
+                              {t('dashboard.risk.moduleDescription', {
+                                module: module.name,
+                                score: module.averageScore,
+                                risk: t(`dashboard.risk.${module.riskLevel}`)
+                              })}
                             </Typography>
                             
                             <Box sx={{ mb: 2 }}>
@@ -870,10 +867,10 @@ export default function SurveyResults() {
                           <PieChart>
                             <Pie
                               data={[
-                                { name: 'Riesgo Bajo', value: riskAnalysis.low || 0, fill: RISK_COLORS.low },
-                                { name: 'Riesgo Medio', value: riskAnalysis.medium || 0, fill: RISK_COLORS.medium },
-                                { name: 'Riesgo Alto', value: riskAnalysis.high || 0, fill: RISK_COLORS.high },
-                                { name: 'Riesgo Muy Alto', value: riskAnalysis.veryHigh || 0, fill: RISK_COLORS.veryHigh }
+                                { name: t('dashboard.risk.low'), value: riskAnalysis.low || 0, fill: RISK_COLORS.low },
+                                { name: t('dashboard.risk.medium'), value: riskAnalysis.medium || 0, fill: RISK_COLORS.medium },
+                                { name: t('dashboard.risk.high'), value: riskAnalysis.high || 0, fill: RISK_COLORS.high },
+                                { name: t('dashboard.risk.veryHigh'), value: riskAnalysis.veryHigh || 0, fill: RISK_COLORS.veryHigh }
                               ]}
                               cx="50%"
                               cy="50%"
@@ -886,10 +883,10 @@ export default function SurveyResults() {
                               dataKey="value"
                             >
                               {[
-                                { name: 'Riesgo Bajo', value: riskAnalysis.low || 0, fill: RISK_COLORS.low },
-                                { name: 'Riesgo Medio', value: riskAnalysis.medium || 0, fill: RISK_COLORS.medium },
-                                { name: 'Riesgo Alto', value: riskAnalysis.high || 0, fill: RISK_COLORS.high },
-                                { name: 'Riesgo Muy Alto', value: riskAnalysis.veryHigh || 0, fill: RISK_COLORS.veryHigh }
+                                { name: t('dashboard.risk.low'), fill: RISK_COLORS.low },
+                                { name: t('dashboard.risk.medium'), fill: RISK_COLORS.medium },
+                                { name: t('dashboard.risk.high'), fill: RISK_COLORS.high },
+                                { name: t('dashboard.risk.veryHigh'), fill: RISK_COLORS.veryHigh }
                               ].map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={entry.fill} />
                               ))}
@@ -915,8 +912,8 @@ export default function SurveyResults() {
                         {(riskAnalysis.veryHigh || 0) > 0 && (
                           <Alert severity="error" sx={{ mb: 2 }}>
                             <Typography variant="body2">
-                              <strong>🚨 Atención Crítica:</strong> {riskAnalysis.veryHigh} módulo(s) con riesgo muy alto.
-                              Se requiere acción inmediata.
+                              <strong>🚨 {t('dashboard.risk.criticalAttention')}:</strong> {riskAnalysis.veryHigh} {t('dashboard.risk.modules')} {t('dashboard.risk.veryHigh').toLowerCase()}.
+                              {t('dashboard.risk.immediateAction')}
                             </Typography>
                           </Alert>
                         )}
@@ -925,8 +922,8 @@ export default function SurveyResults() {
                         {(riskAnalysis.high || 0) > 0 && (
                           <Alert severity="warning" sx={{ mb: 2 }}>
                             <Typography variant="body2">
-                              <strong>⚠️ Alerta Alta:</strong> {riskAnalysis.high} módulo(s) con riesgo alto.
-                              Se recomienda implementar medidas preventivas.
+                              <strong>⚠️ {t('dashboard.risk.highAlert')}:</strong> {riskAnalysis.high} {t('dashboard.risk.modules')} {t('dashboard.risk.high').toLowerCase()}.
+                              {t('dashboard.risk.preventiveMeasures')}
                             </Typography>
                           </Alert>
                         )}
@@ -935,7 +932,7 @@ export default function SurveyResults() {
                         {(riskAnalysis.low || 0) >= 5 && (
                           <Alert severity="success" sx={{ mb: 2 }}>
                             <Typography variant="body2">
-                              <strong>✅ Situación Favorable:</strong> La mayoría de módulos presenta riesgo bajo.
+                              <strong>✅ {t('dashboard.risk.favorableSituation')}:</strong> {t('dashboard.risk.favorableSituationText')}
                             </Typography>
                           </Alert>
                         )}
@@ -944,18 +941,18 @@ export default function SurveyResults() {
                       {/* Medidores de riesgo */}
                       <Box>
                         {[
-                          { level: 'veryHigh', label: 'Muy Alto', color: RISK_COLORS.veryHigh },
-                          { level: 'high', label: 'Alto', color: RISK_COLORS.high },
-                          { level: 'medium', label: 'Medio', color: RISK_COLORS.medium },
-                          { level: 'low', label: 'Bajo', color: RISK_COLORS.low }
-                        ].map(({ level, label, color }) => (
+                          { level: 'veryHigh', color: RISK_COLORS.veryHigh },
+                          { level: 'high', color: RISK_COLORS.high },
+                          { level: 'medium', color: RISK_COLORS.medium },
+                          { level: 'low', color: RISK_COLORS.low }
+                        ].map(({ level, color }) => (
                           <Box key={level} sx={{ mb: 2 }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                               <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                Riesgo {label}
+                                {t('dashboard.risk.riskLevel')}: {t(`dashboard.risk.${level}`)}
                               </Typography>
                               <Typography variant="body2" sx={{ color: color, fontWeight: 700 }}>
-                                {riskAnalysis[level] || 0} módulos
+                                {riskAnalysis[level] || 0} {t('dashboard.risk.modules')}
                               </Typography>
                             </Box>
                             <LinearProgress 
@@ -1020,9 +1017,7 @@ export default function SurveyResults() {
                                   <TableCell align="center">
                                     <Chip 
                                       label={
-                                        module.riskLevel === 'veryHigh' ? 'Muy Alto' :
-                                        module.riskLevel === 'high' ? 'Alto' :
-                                        module.riskLevel === 'medium' ? 'Medio' : 'Bajo'
+                                        t(`dashboard.risk.${module.riskLevel}`)
                                       }
                                       color={
                                         module.riskLevel === 'veryHigh' ? 'error' :
@@ -1055,26 +1050,26 @@ export default function SurveyResults() {
                   <Card>
                     <CardContent>
                       <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                        📋 Recomendaciones según NOM-035
+                        📋 {t('dashboard.risk.recommendations.title')}
                       </Typography>
                       
                       <Grid container spacing={2}>
                         <Grid item xs={12} md={6}>
                           <Box sx={{ p: 2, backgroundColor: '#ffebee', borderRadius: 2 }}>
                             <Typography variant="h6" sx={{ fontWeight: 600, color: '#d32f2f', mb: 1 }}>
-                              🚨 Acciones Inmediatas (Riesgo Muy Alto/Alto)
+                              🚨 {t('dashboard.risk.recommendations.immediate.title')}
                             </Typography>
                             <Typography variant="body2" sx={{ mb: 1 }}>
-                              • Implementar programa de intervención específico
+                              {t('dashboard.risk.recommendations.immediate.intervention')}
                             </Typography>
                             <Typography variant="body2" sx={{ mb: 1 }}>
-                              • Evaluación médica y psicológica del personal
+                              {t('dashboard.risk.recommendations.immediate.evaluation')}
                             </Typography>
                             <Typography variant="body2" sx={{ mb: 1 }}>
-                              • Revisión de cargas de trabajo y condiciones laborales
+                              {t('dashboard.risk.recommendations.immediate.workload')}
                             </Typography>
                             <Typography variant="body2">
-                              • Capacitación en manejo del estrés y comunicación
+                              {t('dashboard.risk.recommendations.immediate.training')}
                             </Typography>
                           </Box>
                         </Grid>
@@ -1082,19 +1077,19 @@ export default function SurveyResults() {
                         <Grid item xs={12} md={6}>
                           <Box sx={{ p: 2, backgroundColor: '#fff3e0', borderRadius: 2 }}>
                             <Typography variant="h6" sx={{ fontWeight: 600, color: '#f57c00', mb: 1 }}>
-                              📋 Medidas Preventivas (Riesgo Medio)
+                              📋 {t('dashboard.risk.recommendations.preventive.title')}
                             </Typography>
                             <Typography variant="body2" sx={{ mb: 1 }}>
-                              • Programas de bienestar laboral
+                              {t('dashboard.risk.recommendations.preventive.wellness')}
                             </Typography>
                             <Typography variant="body2" sx={{ mb: 1 }}>
-                              • Talleres de desarrollo de habilidades
+                              {t('dashboard.risk.recommendations.preventive.skillsWorkshops')}
                             </Typography>
                             <Typography variant="body2" sx={{ mb: 1 }}>
-                              • Mejora en canales de comunicación
+                              {t('dashboard.risk.recommendations.preventive.communication')}
                             </Typography>
                             <Typography variant="body2">
-                              • Monitoreo periódico de condiciones laborales
+                              {t('dashboard.risk.recommendations.preventive.monitoring')}
                             </Typography>
                           </Box>
                         </Grid>

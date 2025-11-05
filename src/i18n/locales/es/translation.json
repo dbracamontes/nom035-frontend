@@ -178,7 +178,9 @@
         "preventiveMeasures": "Medidas preventivas",
         "continuousMonitoring": "Monitoreo continuo",
         "maintainConditions": "Mantener condiciones",
-        "recommendations": {
+  "moduleDescription": "Este módulo evalúa los factores de riesgo psicosocial relacionados con {{module}}. Una puntuación de {{score}} indica un nivel de riesgo {{risk}}.",
+  "favorableSituationText": "La mayoría de módulos presenta riesgo bajo.",
+  "recommendations": {
           "title": "Recomendaciones según NOM-035",
           "immediate": {
             "title": "Acciones Inmediatas (Riesgo Muy Alto/Alto)",
