@@ -139,6 +139,9 @@ export const getCompanyDashboard = companyId => axios.get(`${API_BASE}/dashboard
 export const getCompanyRisk = companyId => axios.get(`${API_BASE}/dashboard/company/${companyId}/risk`);
 export const getCompanyParticipation = companyId => axios.get(`${API_BASE}/dashboard/company/${companyId}/participation`);
 
+// Resumen global de participación por empresa
+export const getParticipationSummary = () => axios.get(`${API_BASE}/dashboard/participation/summary`);
+
 // Survey Response endpoints
 export const submitSurveyResponse = data => {
   console.log('📤 API: Sending to /api/responses:', JSON.stringify(data, null, 2));

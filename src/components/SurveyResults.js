@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { 
-  getSurveyResponses, getCompanies, getSurveys, getEmployees
+  getSurveyResponses, getCompanies, getSurveys, getEmployees, getParticipationSummary
 } from "../api/nom035";
 import { 
   Box, Typography, Paper, Tab, Tabs, Grid, Card, CardContent, 
@@ -135,6 +135,7 @@ export default function SurveyResults() {
   // Estados para datos
   const [responses, setResponses] = useState([]);
   const [companies, setCompanies] = useState([]);
+  const [participationSummary, setParticipationSummary] = useState([]);
   const [surveys, setSurveys] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState('');
@@ -223,27 +224,19 @@ export default function SurveyResults() {
   const loadInitialData = async () => {
     try {
       setLoading(true);
-      
-      // Cargar datos básicos
-      const [responsesRes, companiesRes, surveysRes, employeesRes] = await Promise.all([
+      // Cargar datos básicos y resumen de participación real
+      const [responsesRes, companiesRes, surveysRes, employeesRes, participationSummaryRes] = await Promise.all([
         getSurveyResponses(),
         getCompanies(),
         getSurveys(),
-        getEmployees()
+        getEmployees(),
+        getParticipationSummary()
       ]);
-      
-      console.log('📊 Loaded data:', {
-        responses: responsesRes.data?.length || 0,
-        companies: companiesRes.data?.length || 0,
-        surveys: surveysRes.data?.length || 0,
-        employees: employeesRes.data?.length || 0
-      });
-      
       setResponses(responsesRes.data || []);
       setCompanies(companiesRes.data || []);
       setSurveys(surveysRes.data || []);
       setEmployees(employeesRes.data || []);
-      
+      setParticipationSummary(participationSummaryRes.data || []);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       setError('Error al cargar los datos del dashboard');
@@ -599,50 +592,30 @@ export default function SurveyResults() {
                             </TableRow>
                           </TableHead>
                           <TableBody>
-                            {companies.length > 0 ? companies.map((company) => {
-                              // Simular datos por empresa (aquí harías consultas reales)
-                              const totalEmp = Math.floor(Math.random() * 50) + 10;
-                              const responded = Math.floor(Math.random() * totalEmp);
-                              const pending = totalEmp - responded;
-                              const percentage = Math.round((responded / totalEmp) * 100);
-                              // Definir color y texto del chip
-                              let chipColor = '#2196f3';
-                              let chipLabel = '';
-                              if (percentage >= 85) {
-                                chipColor = '#2196f3';
-                                chipLabel = 'Cumple NOM-035';
-                              } else if (percentage >= 50) {
-                                chipColor = '#9c27b0';
-                                chipLabel = 'En Progreso';
-                              } else {
-                                chipColor = '#9c27b0';
-                                chipLabel = 'Bajo';
-                              }
-                              return (
-                                <TableRow key={company.id}>
-                                  <TableCell>{company.name}</TableCell>
-                                  <TableCell align="center">
-                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#2196f3' }}>{totalEmp}</Typography>
-                                  </TableCell>
-                                  <TableCell align="center">
-                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#2196f3' }}>{responded}</Typography>
-                                  </TableCell>
-                                  <TableCell align="center">
-                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#9c27b0' }}>{pending}</Typography>
-                                  </TableCell>
-                                  <TableCell align="center">
-                                    <Typography variant="body2" sx={{ fontWeight: 700, color: percentage >= 85 ? '#2196f3' : '#9c27b0' }}>{percentage}%</Typography>
-                                  </TableCell>
-                                  <TableCell align="center">
-                                    <Chip 
-                                      label={chipLabel}
-                                      sx={{ backgroundColor: percentage >= 85 ? '#e3f2fd' : '#ede7f6', color: percentage >= 85 ? '#2196f3' : '#9c27b0', fontWeight: 700 }}
-                                      size="small"
-                                    />
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            }) : (
+                            {participationSummary.length > 0 ? participationSummary.map((row) => (
+                              <TableRow key={row.companyId}>
+                                <TableCell>{row.companyName}</TableCell>
+                                <TableCell align="center">
+                                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#2196f3' }}>{row.totalEmployees}</Typography>
+                                </TableCell>
+                                <TableCell align="center">
+                                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#2196f3' }}>{row.responded}</Typography>
+                                </TableCell>
+                                <TableCell align="center">
+                                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#9c27b0' }}>{row.pending}</Typography>
+                                </TableCell>
+                                <TableCell align="center">
+                                  <Typography variant="body2" sx={{ fontWeight: 700, color: row.participationPercent >= 85 ? '#2196f3' : '#9c27b0' }}>{row.participationPercent}%</Typography>
+                                </TableCell>
+                                <TableCell align="center">
+                                  <Chip 
+                                    label={row.status}
+                                    sx={{ backgroundColor: row.participationPercent >= 85 ? '#e3f2fd' : '#ede7f6', color: row.participationPercent >= 85 ? '#2196f3' : '#9c27b0', fontWeight: 700 }}
+                                    size="small"
+                                  />
+                                </TableCell>
+                              </TableRow>
+                            )) : (
                               <TableRow>
                                 <TableCell colSpan={6} align="center">
                                   <Typography color="text.secondary">
