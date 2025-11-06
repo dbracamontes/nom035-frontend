@@ -5,7 +5,7 @@ const API_ROOT = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 const API_BASE = `${API_ROOT}/api`;
 
 // Obtener el usuario autenticado actual
-export const getCurrentUser = () => axios.get(`${API_BASE}/me`);
+export const getCurrentUser = () => axios.get(`${API_BASE}/users/me`);
 
 // Add request interceptor to ensure proper headers
 axios.interceptors.request.use(
