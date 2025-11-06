@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { 
-  Paper, Typography, 
+  Typography, 
   IconButton, Chip, Stack, Box, Grid, Card, CardContent,
   CardActions, Button, Dialog, DialogTitle, DialogContent,
-  DialogActions, Collapse
+  DialogActions, Collapse, Divider
 } from "@mui/material";
 import { 
   Delete as DeleteIcon, 
@@ -13,26 +13,38 @@ import {
   DateRange as DateRangeIcon,
   Business as BusinessIcon
 } from '@mui/icons-material';
-import { getCompanySurveys, deleteCompanySurvey, getCompanies, getSurveys } from "../api/nom035";
+import { getCompanySurveys, deleteCompanySurvey, getCompanies, getSurveys, getEmployees, getSurveyApplications, getSurveyWithQuestions } from "../api/nom035";
 
 export default function CompanySurveyList({ refreshFlag }) {
   const [companySurveys, setCompanySurveys] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [surveys, setSurveys] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [surveyApplications, setSurveyApplications] = useState([]);
+  const [questionCounts, setQuestionCounts] = useState({});
+  const [detailLoading, setDetailLoading] = useState({});
+  const [detailError, setDetailError] = useState({});
   const [expandedCard, setExpandedCard] = useState(null);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, survey: null });
 
   const fetchCompanySurveys = async () => {
     try {
-      const [surveysResponse, companiesResponse, baseSurveysResponse] = await Promise.all([
+      const [surveysResponse, companiesResponse, baseSurveysResponse, employeesResponse, surveyApplicationsResponse] = await Promise.all([
         getCompanySurveys(),
         getCompanies(),
-        getSurveys()
+        getSurveys(),
+        getEmployees(),
+        getSurveyApplications()
       ]);
       
       setCompanySurveys(surveysResponse.data || []);
       setCompanies(companiesResponse.data || []);
       setSurveys(baseSurveysResponse.data || []);
+      setEmployees(employeesResponse.data || []);
+      setSurveyApplications(surveyApplicationsResponse.data || []);
+      setQuestionCounts({});
+      setDetailLoading({});
+      setDetailError({});
     } catch (error) {
       console.error("Error fetching data:", error);
       alert("Error al cargar los datos");
@@ -55,8 +67,29 @@ export default function CompanySurveyList({ refreshFlag }) {
     }
   };
 
-  const toggleExpand = (id) => {
-    setExpandedCard(expandedCard === id ? null : id);
+  const toggleExpand = (survey) => {
+    const isExpanding = expandedCard !== survey.id;
+    setExpandedCard(isExpanding ? survey.id : null);
+    if (isExpanding) {
+      if (!questionCounts[survey.surveyId] && !detailLoading[survey.id]) {
+        loadSurveyDetails(survey);
+      }
+    }
+  };
+
+  const loadSurveyDetails = async (survey) => {
+    setDetailLoading((prev) => ({ ...prev, [survey.id]: true }));
+    try {
+      const questionResponse = await getSurveyWithQuestions(survey.surveyId);
+      const count = Array.isArray(questionResponse.data) ? questionResponse.data.length : 0;
+      setQuestionCounts((prev) => ({ ...prev, [survey.surveyId]: count }));
+      setDetailError((prev) => ({ ...prev, [survey.id]: undefined }));
+    } catch (error) {
+      console.error("Error cargando preguntas de la encuesta:", error);
+      setDetailError((prev) => ({ ...prev, [survey.id]: "No se pudieron cargar las preguntas de la encuesta." }));
+    } finally {
+      setDetailLoading((prev) => ({ ...prev, [survey.id]: false }));
+    }
   };
 
   // Helper functions to get names
@@ -73,6 +106,15 @@ export default function CompanySurveyList({ refreshFlag }) {
   const getSurveyDescription = (surveyId) => {
     const survey = surveys.find(s => s.id === surveyId);
     return survey ? survey.description : "Sin descripción";
+  };
+
+  const getEmployeeName = (employeeId) => {
+    const employee = employees.find((emp) => emp.id === employeeId);
+    return employee ? employee.name : `Empleado #${employeeId}`;
+  };
+
+  const getApplicationsForSurvey = (companySurveyId) => {
+    return surveyApplications.filter((application) => application.companySurveyId === companySurveyId);
   };
 
   const formatDate = (dateString) => {
@@ -113,6 +155,32 @@ export default function CompanySurveyList({ refreshFlag }) {
       return "Activa";
     }
     return status || "Sin estado";
+  };
+
+  const formatStatusLabel = (status) => {
+    switch ((status || "").toUpperCase()) {
+      case "COMPLETADO":
+        return { label: "Completado", color: "success" };
+      case "EN_PROCESO":
+        return { label: "En progreso", color: "warning" };
+      default:
+        return { label: "Pendiente", color: "default" };
+    }
+  };
+
+  const formatDateTime = (value) => {
+    if (!value) return "—";
+    try {
+      return new Date(value).toLocaleString("es-ES", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    } catch (error) {
+      return value;
+    }
   };
 
   return (
@@ -280,7 +348,7 @@ export default function CompanySurveyList({ refreshFlag }) {
                         overflow: 'hidden'
                       }}>
                         <Box sx={{
-                          width: `${survey.completionRate * 100}%`,
+                          width: `${(survey.completionRate ?? 0) * 100}%`,
                           height: '100%',
                           background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
                           transition: 'width 0.3s ease'
@@ -297,7 +365,7 @@ export default function CompanySurveyList({ refreshFlag }) {
                 }}>
                   <Button 
                     size="small" 
-                    onClick={() => toggleExpand(survey.id)}
+                    onClick={() => toggleExpand(survey)}
                     endIcon={expandedCard === survey.id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                     sx={{
                       background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
@@ -413,6 +481,82 @@ export default function CompanySurveyList({ refreshFlag }) {
                       <Typography variant="body2" sx={{ color: '#64748b' }}>
                         {survey.notes || "Sin notas adicionales"}
                       </Typography>
+
+                      <Divider sx={{ my: 3 }} />
+
+                      <Typography 
+                        variant="subtitle2" 
+                        gutterBottom
+                        sx={{
+                          fontWeight: 600,
+                          color: '#1d4ed8',
+                          mb: 2
+                        }}
+                      >
+                        📌 Seguimiento de asignaciones
+                      </Typography>
+
+                      {detailLoading[survey.id] ? (
+                        <Typography variant="body2" sx={{ color: '#64748b' }}>
+                          Cargando preguntas y asignaciones...
+                        </Typography>
+                      ) : (
+                        <Stack spacing={2}>
+                          <Typography variant="body2" sx={{ color: '#475569' }}>
+                            <strong style={{ color: '#6366f1' }}>Preguntas totales:</strong> {questionCounts[survey.surveyId] ?? '—'}
+                          </Typography>
+
+                          {detailError[survey.id] && (
+                            <Typography variant="body2" sx={{ color: '#dc2626' }}>
+                              {detailError[survey.id]}
+                            </Typography>
+                          )}
+
+                          {(() => {
+                            const applicationsForSurvey = getApplicationsForSurvey(survey.id);
+                            if (applicationsForSurvey.length === 0) {
+                              return (
+                                <Typography variant="body2" sx={{ color: '#94a3b8' }}>
+                                  No hay empleados asignados a esta encuesta todavía.
+                                </Typography>
+                              );
+                            }
+
+                            return applicationsForSurvey.map((application) => {
+                              const statusInfo = formatStatusLabel(application.status);
+                              return (
+                                <Box
+                                  key={application.id}
+                                  sx={{
+                                    p: 2,
+                                    borderRadius: 2,
+                                    background: 'linear-gradient(135deg, #f8fafc 0%, #edf2ff 100%)',
+                                    border: '1px solid rgba(99, 102, 241, 0.12)'
+                                  }}
+                                >
+                                  <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
+                                      {getEmployeeName(application.employeeId)}
+                                    </Typography>
+                                    <Chip
+                                      size="small"
+                                      color={statusInfo.color}
+                                      label={statusInfo.label}
+                                      sx={{ fontWeight: 500 }}
+                                    />
+                                    <Typography variant="caption" sx={{ color: '#64748b' }}>
+                                      Inicio: {formatDateTime(application.startedAt)}
+                                    </Typography>
+                                    <Typography variant="caption" sx={{ color: '#64748b' }}>
+                                      Fin: {formatDateTime(application.completedAt)}
+                                    </Typography>
+                                  </Stack>
+                                </Box>
+                              );
+                            });
+                          })()}
+                        </Stack>
+                      )}
                     </Box>
                   </CardContent>
                 </Collapse>
