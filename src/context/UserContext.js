@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect } from "react";
 import { getCurrentUser } from "../api/nom035";
 import axios from "axios";
@@ -13,7 +12,13 @@ export const UserProvider = ({ children }) => {
 		// Intenta obtener el usuario actual al cargar la app
 		getCurrentUser()
 			.then(res => {
-				setUser(res.data);
+				// Normalize company id into user.companyId for consistency
+				const u = res.data || {};
+				const normalized = {
+					...u,
+					companyId: String(u.companyId || (u.company && u.company.id) || u.company_id || '')
+				};
+				setUser(normalized);
 				setLoading(false);
 			})
 			.catch(() => {
@@ -30,7 +35,12 @@ export const UserProvider = ({ children }) => {
 			const res = await axios.get("http://localhost:8080/api/users/me", {
 				headers: { Authorization: `Basic ${basicAuth}` }
 			});
-			setUser(res.data);
+			const u = res.data || {};
+			const normalized = {
+				...u,
+				companyId: String(u.companyId || (u.company && u.company.id) || u.company_id || '')
+			};
+			setUser(normalized);
 			sessionStorage.setItem('auth', basicAuth);
 			return { success: true };
 		} catch (err) {
@@ -51,4 +61,3 @@ export const UserProvider = ({ children }) => {
 		</UserContext.Provider>
 	);
 };
-

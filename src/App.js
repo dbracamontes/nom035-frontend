@@ -51,8 +51,9 @@ export default function App() {
     { text: t("navigation.dashboard"), icon: <DashboardIcon />, component: <Dashboard />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
     { text: t("navigation.companies"), icon: <BusinessIcon />, component: <CompaniesPage />, roles: ['ROLE_ADMIN'] },
     { text: t("navigation.employees"), icon: <PeopleIcon />, component: <EmployeesPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
-    { text: t("navigation.surveys"), icon: <AssignmentIcon />, component: <><SurveyForm /><SurveyList /></>, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
-    { text: t("navigation.companySurveys"), icon: <BusinessIcon />, component: <CompanySurveyPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
+    // Ocultar encuestas para ROLE_COMPANY: solo visible para ROLE_ADMIN
+    { text: t("navigation.surveys"), icon: <AssignmentIcon />, component: <><SurveyForm /><SurveyList /></>, roles: ['ROLE_ADMIN'] },
+    { text: t("navigation.companySurveys"), icon: <BusinessIcon />, component: <CompanySurveyPage />, roles: ['ROLE_ADMIN'] },
     // ROLE_EMPLOYEE - Solo responder encuestas asignadas (componente simplificado)
     { text: t("navigation.answerSurvey"), icon: <QuizIcon />, component: <EmployeeSurveyAnswer />, roles: ['ROLE_EMPLOYEE'] },
     { text: t("navigation.resultsDashboard"), icon: <AnalyticsIcon />, component: <SurveyResults />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
@@ -63,6 +64,13 @@ export default function App() {
   const menuOptions = user ? allMenuOptions.filter(option => 
     option.roles.some(role => hasRole(role))
   ) : allMenuOptions;
+
+  // Asegurar que el índice seleccionado es válido tras filtrar
+  useEffect(() => {
+    if (selected >= menuOptions.length) {
+      setSelected(0);
+    }
+  }, [menuOptions.length, selected]);
 
   // Si está cargando, mostrar pantalla de carga
   if (loading) return <div>Cargando...</div>;

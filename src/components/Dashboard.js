@@ -60,6 +60,12 @@ export default function Dashboard() {
   const { user, loading } = useContext(UserContext);
   const navigate = useNavigate();
 
+  // helper to check roles
+  const hasRole = (roleName) => {
+    if (!user || !user.roles) return false;
+    return user.roles.some(role => role.authority === roleName);
+  };
+
   const [dashboard, setDashboard] = useState({ employees: [], surveyStatusCounts: [], surveys: [] });
   const [riskByFactor, setRiskByFactor] = useState({});
   const [participation, setParticipation] = useState([]);
@@ -113,12 +119,18 @@ export default function Dashboard() {
   useEffect(() => {
     getCompanies().then((res) => {
       setCompanies(res.data);
-      // Si no hay empresa seleccionada, setear la primera (como string)
-      if (res.data && res.data.length > 0 && (!selectedCompany || !res.data.some(c => String(c.id) === String(selectedCompany)))) {
-        setSelectedCompany(String(res.data[0].id));
+      // If the user is a company user, prefer their company
+      if (user && hasRole('ROLE_COMPANY')) {
+        const userCompanyId = String(user.companyId || (user.company && user.company.id) || (res.data && res.data[0] && res.data[0].id));
+        setSelectedCompany(userCompanyId);
+      } else {
+        // If no company selected yet, set the first one
+        if (res.data && res.data.length > 0 && (!selectedCompany || !res.data.some(c => String(c.id) === String(selectedCompany)))) {
+          setSelectedCompany(String(res.data[0].id));
+        }
       }
     }).catch(() => setCompanies([]));
-  }, [selectedCompany]);
+  }, [user]);
 
   useEffect(() => {
     if (selectedCompany) fetchData(selectedCompany);
@@ -196,19 +208,26 @@ export default function Dashboard() {
       </Box>
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <FormControl sx={{ minWidth: 240 }}>
-          <InputLabel>Seleccionar Empresa</InputLabel>
-          <Select
-            value={selectedCompany}
-            label="Seleccionar Empresa"
-            onChange={(e) => setSelectedCompany(String(e.target.value))}
-            MenuProps={{ PaperProps: { style: { maxHeight: 300 } } }}
-          >
-            {companies.map((c) => (
-              <MenuItem key={c.id} value={String(c.id)}><BusinessIcon sx={{ mr: 1 }} />{c.name}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        {hasRole('ROLE_ADMIN') ? (
+          <FormControl sx={{ minWidth: 240 }}>
+            <InputLabel>Seleccionar Empresa</InputLabel>
+            <Select
+              value={selectedCompany}
+              label="Seleccionar Empresa"
+              onChange={(e) => setSelectedCompany(String(e.target.value))}
+              MenuProps={{ PaperProps: { style: { maxHeight: 300 } } }}
+            >
+              {companies.map((c) => (
+                <MenuItem key={c.id} value={String(c.id)}><BusinessIcon sx={{ mr: 1 }} />{c.name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        ) : (
+          <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 240 }}>
+            <BusinessIcon sx={{ mr: 1 }} />
+            <Typography variant="subtitle1">{companies.find(c => String(c.id) === String(selectedCompany))?.name || '—'}</Typography>
+          </Box>
+        )}
 
         <Button variant="outlined" startIcon={<RefreshIcon />} onClick={() => fetchData(selectedCompany)} disabled={loading}>
           Actualizar
