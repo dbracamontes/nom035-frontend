@@ -158,6 +158,13 @@ export default function SurveyResults() {
     return filtered;
   }, [responses, selectedCompany, selectedSurvey]);
 
+  useEffect(() => {
+    if (filteredResponses && filteredResponses.length) {
+      // Mostrar un ejemplo real de la estructura de las respuestas
+      console.log('Ejemplo de filteredResponses[0]:', filteredResponses[0]);
+    }
+  }, [filteredResponses]);
+
   // Exportar a Excel
   const handleExportExcel = () => {
     if (!filteredResponses.length) return;
@@ -692,7 +699,7 @@ export default function SurveyResults() {
                       </Typography>
                       
                       <Box sx={{ maxHeight: 350, overflowY: 'auto' }}>
-                        {moduleResults
+                        {[...moduleResults]
                           .sort((a, b) => b.averageScore - a.averageScore)
                           .slice(0, 7)
                           .map((module, index) => (
@@ -994,7 +1001,7 @@ export default function SurveyResults() {
                             </TableRow>
                           </TableHead>
                           <TableBody>
-                            {moduleResults
+                            {[...moduleResults]
                               .sort((a, b) => {
                                 const riskOrder = { veryHigh: 4, high: 3, medium: 2, low: 1 };
                                 return riskOrder[b.riskLevel] - riskOrder[a.riskLevel];
@@ -1122,25 +1129,20 @@ export default function SurveyResults() {
                   <TableHead>
                     <TableRow>
                       <TableCell><strong>ID</strong></TableCell>
-                      <TableCell><strong>Empleado</strong></TableCell>
                       <TableCell><strong>Encuesta</strong></TableCell>
-                      <TableCell><strong>Fecha</strong></TableCell>
-                      {/* Render dynamic answer columns */}
-                      {filteredResponses[0]?.answers && Object.keys(filteredResponses[0].answers).map((q, idx) => (
-                        <TableCell key={q}><strong>{q}</strong></TableCell>
-                      ))}
+                      <TableCell><strong>Pregunta</strong></TableCell>
+                      <TableCell><strong>Opción</strong></TableCell>
+                      <TableCell><strong>Respuesta texto</strong></TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {filteredResponses.length ? filteredResponses.map((r) => (
                       <TableRow key={r.id}>
                         <TableCell>{r.id}</TableCell>
-                        <TableCell>{r.employeeName || r.employeeId || ''}</TableCell>
-                        <TableCell>{r.surveyTitle || r.surveyApplicationId || ''}</TableCell>
-                        <TableCell>{r.createdAt ? new Date(r.createdAt).toLocaleString() : ''}</TableCell>
-                        {r.answers && Object.keys(filteredResponses[0].answers).map((q) => (
-                          <TableCell key={q}>{r.answers[q] || ''}</TableCell>
-                        ))}
+                        <TableCell>{r.surveyApplicationId}</TableCell>
+                        <TableCell>{r.questionId}</TableCell>
+                        <TableCell>{r.optionAnswerId}</TableCell>
+                        <TableCell>{r.textAnswer || ''}</TableCell>
                       </TableRow>
                     )) : (
                       <TableRow>
