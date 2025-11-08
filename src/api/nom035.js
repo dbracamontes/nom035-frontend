@@ -7,6 +7,16 @@ const API_BASE = `${API_ROOT}/api`;
 // Obtener el usuario autenticado actual
 export const getCurrentUser = () => axios.get(`${API_BASE}/users/me`);
 
+// Gestión de usuarios y roles
+export const getUsersWithRoles = () => axios.get(`${API_BASE}/users`);
+export const getRolesCatalog = () => axios.get(`${API_BASE}/users/roles`);
+export const updateUserRoles = (userId, payload) => axios.put(`${API_BASE}/users/${userId}/roles`, payload);
+export const generateTemporaryPassword = (userId) => axios.post(`${API_BASE}/users/${userId}/password/generate`);
+
+// Recuperación de contraseñas
+export const requestPasswordReset = (email) => axios.post(`${API_BASE}/users/password-reset/request`, { email });
+export const confirmPasswordReset = (token, newPassword) => axios.post(`${API_BASE}/users/password-reset/confirm`, { token, newPassword });
+
 // Add request interceptor to ensure proper headers
 axios.interceptors.request.use(
   (config) => {

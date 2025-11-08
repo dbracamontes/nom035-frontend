@@ -8,6 +8,7 @@ import QuizIcon from '@mui/icons-material/Quiz';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import BusinessIcon from '@mui/icons-material/Business';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import LandingPage from "./components/LandingPage";
 import EmployeeForm from "./components/EmployeeForm";
 import EmployeeList from "./components/EmployeeList";
@@ -21,6 +22,7 @@ import SurveyResponsesTable from "./components/SurveyResponsesTable";
 import EmployeesPage from "./components/EmployeesPage";
 import CompanySurveyPage from "./components/CompanySurveyPage";
 import CompaniesPage from "./components/CompaniesPage";
+import UserRoleManagement from "./components/UserRoleManagement";
 import LanguageSelector from "./components/LanguageSelector";
 import LoginPage from "./components/LoginPage";
 import { useTranslation } from 'react-i18next';
@@ -51,13 +53,13 @@ export default function App() {
     { text: t("navigation.dashboard"), icon: <DashboardIcon />, component: <Dashboard />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
     { text: t("navigation.companies"), icon: <BusinessIcon />, component: <CompaniesPage />, roles: ['ROLE_ADMIN'] },
     { text: t("navigation.employees"), icon: <PeopleIcon />, component: <EmployeesPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
-    // Ocultar encuestas para ROLE_COMPANY: solo visible para ROLE_ADMIN
+    { text: t("navigation.rolesPrivileges"), icon: <AdminPanelSettingsIcon />, component: <UserRoleManagement />, roles: ['ROLE_ADMIN'] },
     { text: t("navigation.surveys"), icon: <AssignmentIcon />, component: <><SurveyForm /><SurveyList /></>, roles: ['ROLE_ADMIN'] },
     { text: t("navigation.companySurveys"), icon: <BusinessIcon />, component: <CompanySurveyPage />, roles: ['ROLE_ADMIN'] },
-    // ROLE_EMPLOYEE - Solo responder encuestas asignadas (componente simplificado)
-    { text: t("navigation.answerSurvey"), icon: <QuizIcon />, component: <EmployeeSurveyAnswer />, roles: ['ROLE_EMPLOYEE'] },
     { text: t("navigation.resultsDashboard"), icon: <AnalyticsIcon />, component: <SurveyResults />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
-    { text: t("navigation.surveyResponses"), icon: <TableChartIcon />, component: <SurveyResponsesTable />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] }
+    { text: t("navigation.surveyResponses"), icon: <TableChartIcon />, component: <SurveyResponsesTable />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
+    // ROLE_EMPLOYEE - Solo responder encuestas asignadas (componente simplificado)
+    { text: t("navigation.answerSurvey"), icon: <QuizIcon />, component: <EmployeeSurveyAnswer />, roles: ['ROLE_EMPLOYEE'] }
   ];
 
   // Filtrar opciones de menú según el rol del usuario

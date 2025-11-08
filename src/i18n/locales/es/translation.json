@@ -5,7 +5,8 @@
   "navigation": {
     "landing": "Inicio",
     "dashboard": "Panel de Control",
-    "companies": "Empresas",
+  "companies": "Empresas",
+  "rolesPrivileges": "Roles y Privilegios",
     "employees": "Empleados",
     "surveys": "Encuestas",
     "companySurveys": "Encuestas de Empresa",
@@ -220,5 +221,64 @@
     "edit": "Editar",
     "delete": "Eliminar",
     "language": "Idioma"
+  }
+  ,
+  "users": {
+    "title": "Gestión de usuarios y roles",
+    "actions": {
+      "refresh": "Actualizar",
+      "manualPassword": "Asignar contraseña manual",
+      "generatePassword": "Generar contraseña temporal",
+      "requestReset": "Solicitar recuperación",
+      "save": "Guardar cambios",
+      "copy": "Copiar"
+    },
+    "columns": {
+      "username": "Usuario",
+      "email": "Correo",
+      "company": "Empresa",
+      "roles": "Roles",
+      "enabled": "Activo",
+      "actions": "Acciones"
+    },
+    "labels": {
+      "noEmail": "Sin correo",
+      "noCompany": "Sin empresa",
+      "selectCompany": "Seleccionar empresa",
+      "selectRoles": "Seleccionar roles",
+      "search": "Buscar por nombre o correo",
+      "expires": "Expira el {{value}}"
+    },
+    "feedback": {
+      "updated": "Cambios guardados correctamente",
+      "passwordGenerated": "Contraseña temporal generada",
+      "resetLink": "Se generó un enlace de recuperación",
+      "manualPasswordSet": "Contraseña actualizada correctamente",
+      "copied": "Copiado al portapapeles"
+    },
+    "errors": {
+      "load": "No se pudieron cargar los usuarios o roles",
+      "update": "No fue posible guardar los cambios. Intenta más tarde.",
+      "generatePassword": "No se pudo generar la contraseña",
+      "emailRequired": "El usuario no tiene correo registrado",
+      "requestReset": "No se pudo generar el enlace de recuperación",
+      "manualPassword": "No se pudo actualizar la contraseña",
+      "manualPasswordMismatch": "Las contraseñas no coinciden",
+      "manualPasswordLength": "La contraseña debe tener al menos 6 caracteres",
+      "copy": "No se pudo copiar el texto"
+    },
+    "dialogs": {
+      "passwordTitle": "Contraseña temporal generada",
+      "passwordBody": "Comparte la siguiente contraseña temporal con {{username}} y solicita que la cambie en su próximo acceso.",
+      "passwordWarning": "Por seguridad, esta contraseña solo se muestra una vez. Copia y resguárdala antes de cerrar esta ventana.",
+      "resetTitle": "Enlace de recuperación",
+      "resetBody": "Comparte el siguiente token con el usuario para completar la recuperación de contraseña desde la pantalla de restablecimiento.",
+      "manualPasswordTitle": "Asignar contraseña a {{username}}",
+      "manualPasswordBody": "Ingresa una contraseña temporal personalizada y compártela con el usuario.",
+      "manualPasswordLabel": "Contraseña",
+      "manualPasswordConfirm": "Confirmar contraseña",
+      "manualPasswordSave": "Guardar contraseña"
+    },
+    "empty": "No hay usuarios registrados"
   }
 }

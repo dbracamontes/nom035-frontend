@@ -6,6 +6,7 @@
   "landing": "Landing",
   "dashboard": "Dashboard",
   "companies": "Companies",
+  "rolesPrivileges": "Roles & Privileges",
   "employees": "Employees",
   "surveys": "Surveys",
   "companySurveys": "Company Surveys",
@@ -119,5 +120,63 @@
     "edit": "Edit",
     "delete": "Delete",
     "language": "Language"
+  },
+  "users": {
+    "title": "User and role management",
+    "actions": {
+      "refresh": "Refresh",
+      "manualPassword": "Set manual password",
+      "generatePassword": "Generate temporary password",
+      "requestReset": "Request recovery",
+      "save": "Save changes",
+      "copy": "Copy"
+    },
+    "columns": {
+      "username": "Username",
+      "email": "Email",
+      "company": "Company",
+      "roles": "Roles",
+      "enabled": "Active",
+      "actions": "Actions"
+    },
+    "labels": {
+      "noEmail": "No email",
+      "noCompany": "No company",
+      "selectCompany": "Select company",
+      "selectRoles": "Select roles",
+      "search": "Search by name or email",
+      "expires": "Expires on {{value}}"
+    },
+    "feedback": {
+      "updated": "Changes saved successfully",
+      "passwordGenerated": "Temporary password generated",
+      "resetLink": "Recovery link generated",
+      "manualPasswordSet": "Password updated successfully",
+      "copied": "Copied to clipboard"
+    },
+    "errors": {
+      "load": "Unable to load users or roles",
+      "update": "Unable to save changes. Please try again later.",
+      "generatePassword": "Password could not be generated",
+      "emailRequired": "The user does not have an email registered",
+      "requestReset": "Unable to generate the recovery link",
+      "manualPassword": "Could not update the password",
+      "manualPasswordMismatch": "Passwords do not match",
+      "manualPasswordLength": "Password must be at least 6 characters",
+      "copy": "Unable to copy the value"
+    },
+    "dialogs": {
+      "passwordTitle": "Temporary password",
+      "passwordBody": "Share the following temporary password with {{username}} and ask them to change it on their next sign-in.",
+      "passwordWarning": "For security reasons this password is only shown once. Copy it before closing this dialog.",
+      "resetTitle": "Recovery token",
+      "resetBody": "Share the following token with the user so they can complete the password recovery from the reset screen.",
+      "manualPasswordTitle": "Set password for {{username}}",
+      "manualPasswordBody": "Enter a custom temporary password and share it with the user.",
+      "manualPasswordLabel": "Password",
+      "manualPasswordConfirm": "Confirm password",
+      "manualPasswordSave": "Save password"
+    },
+    "empty": "No users found"
   }
 }
