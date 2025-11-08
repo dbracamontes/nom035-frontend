@@ -148,6 +148,7 @@ export const deleteCompanySurvey = id => axios.delete(`${API_BASE}/company-surve
 export const getCompanyDashboard = companyId => axios.get(`${API_BASE}/dashboard/company/${companyId}`);
 export const getCompanyRisk = companyId => axios.get(`${API_BASE}/dashboard/company/${companyId}/risk`);
 export const getCompanyParticipation = companyId => axios.get(`${API_BASE}/dashboard/company/${companyId}/participation`);
+export const getCompanyParticipationSummary = companyId => axios.get(`${API_BASE}/dashboard/company/${companyId}/participation/summary`);
 
 // Resumen global de participación por empresa
 export const getParticipationSummary = () => axios.get(`${API_BASE}/dashboard/participation/summary`);

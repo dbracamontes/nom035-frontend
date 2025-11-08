@@ -5,7 +5,8 @@ import {
   getCompanyDashboard,
   getCompanyRisk,
   getCompanyParticipation,
-  getCompanies
+  getCompanies,
+  getCompanyParticipationSummary
 } from "../api/nom035";
 import {
   Box,
@@ -53,10 +54,6 @@ import theme from "../theme";
 const COLORS = [theme.palette.primary.dark, theme.palette.primary.light, theme.palette.primary.main, theme.palette.secondary.main];
 
 export default function Dashboard() {
-  // ...existing code...
-  // ...existing code...
-  // ...existing code...
-  // (El log de riskByFactor se mueve después de todos los useState y hooks)
   const { user, loading } = useContext(UserContext);
   const navigate = useNavigate();
 
@@ -70,12 +67,11 @@ export default function Dashboard() {
   const [riskByFactor, setRiskByFactor] = useState({});
   const [participation, setParticipation] = useState([]);
   const [companies, setCompanies] = useState([]);
-  // selectedCompany inicia vacío y se setea al primer id válido cuando companies carga
   const [selectedCompany, setSelectedCompany] = useState("");
   const [dashboardLoading, setDashboardLoading] = useState(false);
-  // Hooks para mostrar todos o top 5
   const [showAllRisk, setShowAllRisk] = useState(false);
   const [showAllParticipation, setShowAllParticipation] = useState(false);
+  const [participationSummary, setParticipationSummary] = useState(null);
 
   // Log para depuración: mostrar los nombres de los factores que llegan del backend
   useEffect(() => {
@@ -87,18 +83,21 @@ export default function Dashboard() {
   const fetchData = async (companyId) => {
     setDashboardLoading(true);
     try {
-      const [dashboardRes, riskRes, participationRes] = await Promise.all([
+      const [dashboardRes, riskRes, participationRes, summaryRes] = await Promise.all([
         getCompanyDashboard(companyId),
         getCompanyRisk(companyId),
-        getCompanyParticipation(companyId)
+        getCompanyParticipation(companyId),
+        getCompanyParticipationSummary(companyId)
       ]);
       // Log de datos crudos para depuración
       console.log('DASHBOARD DATA:', dashboardRes.data);
       console.log('RISK BY FACTOR:', riskRes.data);
-      console.log('PARTICIPATION:', participationRes.data);
+      console.log('PARTICIPATION (per survey):', participationRes.data);
+      console.log('PARTICIPATION SUMMARY (canonical):', summaryRes.data);
       setDashboard(dashboardRes.data);
       setRiskByFactor(riskRes.data);
       setParticipation(participationRes.data);
+      setParticipationSummary(summaryRes.data);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
     } finally {
@@ -161,7 +160,9 @@ export default function Dashboard() {
     totalEmployees: dashboard.employees?.length || 0,
     totalSurveys: dashboard.surveys?.length || 0,
     avgCompletion: participation.length > 0 ? (participation.reduce((a, b) => a + b.completionRate, 0) / participation.length).toFixed(1) : 0,
-    highRiskFactors: pieData.filter((p) => p.value > 70).length
+    highRiskFactors: pieData.filter((p) => p.value > 70).length,
+    responded: participationSummary ? participationSummary.responded : 0,
+    pending: participationSummary ? participationSummary.pending : (dashboard.employees?.length || 0)
   };
   // Altura dinámica para las gráficas (debe ir después de definir los datos limitados)
   const pieChartHeight = Math.max(360, (pieDataLimited.length || 1) * 60);
@@ -237,10 +238,12 @@ export default function Dashboard() {
       {dashboardLoading && <LinearProgress sx={{ mb: 2 }} />}
 
       <Grid container columnSpacing={2} rowSpacing={2} sx={{ mb: 3 }}>
-        <Grid><StatCard title="Total Empleados" value={stats.totalEmployees} icon={<PeopleIcon />} subtitle="Personal registrado" trend="+2% este mes" /></Grid>
-        <Grid><StatCard title="Encuestas Activas" value={stats.totalSurveys} icon={<AssignmentIcon />} subtitle="En el sistema" trend="3 nuevas esta semana" /></Grid>
-        <Grid><StatCard title="Participación" value={`${stats.avgCompletion}%`} icon={<TrendingUpIcon />} subtitle="Promedio general" trend="↗ Mejorando" /></Grid>
-        <Grid><StatCard title="Factores de Riesgo" value={stats.highRiskFactors} icon={<WarningIcon />} subtitle="Requieren atención" trend={stats.highRiskFactors > 0 ? '⚠ Revisar' : '✓ Bajo control'} /></Grid>
+        <Grid><StatCard title="Total Empleados" value={stats.totalEmployees} icon={<PeopleIcon />} subtitle="Personal registrado" trend="" /></Grid>
+        <Grid><StatCard title="Encuestas Activas" value={stats.totalSurveys} icon={<AssignmentIcon />} subtitle="En el sistema" trend="" /></Grid>
+        <Grid><StatCard title="Participación Promedio" value={`${stats.avgCompletion}%`} icon={<TrendingUpIcon />} subtitle="Promedio por encuesta" trend="" /></Grid>
+        <Grid><StatCard title="Respondidos" value={stats.responded} icon={<TrendingUpIcon />} subtitle="Aplicaciones completadas" trend="" /></Grid>
+        <Grid><StatCard title="Pendientes" value={stats.pending} icon={<WarningIcon />} subtitle="Aplicaciones sin completar" trend={stats.pending === 0 ? '✓ Completo' : ''} /></Grid>
+        <Grid><StatCard title="Factores de Riesgo" value={stats.highRiskFactors} icon={<WarningIcon />} subtitle=">70 promedio" trend={stats.highRiskFactors > 0 ? '⚠ Revisar' : '✓ Bajo'} /></Grid>
       </Grid>
 
       <Grid container columnSpacing={2} rowSpacing={2}>
