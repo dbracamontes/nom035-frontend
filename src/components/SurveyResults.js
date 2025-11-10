@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { 
-  getSurveyResponses, getCompanies, getSurveys, getEmployees, getParticipationSummary
+  getSurveyResponses, getCompanies, getSurveys, getEmployees, getParticipationSummary, getSurveyApplications
 } from "../api/nom035";
 import { 
   Box, Typography, Paper, Tab, Tabs, Grid, Card, CardContent, 
@@ -138,6 +138,7 @@ export default function SurveyResults() {
   const [participationSummary, setParticipationSummary] = useState([]);
   const [surveys, setSurveys] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [surveyApplications, setSurveyApplications] = useState([]); // nuevo para relacionar respuesta->empleado->empresa
   const [selectedCompany, setSelectedCompany] = useState('');
   const [selectedSurvey, setSelectedSurvey] = useState('');
   
@@ -148,15 +149,34 @@ export default function SurveyResults() {
 
   // Memoized filtered responses para exportar y mostrar detalle
   const filteredResponses = useMemo(() => {
+    // Necesitamos vincular cada respuesta (surveyApplicationId) con su aplicación para obtener employeeId y surveyId
+    const appById = new Map((surveyApplications || []).map(a => [a.id, a]));
     let filtered = responses;
+
     if (selectedCompany) {
-      // TODO: Filtrar por empresa cuando tengamos esa relación
+      // IDs de empleados de la empresa seleccionada
+      const employeesInCompany = new Set(
+        employees
+          .filter(e => String(e.companyId || (e.company && e.company.id)) === String(selectedCompany))
+          .map(e => e.id)
+      );
+      filtered = filtered.filter(r => {
+        const app = appById.get(r.surveyApplicationId);
+        if (!app) return false;
+        return employeesInCompany.has(app.employeeId);
+      });
     }
+
     if (selectedSurvey) {
-      filtered = filtered.filter(r => r.surveyApplicationId === parseInt(selectedSurvey));
+      // selectedSurvey es el id de la encuesta, no el id de la aplicación
+      filtered = filtered.filter(r => {
+        const app = appById.get(r.surveyApplicationId);
+        if (!app) return false;
+        return String(app.surveyId) === String(selectedSurvey);
+      });
     }
     return filtered;
-  }, [responses, selectedCompany, selectedSurvey]);
+  }, [responses, selectedCompany, selectedSurvey, surveyApplications, employees]);
 
   useEffect(() => {
     if (filteredResponses && filteredResponses.length) {
@@ -223,27 +243,28 @@ export default function SurveyResults() {
   }, []);
 
   useEffect(() => {
-    if (responses.length > 0) {
+    if (responses.length > 0 || surveyApplications.length > 0) {
       processStatistics();
     }
-  }, [responses, selectedCompany, selectedSurvey]);
+  }, [responses, surveyApplications, employees, selectedCompany, selectedSurvey]);
 
   const loadInitialData = async () => {
     try {
       setLoading(true);
-      // Cargar datos básicos y resumen de participación real
-      const [responsesRes, companiesRes, surveysRes, employeesRes, participationSummaryRes] = await Promise.all([
+      const [responsesRes, companiesRes, surveysRes, employeesRes, participationSummaryRes, applicationsRes] = await Promise.all([
         getSurveyResponses(),
         getCompanies(),
         getSurveys(),
         getEmployees(),
-        getParticipationSummary()
+        getParticipationSummary(),
+        getSurveyApplications()
       ]);
       setResponses(responsesRes.data || []);
       setCompanies(companiesRes.data || []);
       setSurveys(surveysRes.data || []);
       setEmployees(employeesRes.data || []);
       setParticipationSummary(participationSummaryRes.data || []);
+      setSurveyApplications(applicationsRes.data || []);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       setError('Error al cargar los datos del dashboard');
@@ -254,38 +275,56 @@ export default function SurveyResults() {
 
   const processStatistics = () => {
     console.log('🔄 Processing statistics with responses:', responses.length);
-    
-    // Filtrar respuestas según selección
-    let filteredResponses = responses;
-    
+    const appById = new Map((surveyApplications || []).map(a => [a.id, a]));
+
+    // Filtrar respuestas según selección utilizando la misma lógica que memo
+    let resp = responses;
     if (selectedCompany) {
-      // TODO: Filtrar por empresa cuando tengamos esa relación
-    }
-    
-    if (selectedSurvey) {
-      filteredResponses = filteredResponses.filter(r => 
-        r.surveyApplicationId === parseInt(selectedSurvey)
+      const employeesInCompany = new Set(
+        employees
+          .filter(e => String(e.companyId || (e.company && e.company.id)) === String(selectedCompany))
+          .map(e => e.id)
       );
+      resp = resp.filter(r => {
+        const app = appById.get(r.surveyApplicationId);
+        return app && employeesInCompany.has(app.employeeId);
+      });
     }
-    
-    // Calcular estadísticas de participación
-    const totalEmployees = employees.length;
-    const respondedEmployees = new Set(filteredResponses.map(r => r.surveyApplicationId)).size;
-    
+    if (selectedSurvey) {
+      resp = resp.filter(r => {
+        const app = appById.get(r.surveyApplicationId);
+        return app && String(app.surveyId) === String(selectedSurvey);
+      });
+    }
+
+    // Calcular empleados totales dentro del scope del filtro
+    const scopedEmployees = selectedCompany
+      ? employees.filter(e => String(e.companyId || (e.company && e.company.id)) === String(selectedCompany))
+      : employees;
+
+    // Empleados que han respondido (distintos employeeId presentes en aplicaciones asociadas a las respuestas filtradas)
+    const respondedEmployeeIds = new Set(
+      resp
+        .map(r => appById.get(r.surveyApplicationId))
+        .filter(Boolean)
+        .map(app => app.employeeId)
+    );
+
+    const totalEmployees = scopedEmployees.length;
+    const respondedEmployees = respondedEmployeeIds.size;
+
     setParticipationStats({
       total: totalEmployees,
       responded: respondedEmployees,
-      pending: totalEmployees - respondedEmployees,
+      pending: Math.max(totalEmployees - respondedEmployees, 0),
       percentage: totalEmployees > 0 ? Math.round((respondedEmployees / totalEmployees) * 100) : 0
     });
-    
-    // Procesar resultados por módulo (simulado por ahora)
+
+    // Simulación de resultados por módulo basada en respondedEmployees (placeholder hasta tener backend por módulo)
     const moduleData = Object.entries(NOM035_MODULES).map(([num, module]) => {
-      // Simular datos de respuestas por módulo
-      const moduleResponses = Math.floor(Math.random() * respondedEmployees) + 1;
-      const averageScore = Math.floor(Math.random() * 40) + 1;
+      const moduleResponses = respondedEmployees > 0 ? Math.min(respondedEmployees, Math.floor(Math.random() * respondedEmployees) + 1) : 0;
+      const averageScore = moduleResponses > 0 ? Math.floor(Math.random() * 40) + 1 : 0;
       const riskLevel = getRiskLevel(averageScore, parseInt(num));
-      
       return {
         module: parseInt(num),
         name: module.name,
@@ -295,21 +334,17 @@ export default function SurveyResults() {
         color: module.color
       };
     });
-    
     setModuleResults(moduleData);
-    
-    // Calcular análisis de riesgo general
+
     const riskCounts = moduleData.reduce((acc, module) => {
       acc[module.riskLevel] = (acc[module.riskLevel] || 0) + 1;
       return acc;
     }, {});
-    
     setRiskAnalysis(riskCounts);
-    
-    console.log('✅ Statistics processed:', {
-      participation: { totalEmployees, respondedEmployees },
-      modules: moduleData.length,
-      riskAnalysis: riskCounts
+
+    console.log('✅ Statistics processed (filtered):', {
+      scope: selectedCompany ? `Empresa ${selectedCompany}` : 'Global',
+      totalEmployees, respondedEmployees
     });
   };
 
@@ -421,7 +456,7 @@ export default function SurveyResults() {
         <Grid item xs={12} md={3}>
           <StatCard 
             title="Total Respuestas"
-            value={responses.length}
+            value={filteredResponses.length}
             subtitle="Respuestas registradas"
             icon={<AssessmentIcon sx={{ fontSize: 40, color: '#9c27b0' }} />}
             color="#9c27b0"
@@ -599,7 +634,9 @@ export default function SurveyResults() {
                             </TableRow>
                           </TableHead>
                           <TableBody>
-                            {participationSummary.length > 0 ? participationSummary.map((row) => (
+                            {participationSummary.length > 0 ? participationSummary
+                              .filter(row => !selectedCompany || String(row.companyId) === String(selectedCompany))
+                              .map((row) => (
                               <TableRow key={row.companyId}>
                                 <TableCell>{row.companyName}</TableCell>
                                 <TableCell align="center">
@@ -1137,20 +1174,20 @@ export default function SurveyResults() {
                   </TableHead>
                   <TableBody>
                     {filteredResponses.length ? filteredResponses.map((r) => (
-                      <TableRow key={r.id}>
-                        <TableCell>{r.id}</TableCell>
-                        <TableCell>{r.surveyApplicationId}</TableCell>
-                        <TableCell>{r.questionId}</TableCell>
-                        <TableCell>{r.optionAnswerId}</TableCell>
-                        <TableCell>{r.textAnswer || ''}</TableCell>
-                      </TableRow>
-                    )) : (
-                      <TableRow>
-                        <TableCell colSpan={4} align="center">
-                          <Typography color="text.secondary">No hay respuestas para los filtros seleccionados.</Typography>
-                        </TableCell>
-                      </TableRow>
-                    )}
+                          <TableRow key={r.id}>
+                            <TableCell>{r.id}</TableCell>
+                            <TableCell>{r.surveyApplicationId}</TableCell>
+                            <TableCell>{r.questionId}</TableCell>
+                            <TableCell>{r.optionAnswerId}</TableCell>
+                            <TableCell>{r.textAnswer || ''}</TableCell>
+                          </TableRow>
+                        )) : (
+                          <TableRow>
+                            <TableCell colSpan={5} align="center">
+                              <Typography color="text.secondary">No hay respuestas para los filtros seleccionados.</Typography>
+                            </TableCell>
+                          </TableRow>
+                        )}
                   </TableBody>
                 </Table>
               </TableContainer>
