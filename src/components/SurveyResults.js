@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useContext } from "react";
 import { 
   getSurveyResponses, getCompanies, getSurveys, getEmployees, getParticipationSummary, getSurveyApplications
 } from "../api/nom035";
@@ -23,6 +23,8 @@ import {
   ExpandMore as ExpandMoreIcon
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { UserContext } from '../context/UserContext';
+import { getLogger } from '../utils/logger';
 
 // Definición de módulos NOM-035 para análisis (colores azul y morado)
 const NOM035_MODULES = {
@@ -128,6 +130,14 @@ function StatCard({ title, value, subtitle, icon, color = '#1976d2' }) {
 // Componente principal
 export default function SurveyResults() {
   const { t } = useTranslation();
+  const log = getLogger('SurveyResults');
+  const { user } = useContext(UserContext);
+  const hasRole = (roleName) => {
+    if (!user || !user.roles) return false;
+    return user.roles.some(r => (typeof r === 'string' && r === roleName) || (r && r.authority === roleName) || (r && r.name === roleName));
+  };
+  const isCompanyRole = hasRole('ROLE_COMPANY');
+  const isAdmin = hasRole('ROLE_ADMIN');
   const [currentTab, setCurrentTab] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -171,8 +181,11 @@ export default function SurveyResults() {
       // selectedSurvey es el id de la encuesta, no el id de la aplicación
       filtered = filtered.filter(r => {
         const app = appById.get(r.surveyApplicationId);
-        if (!app) return false;
-        return String(app.surveyId) === String(selectedSurvey);
+        if (app) return String(app.surveyId) === String(selectedSurvey);
+        // Fallback: si la respuesta trae surveyId directo
+        const respSurveyId = r.surveyId || r.survey_id || (r.survey && r.survey.id);
+        if (respSurveyId != null) return String(respSurveyId) === String(selectedSurvey);
+        return false;
       });
     }
     return filtered;
@@ -187,7 +200,8 @@ export default function SurveyResults() {
 
   // Exportar a Excel
   const handleExportExcel = () => {
-    if (!filteredResponses.length) return;
+    if (!filteredResponses.length) { log.warn('Excel export skipped - empty filteredResponses'); return; }
+    log.debug('Exporting Excel', { count: filteredResponses.length });
     const data = filteredResponses.map(r => ({
       ID: r.id,
       'Empleado': r.employeeName || r.employeeId || '',
@@ -203,7 +217,8 @@ export default function SurveyResults() {
 
   // Exportar a PDF
   const handleExportPDF = () => {
-    if (!filteredResponses.length) return;
+    if (!filteredResponses.length) { log.warn('PDF export skipped - empty filteredResponses'); return; }
+    log.debug('Exporting PDF', { count: filteredResponses.length });
     const doc = new jsPDF();
     const columns = [
       { header: 'ID', dataKey: 'id' },
@@ -251,6 +266,7 @@ export default function SurveyResults() {
   const loadInitialData = async () => {
     try {
       setLoading(true);
+      log.info('Loading initial data');
       const [responsesRes, companiesRes, surveysRes, employeesRes, participationSummaryRes, applicationsRes] = await Promise.all([
         getSurveyResponses(),
         getCompanies(),
@@ -265,53 +281,54 @@ export default function SurveyResults() {
       setEmployees(employeesRes.data || []);
       setParticipationSummary(participationSummaryRes.data || []);
       setSurveyApplications(applicationsRes.data || []);
+      log.info('Data loaded', {
+        responses: responsesRes.data?.length,
+        companies: companiesRes.data?.length,
+        surveys: surveysRes.data?.length,
+        employees: employeesRes.data?.length,
+        applications: applicationsRes.data?.length
+      });
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       setError('Error al cargar los datos del dashboard');
+      log.error('Initial data load failed', { error: error?.message });
     } finally {
       setLoading(false);
     }
   };
 
   const processStatistics = () => {
-    console.log('🔄 Processing statistics with responses:', responses.length);
+    log.debug('Processing statistics', { responses: responses.length, applications: surveyApplications.length, selectedCompany, selectedSurvey });
     const appById = new Map((surveyApplications || []).map(a => [a.id, a]));
 
-    // Filtrar respuestas según selección utilizando la misma lógica que memo
-    let resp = responses;
-    if (selectedCompany) {
-      const employeesInCompany = new Set(
-        employees
-          .filter(e => String(e.companyId || (e.company && e.company.id)) === String(selectedCompany))
-          .map(e => e.id)
-      );
-      resp = resp.filter(r => {
-        const app = appById.get(r.surveyApplicationId);
-        return app && employeesInCompany.has(app.employeeId);
-      });
-    }
-    if (selectedSurvey) {
-      resp = resp.filter(r => {
-        const app = appById.get(r.surveyApplicationId);
-        return app && String(app.surveyId) === String(selectedSurvey);
-      });
-    }
-
-    // Calcular empleados totales dentro del scope del filtro
+    // Build scoped employees set by selected company
     const scopedEmployees = selectedCompany
       ? employees.filter(e => String(e.companyId || (e.company && e.company.id)) === String(selectedCompany))
       : employees;
+    const scopedEmployeeIds = new Set(scopedEmployees.map(e => e.id));
 
-    // Empleados que han respondido (distintos employeeId presentes en aplicaciones asociadas a las respuestas filtradas)
-    const respondedEmployeeIds = new Set(
-      resp
-        .map(r => appById.get(r.surveyApplicationId))
-        .filter(Boolean)
-        .map(app => app.employeeId)
-    );
+    // Filter applications by company and survey
+    let scopedApps = (surveyApplications || []).filter(app => scopedEmployeeIds.has(app.employeeId));
+    if (selectedSurvey) {
+      scopedApps = scopedApps.filter(app => String(app.surveyId) === String(selectedSurvey));
+    }
 
-    const totalEmployees = scopedEmployees.length;
-    const respondedEmployees = respondedEmployeeIds.size;
+    // Determine target population for participation
+    // If a survey is selected, target is employees assigned that survey (unique employeeIds in scopedApps)
+    // Otherwise, target is all employees in scope (company/all)
+    const targetEmployeeIds = selectedSurvey
+      ? new Set(scopedApps.map(a => a.employeeId))
+      : scopedEmployeeIds;
+
+    // Determine responded based on application completion indicators
+    const isCompleted = (app) => {
+      const status = (app.status || app.applicationStatus || '').toString().toUpperCase();
+      return !!(app.completedAt || app.completed || status === 'COMPLETADA' || status === 'COMPLETED' || status === 'COMPLETO');
+    };
+    const respondedIds = new Set(scopedApps.filter(isCompleted).map(a => a.employeeId));
+
+    const totalEmployees = targetEmployeeIds.size;
+    const respondedEmployees = [...respondedIds].filter(id => targetEmployeeIds.has(id)).length;
 
     setParticipationStats({
       total: totalEmployees,
@@ -319,6 +336,26 @@ export default function SurveyResults() {
       pending: Math.max(totalEmployees - respondedEmployees, 0),
       percentage: totalEmployees > 0 ? Math.round((respondedEmployees / totalEmployees) * 100) : 0
     });
+    log.info('Participation computed', { totalEmployees, respondedEmployees });
+
+    // También construir un array de respuestas filtradas para el placeholder de módulos/riesgo (usando la lógica anterior como base)
+    // Filtrar respuestas según selección utilizando la misma lógica que memo
+    let resp = responses;
+    if (selectedCompany) {
+      resp = resp.filter(r => {
+        const app = appById.get(r.surveyApplicationId);
+        return app && scopedEmployeeIds.has(app.employeeId);
+      });
+    }
+    if (selectedSurvey) {
+      resp = resp.filter(r => {
+        const app = appById.get(r.surveyApplicationId);
+        if (app) return String(app.surveyId) === String(selectedSurvey);
+        const respSurveyId = r.surveyId || r.survey_id || (r.survey && r.survey.id);
+        if (respSurveyId != null) return String(respSurveyId) === String(selectedSurvey);
+        return false;
+      });
+    }
 
     // Simulación de resultados por módulo basada en respondedEmployees (placeholder hasta tener backend por módulo)
     const moduleData = Object.entries(NOM035_MODULES).map(([num, module]) => {
@@ -341,16 +378,29 @@ export default function SurveyResults() {
       return acc;
     }, {});
     setRiskAnalysis(riskCounts);
+    log.info('Module & risk analysis updated', { modules: moduleData.length, riskBuckets: riskCounts });
 
     console.log('✅ Statistics processed (filtered):', {
       scope: selectedCompany ? `Empresa ${selectedCompany}` : 'Global',
+      survey: selectedSurvey || 'Todas',
       totalEmployees, respondedEmployees
     });
   };
 
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
+    log.debug('Tab changed', { newValue });
   };
+
+  useEffect(() => {
+    if (user && isCompanyRole) {
+      const userCompanyId = String(user.companyId || (user.company && user.company.id) || '');
+      if (userCompanyId && userCompanyId !== String(selectedCompany)) {
+        log.debug('Locking company for ROLE_COMPANY user', { userCompanyId });
+        setSelectedCompany(userCompanyId);
+      }
+    }
+  }, [user, isCompanyRole, selectedCompany]);
 
   if (loading) {
     return (
@@ -384,23 +434,38 @@ export default function SurveyResults() {
         </Typography>
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
-            <TextField
-              select
-              fullWidth
-              label="Seleccionar Empresa"
-              value={selectedCompany}
-              onChange={e => setSelectedCompany(e.target.value)}
-              variant="outlined"
-              sx={{ backgroundColor: '#fff', borderRadius: 2, minWidth: 300 }}
-              InputProps={{ style: { fontSize: 16 } }}
-            >
-              <MenuItem value="">Todas las empresas</MenuItem>
-              {companies.map(company => (
-                <MenuItem key={company.id} value={company.id}>
-                  {company.name}
-                </MenuItem>
-              ))}
-            </TextField>
+            {isCompanyRole ? (
+              <TextField
+                fullWidth
+                disabled
+                label="Empresa"
+                value={(() => {
+                  const companyObj = companies.find(c => String(c.id) === String(selectedCompany));
+                  return companyObj ? companyObj.name : 'Mi Empresa';
+                })()}
+                variant="outlined"
+                sx={{ backgroundColor: '#fff', borderRadius: 2, minWidth: 300 }}
+                InputProps={{ style: { fontSize: 16 } }}
+              />
+            ) : (
+              <TextField
+                select
+                fullWidth
+                label="Seleccionar Empresa"
+                value={selectedCompany}
+                onChange={e => { setSelectedCompany(e.target.value); log.debug('Company filter changed', { companyId: e.target.value }); }}
+                variant="outlined"
+                sx={{ backgroundColor: '#fff', borderRadius: 2, minWidth: 300 }}
+                InputProps={{ style: { fontSize: 16 } }}
+              >
+                <MenuItem value="">Todas las empresas</MenuItem>
+                {companies.map(company => (
+                  <MenuItem key={company.id} value={company.id}>
+                    {company.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
           </Grid>
           <Grid item xs={12} md={6}>
             <TextField
@@ -408,7 +473,7 @@ export default function SurveyResults() {
               fullWidth
               label="Seleccionar Encuesta"
               value={selectedSurvey}
-              onChange={e => setSelectedSurvey(e.target.value)}
+              onChange={e => { setSelectedSurvey(e.target.value); log.debug('Survey filter changed', { surveyId: e.target.value }); }}
               variant="outlined"
               sx={{ backgroundColor: '#fff', borderRadius: 2, minWidth: 300 }}
               InputProps={{ style: { fontSize: 16 } }}
