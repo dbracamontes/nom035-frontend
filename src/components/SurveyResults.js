@@ -1236,29 +1236,47 @@ export default function SurveyResults() {
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell><strong>ID</strong></TableCell>
+                      <TableCell><strong>Empleado</strong></TableCell>
                       <TableCell><strong>Encuesta</strong></TableCell>
-                      <TableCell><strong>Pregunta</strong></TableCell>
-                      <TableCell><strong>Opción</strong></TableCell>
-                      <TableCell><strong>Respuesta texto</strong></TableCell>
+                      <TableCell><strong>Fecha</strong></TableCell>
+                      <TableCell><strong>Nivel de riesgo</strong></TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredResponses.length ? filteredResponses.map((r) => (
+                    {(() => {
+                      // Agrupar por empleado y mostrar solo el registro más reciente por empleado
+                      const byEmployee = {};
+                      filteredResponses.forEach((r) => {
+                        const app = surveyApplications.find(a => a.id === r.surveyApplicationId) || {};
+                        const employeeId = app.employeeId || r.employeeId || (r.employee && r.employee.id);
+                        const fecha = r.createdAt ? new Date(r.createdAt) : (app.completedAt ? new Date(app.completedAt) : null);
+                        if (!employeeId) return;
+                        if (!byEmployee[employeeId] || (fecha && fecha > byEmployee[employeeId].fecha)) {
+                          byEmployee[employeeId] = { r, app, fecha };
+                        }
+                      });
+                      const rows = Object.values(byEmployee);
+                      return rows.length ? rows.map(({ r, app, fecha }) => {
+                        const employee = employees.find(e => e.id === (app.employeeId || r.employeeId)) || {};
+                        const survey = surveys.find(s => s.id === (app.surveyId || r.surveyId)) || {};
+                        const risk = app.riskLevel || r.riskLevel || '';
+                        return (
                           <TableRow key={r.id}>
-                            <TableCell>{r.id}</TableCell>
-                            <TableCell>{r.surveyApplicationId}</TableCell>
-                            <TableCell>{r.questionId}</TableCell>
-                            <TableCell>{r.optionAnswerId}</TableCell>
-                            <TableCell>{r.textAnswer || ''}</TableCell>
+                            <TableCell>{employee.name || employee.email || r.employeeName || r.employeeId || ''}</TableCell>
+                            <TableCell>{survey.title || r.surveyTitle || r.surveyId || ''}</TableCell>
+                            <TableCell>{fecha ? fecha.toLocaleString() : ''}</TableCell>
+                            <TableCell>{risk}</TableCell>
                           </TableRow>
-                        )) : (
-                          <TableRow>
-                            <TableCell colSpan={5} align="center">
-                              <Typography color="text.secondary">No hay respuestas para los filtros seleccionados.</Typography>
-                            </TableCell>
-                          </TableRow>
-                        )}
+                        );
+                      }) : (
+                        <TableRow>
+                          <TableCell colSpan={4} align="center">
+                            <Typography color="text.secondary">No hay respuestas para los filtros seleccionados.</Typography>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })()}
+                    
                   </TableBody>
                 </Table>
               </TableContainer>
