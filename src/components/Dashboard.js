@@ -55,6 +55,34 @@ import { getLogger } from '../utils/logger';
 
 const COLORS = [theme.palette.primary.dark, theme.palette.primary.light, theme.palette.primary.main, theme.palette.secondary.main];
 
+// Distinct, colorblind-friendly categorical palette (20 colors) for Pie charts
+const PIE_COLORS = [
+	'#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+	'#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf',
+	'#aec7e8', '#ffbb78', '#98df8a', '#ff9896', '#c5b0d5',
+	'#c49c94', '#f7b6d2', '#c7c7c7', '#dbdb8d', '#9edae5'
+];
+
+const getPieColor = (index) => PIE_COLORS[index % PIE_COLORS.length;
+
+// Generate an HSL color using golden angle for distinct hues
+const goldenAngleColor = (idx) => {
+	const hue = (idx * 137.508) % 360; // golden angle
+	const saturation = 65; // percent
+	const lightness = 50; // percent
+	return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+};
+
+// Simple deterministic hash for strings
+const hashString = (str) => {
+	let h = 0;
+	for (let i = 0; i < str.length; i++) {
+		h = (h << 5) - h + str.charCodeAt(i);
+		h |= 0;
+	}
+	return Math.abs(h);
+};
+
 export default function Dashboard() {
 	const { user, loading } = useContext(UserContext);
 	const navigate = useNavigate();
@@ -216,6 +244,22 @@ export default function Dashboard() {
 		: factoresClave
 			.map(factor => pieData.find(d => d.name === factor))
 			.filter(Boolean);
+
+	// Stable color mapping per factor name (consistent across toggles and renders)
+	const pieColorMap = React.useMemo(() => {
+		const allNames = (pieData || []).map(d => d.name).sort();
+		const map = {};
+		allNames.forEach((name, i) => {
+			// Prefer base palette for the first N factors, then generate via golden angle with a name-based offset
+			if (i < PIE_COLORS.length) {
+				map[name] = PIE_COLORS[i];
+			} else {
+				const seed = hashString(name);
+				map[name] = goldenAngleColor(seed % 360);
+			}
+		});
+		return map;
+	}, [pieData]);
 	const barDataLimited = showAllParticipation ? barData : barData.slice(0, 5);
 	const stats = {
 		totalEmployees: dashboard.employees?.length || 0,
@@ -333,7 +377,9 @@ export default function Dashboard() {
 							<ResponsiveContainer width="100%" height={pieChartHeight}>
 								<PieChart>
 									<Pie data={pieDataLimited} dataKey="value" nameKey="name" innerRadius={40} outerRadius={100} label>
-										{pieDataLimited.map((entry, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+										{pieDataLimited.map((entry, i) => (
+											<Cell key={i} fill={pieColorMap[entry.name] || getPieColor(i)} stroke="#ffffff" strokeWidth={1} />
+										))}
 									</Pie>
 									<RechartsTooltip />
 									<Legend />
