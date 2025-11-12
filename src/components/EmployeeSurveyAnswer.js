@@ -33,6 +33,10 @@ export default function EmployeeSurveyAnswer() {
   const [formDisabled, setFormDisabled] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [completedSurveys, setCompletedSurveys] = useState({}); // { [surveyId]: true }
+  const [surveyTitleFilter, setSurveyTitleFilter] = useState('');
+  // NEW: gating state for sequential sections
+  const [enabledSectionMaxIndex, setEnabledSectionMaxIndex] = useState(0);
+  const [savingSection, setSavingSection] = useState(false);
 
   const getAnswer = (qid) => answers[String(qid)] || "";
 
@@ -286,6 +290,64 @@ export default function EmployeeSurveyAnswer() {
     }
   }, [selectedSurvey, checkExistingSubmission]);
 
+  // Helpers for sections
+  const allQuestions = selectedSurvey?.questions || [];
+  const resolvedSurveyTitle = (q) => q.surveyTitle || q.survey_title || '';
+  const sectionKey = (title) => {
+    if (!title) return '';
+    const s = String(title);
+    const m = s.match(/^Gu[ií]a\s*([IVX]+)/i);
+    if (m) {
+      const roman = (m[1] || '').toUpperCase();
+      return `Guía ${roman}`;
+    }
+    // default: part before dash or full title
+    const dashIdx = s.indexOf(' - ');
+    return dashIdx > 0 ? s.slice(0, dashIdx) : s;
+  };
+  // Derive ordered distinct section titles by walking questions
+  const sectionTitles = (() => {
+    const seen = new Set();
+    const order = [];
+    allQuestions.forEach(q => {
+      const key = sectionKey(resolvedSurveyTitle(q));
+      if (key && !seen.has(key)) { seen.add(key); order.push(key); }
+    });
+    return order;
+  })();
+  // NEW: map internal key -> full original title for display
+  const sectionTitleMap = (() => {
+    const map = {};
+    allQuestions.forEach(q => {
+      const full = resolvedSurveyTitle(q);
+      const key = sectionKey(full);
+      if (key && !map[key]) map[key] = full; // first occurrence keeps full text
+    });
+    return map;
+  })();
+  const questionsInSection = (title) => allQuestions.filter(q => sectionKey(resolvedSurveyTitle(q)) === title);
+  const isSectionComplete = (title) => questionsInSection(title).every(q => !!getAnswer(q.id));
+
+  // Initialize/refresh gating when survey or answers change
+  useEffect(() => {
+    if (!selectedSurvey) return;
+    if (sectionTitles.length === 0) return;
+
+    // Determine last fully-completed section index and unlock next one
+    let lastCompletedIdx = -1;
+    sectionTitles.forEach((t, idx) => {
+      if (isSectionComplete(t)) lastCompletedIdx = idx > lastCompletedIdx ? idx : lastCompletedIdx;
+    });
+    const nextUnlock = Math.min(sectionTitles.length - 1, Math.max(0, lastCompletedIdx + 1));
+    setEnabledSectionMaxIndex(nextUnlock);
+
+    // Ensure a valid current filter: prefer first incomplete; otherwise keep current
+    if (!surveyTitleFilter || !sectionTitles.includes(surveyTitleFilter)) {
+      const firstIncomplete = sectionTitles.find(t => !isSectionComplete(t)) || sectionTitles[0];
+      setSurveyTitleFilter(firstIncomplete);
+    }
+  }, [selectedSurvey, answers]);
+
   const handleSurveyChange = async (e) => {
     const surveyId = e.target.value;
     const survey = surveys.find(s => s.id === surveyId);
@@ -293,6 +355,9 @@ export default function EmployeeSurveyAnswer() {
     setAnswers({});
     setExpandedModule(null);
     setShowSuccessMessage(false);
+    // Reset gating for new survey
+    setEnabledSectionMaxIndex(0);
+    setSurveyTitleFilter('');
     
     // Verificar si esta encuesta ya tiene respuestas guardadas
     if (survey) {
@@ -304,14 +369,80 @@ export default function EmployeeSurveyAnswer() {
     setAnswers(prev => ({ ...prev, [String(questionId)]: value }));
   };
 
+  // Save only the current section's answers and unlock the next section
+  const saveCurrentSection = async () => {
+    if (!selectedSurvey) return;
+    if (!surveyTitleFilter) return;
+
+    const currentIndex = sectionTitles.indexOf(surveyTitleFilter);
+    if (currentIndex === -1) return;
+
+    const sectionQs = questionsInSection(surveyTitleFilter);
+    const unanswered = sectionQs.filter(q => !getAnswer(q.id));
+    if (unanswered.length > 0) {
+      alert(`Por favor responde todas las preguntas de la sección antes de guardar. Faltan ${unanswered.length}.`);
+      return;
+    }
+
+    try {
+      setSavingSection(true);
+      // Ensure we have a survey application id
+      let appId = existingApplication?.id ?? existingApplication?.applicationId ?? existingApplication?.surveyApplicationId;
+      if (!appId) {
+        const appRes = await createSurveyApplication({
+          surveyId: selectedSurvey.id,
+          status: 'en_progreso'
+        });
+        appId = appRes.data?.id ?? appRes.data?.applicationId;
+      }
+
+      // Build payload only for this section
+      const responsesPayload = sectionQs.map(q => {
+        const answerVal = getAnswer(q.id);
+        const score = canonicalLabels.indexOf(answerVal) + 1;
+        return {
+          surveyApplicationId: appId,
+          questionId: q.id,
+          value: score > 0 ? score : null,
+          freeText: score > 0 ? null : answerVal
+        };
+      });
+
+      await submitSurveyResponse(responsesPayload);
+
+      // Unlock next section and auto-advance
+      const nextIdx = Math.min(sectionTitles.length - 1, currentIndex + 1);
+      setEnabledSectionMaxIndex(prev => Math.max(prev, nextIdx));
+      if (nextIdx !== currentIndex) setSurveyTitleFilter(sectionTitles[nextIdx]);
+
+      // If all sections are now complete, optionally mark as completed here
+      const allComplete = sectionTitles.every(t => isSectionComplete(t));
+      if (allComplete && appId) {
+        try {
+          await completeSurveyApplication(appId);
+          setFormDisabled(true);
+          setShowSuccessMessage(true);
+          setCompletedSurveys(prev => ({ ...prev, [selectedSurvey.id]: true }));
+        } catch (e) {
+          // Non-fatal: user can still submit with the final button
+        }
+      }
+    } catch (err) {
+      console.error('Error guardando sección:', err);
+      alert('Error al guardar la sección: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setSavingSection(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!selectedSurvey) {
       alert('Por favor selecciona una encuesta');
       return;
     }
 
-    const allQuestions = selectedSurvey.questions || [];
-    const unanswered = allQuestions.filter(q => !getAnswer(q.id));
+    const allQs = selectedSurvey.questions || [];
+    const unanswered = allQs.filter(q => !getAnswer(q.id));
     if (unanswered.length > 0) {
       alert(`Por favor responde todas las preguntas. Faltan ${unanswered.length} respuestas.`);
       return;
@@ -330,7 +461,7 @@ export default function EmployeeSurveyAnswer() {
         console.log('✅ Created application with ID:', appId);
       }
 
-      const responsesPayload = allQuestions.map(q => {
+      const responsesPayload = allQs.map(q => {
         const answerVal = getAnswer(q.id);
         const score = canonicalLabels.indexOf(answerVal) + 1;
         return {
@@ -370,16 +501,26 @@ export default function EmployeeSurveyAnswer() {
     }
   };
 
-  const groupedQuestions = (selectedSurvey?.questions || []).reduce((acc, q) => {
+  // adjust grouped questions based on filter
+  const filteredQuestions = surveyTitleFilter
+    ? allQuestions.filter(q => sectionKey(resolvedSurveyTitle(q)) === surveyTitleFilter)
+    : allQuestions;
+  const groupedQuestions = filteredQuestions.reduce((acc, q) => {
     const cat = q.category || 'General';
     if (!acc[cat]) acc[cat] = [];
     acc[cat].push(q);
     return acc;
   }, {});
-
-  const totalQuestions = selectedSurvey?.questions?.length || 0;
-  const answeredCount = Object.keys(answers).filter(k => answers[k]).length;
+  const totalQuestions = filteredQuestions.length;
+  const answeredCount = filteredQuestions.filter(q => getAnswer(q.id)).length;
   const progress = totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
+  // NEW: global completion across all sections
+  const fullTotalQuestions = allQuestions.length;
+  const fullAnsweredCount = allQuestions.filter(q => getAnswer(q.id)).length;
+  const completedSectionsCount = sectionTitles.filter(t => isSectionComplete(t)).length;
+  const allSectionsComplete = sectionTitles.length > 0
+    ? completedSectionsCount === sectionTitles.length && sectionTitles.length > 0
+    : (fullTotalQuestions > 0 && fullAnsweredCount === fullTotalQuestions);
 
   return (
     <Box sx={{ maxWidth: 900, mx: 'auto', mt: 4 }}>
@@ -452,6 +593,36 @@ export default function EmployeeSurveyAnswer() {
           </Select>
         </FormControl>
 
+        {/* Nueva dropdown para filtrar por Bloque / Módulo (secuencial) */}
+        {selectedSurvey && sectionTitles.length > 0 && (
+          <FormControl fullWidth sx={{ mb: 3 }}>
+            <InputLabel id="survey-title-filter-label">Sección</InputLabel>
+            <Select
+              labelId="survey-title-filter-label"
+              value={surveyTitleFilter}
+              label="Sección"
+              onChange={(e) => setSurveyTitleFilter(e.target.value)}
+              MenuProps={MENU_PROPS}
+            >
+              {sectionTitles.map((title, idx) => (
+                <MenuItem key={title} value={title} disabled={idx > enabledSectionMaxIndex}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography>{sectionTitleMap[title] || title}</Typography>
+                    <Chip 
+                      label={`${questionsInSection(title).filter(q => getAnswer(q.id)).length}/${questionsInSection(title).length}`} 
+                      size="small" 
+                      color={isSectionComplete(title) ? 'success' : 'default'}
+                    />
+                    {idx > enabledSectionMaxIndex && (
+                      <Chip label="Bloqueado" size="small" color="warning" variant="outlined" />
+                    )}
+                  </Box>
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        )}
+
         {/* Estado de la Encuesta */}
         {existingApplication && (
           <Alert 
@@ -510,7 +681,7 @@ export default function EmployeeSurveyAnswer() {
           <Box sx={{ mb: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
               <Typography variant="body2" color="text.secondary">
-                Progreso: {answeredCount} / {totalQuestions} preguntas
+                Progreso: {answeredCount} / {totalQuestions} preguntas{surveyTitleFilter ? ' (filtrado)' : ''}
               </Typography>
               <Typography variant="body2" color="primary" sx={{ fontWeight: 500 }}>
                 {Math.round(progress)}%
@@ -692,6 +863,20 @@ export default function EmployeeSurveyAnswer() {
           </Box>
         )}
 
+        {/* Botones de Guardado por Sección */}
+        {selectedSurvey && !formDisabled && surveyTitleFilter && (
+          <Box sx={{ mt: 2, mb: 1, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+            <Button 
+              variant="contained" 
+              color="primary" 
+              onClick={saveCurrentSection}
+              disabled={!isSectionComplete(surveyTitleFilter) || savingSection}
+            >
+              {savingSection ? 'Guardando…' : 'Guardar sección'}
+            </Button>
+          </Box>
+        )}
+
         {/* Botón de Envío - Solo se muestra si no está completada */}
         {selectedSurvey && !formDisabled && (
           <Button 
@@ -700,7 +885,7 @@ export default function EmployeeSurveyAnswer() {
             fullWidth 
             size="large"
             onClick={handleSubmit}
-            disabled={answeredCount < totalQuestions}
+            disabled={!allSectionsComplete}
             sx={{ 
               mt: 3,
               py: 1.5,
@@ -708,8 +893,10 @@ export default function EmployeeSurveyAnswer() {
               fontSize: '1.1rem'
             }}
           >
-            {answeredCount < totalQuestions 
-              ? `Completa todas las preguntas (${answeredCount}/${totalQuestions})`
+            {!allSectionsComplete 
+              ? (sectionTitles.length > 0
+                  ? `Completa todas las secciones (${completedSectionsCount}/${sectionTitles.length})`
+                  : `Completa todas las preguntas (${fullAnsweredCount}/${fullTotalQuestions})`)
               : 'Enviar Encuesta'
             }
           </Button>

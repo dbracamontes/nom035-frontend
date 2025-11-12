@@ -972,37 +972,43 @@ export default function SurveyResults() {
                       </Typography>
                       
                       <Box sx={{ height: 300 }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={[
-                                { name: t('dashboard.risk.low'), value: riskAnalysis.low || 0, fill: RISK_COLORS.low },
-                                { name: t('dashboard.risk.medium'), value: riskAnalysis.medium || 0, fill: RISK_COLORS.medium },
-                                { name: t('dashboard.risk.high'), value: riskAnalysis.high || 0, fill: RISK_COLORS.high },
-                                { name: t('dashboard.risk.veryHigh'), value: riskAnalysis.veryHigh || 0, fill: RISK_COLORS.veryHigh }
-                              ]}
-                              cx="50%"
-                              cy="50%"
-                              labelLine={false}
-                              label={({ name, value, percent }) => 
-                                value > 0 ? `${name}: ${value} (${(percent * 100).toFixed(0)}%)` : null
-                              }
-                              outerRadius={80}
-                              fill="#8884d8"
-                              dataKey="value"
-                            >
-                              {[
-                                { name: t('dashboard.risk.low'), fill: RISK_COLORS.low },
-                                { name: t('dashboard.risk.medium'), fill: RISK_COLORS.medium },
-                                { name: t('dashboard.risk.high'), fill: RISK_COLORS.high },
-                                { name: t('dashboard.risk.veryHigh'), fill: RISK_COLORS.veryHigh }
-                              ].map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.fill} />
-                              ))}
-                            </Pie>
-                            <Tooltip />
-                          </PieChart>
-                        </ResponsiveContainer>
+                        {/* Enlarged pie chart container */}
+                        <Box sx={{ height: 420 }}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart margin={{ top: 10, right: 20, left: 20, bottom: 40 }}>
+                              <Pie
+                                data={[
+                                  { name: t('dashboard.risk.low'), value: riskAnalysis.low || 0, fill: RISK_COLORS.low },
+                                  { name: t('dashboard.risk.medium'), value: riskAnalysis.medium || 0, fill: RISK_COLORS.medium },
+                                  { name: t('dashboard.risk.high'), value: riskAnalysis.high || 0, fill: RISK_COLORS.high },
+                                  { name: t('dashboard.risk.veryHigh'), value: riskAnalysis.veryHigh || 0, fill: RISK_COLORS.veryHigh }
+                                ]}
+                                cx="50%"
+                                cy="50%"
+                                labelLine={false}
+                                label={({ name, value, percent }) => 
+                                  value > 0 ? `${name}: ${value} (${(percent * 100).toFixed(0)}%)` : null
+                                }
+                                outerRadius={130}
+                                innerRadius={50}
+                                fill="#8884d8"
+                                dataKey="value"
+                                paddingAngle={2}
+                              >
+                                {[ // map cell colors explicitly (data already has fill, but this keeps code clear)
+                                  RISK_COLORS.low,
+                                  RISK_COLORS.medium,
+                                  RISK_COLORS.high,
+                                  RISK_COLORS.veryHigh
+                                ].map((color, idx) => (
+                                  <Cell key={`cell2-${idx}`} fill={color} />
+                                ))}
+                              </Pie>
+                              <Legend verticalAlign="bottom" height={36} />
+                              <Tooltip />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </Box>
                       </Box>
                     </CardContent>
                   </Card>
@@ -1139,7 +1145,7 @@ export default function SurveyResults() {
                                   <TableCell align="center">{module.responses}</TableCell>
                                   <TableCell align="center">
                                     <Typography variant="body2" color="text.secondary">
-                                      {module.riskLevel === 'veryHigh' ? '� Acción inmediata' :
+                                      {module.riskLevel === 'veryHigh' ? '🚨 Acción inmediata' :
                                        module.riskLevel === 'high' ? '⚠️ Medidas preventivas' :
                                        module.riskLevel === 'medium' ? '📋 Monitoreo continuo' : '✅ Mantener condiciones'}
                                     </Typography>
