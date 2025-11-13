@@ -16,6 +16,7 @@ import {
 import { getCompanySurveys, deleteCompanySurvey, getCompanies, getSurveys, getEmployees, getSurveyApplications, getSurveyWithQuestions } from "../api/nom035";
 
 export default function CompanySurveyList({ refreshFlag }) {
+    // El progreso se toma directamente del backend (survey.completionRate)
   const [companySurveys, setCompanySurveys] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [surveys, setSurveys] = useState([]);
@@ -348,7 +349,7 @@ export default function CompanySurveyList({ refreshFlag }) {
                         overflow: 'hidden'
                       }}>
                         <Box sx={{
-                          width: `${(survey.completionRate ?? 0) * 100}%`,
+                          width: `${(survey.completionRate * 100).toFixed(1)}%`,
                           height: '100%',
                           background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
                           transition: 'width 0.3s ease'

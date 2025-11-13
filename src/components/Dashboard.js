@@ -63,7 +63,7 @@ const PIE_COLORS = [
 	'#c49c94', '#f7b6d2', '#c7c7c7', '#dbdb8d', '#9edae5'
 ];
 
-const getPieColor = (index) => PIE_COLORS[index % PIE_COLORS.length;
+const getPieColor = (index) => PIE_COLORS[index % PIE_COLORS.length];
 
 // Generate an HSL color using golden angle for distinct hues
 const goldenAngleColor = (idx) => {
@@ -231,6 +231,8 @@ export default function Dashboard() {
 		completionRate: item.completionRate,
 		fullName: item.surveyTitle
 	}));
+	// Asignar barData globalmente para otros componentes
+	window.dashboardBarData = barData;
 	// Mostrar siempre los factores clave de la NOM-035
 	const factoresClave = [
 		'Sobrecarga',
