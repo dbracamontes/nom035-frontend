@@ -63,7 +63,7 @@ const PIE_COLORS = [
 	'#c49c94', '#f7b6d2', '#c7c7c7', '#dbdb8d', '#9edae5'
 ];
 
-const getPieColor = (index) => PIE_COLORS[index % PIE_COLORS.length;
+const getPieColor = (index) => PIE_COLORS[index % PIE_COLORS.length];
 
 // Generate an HSL color using golden angle for distinct hues
 const goldenAngleColor = (idx) => {
@@ -246,11 +246,10 @@ export default function Dashboard() {
 			.filter(Boolean);
 
 	// Stable color mapping per factor name (consistent across toggles and renders)
-	const pieColorMap = React.useMemo(() => {
+	const pieColorMap = (() => {
 		const allNames = (pieData || []).map(d => d.name).sort();
 		const map = {};
 		allNames.forEach((name, i) => {
-			// Prefer base palette for the first N factors, then generate via golden angle with a name-based offset
 			if (i < PIE_COLORS.length) {
 				map[name] = PIE_COLORS[i];
 			} else {
@@ -259,7 +258,7 @@ export default function Dashboard() {
 			}
 		});
 		return map;
-	}, [pieData]);
+	})();
 	const barDataLimited = showAllParticipation ? barData : barData.slice(0, 5);
 	const stats = {
 		totalEmployees: dashboard.employees?.length || 0,
