@@ -284,6 +284,7 @@ export default function CompanySurveyForm({ onCreated }) {
           gap: 3
         }}
       >
+
         {/* Company Selection */}
         <Box>
           <TextField
@@ -305,27 +306,7 @@ export default function CompanySurveyForm({ onCreated }) {
           </TextField>
         </Box>
 
-        {/* Survey Selection */}
-        <Box>
-          <TextField
-            select
-            fullWidth
-            label="Visualizar Encuestas"
-            value={selectedSurvey}
-            onChange={e => setSelectedSurvey(e.target.value)}
-            sx={fieldSx}
-            MenuProps={selectMenuProps}
-          >
-            <MenuItem value="">-- Visualizar Encuesta --</MenuItem>
-            {surveys.map(survey => (
-              <MenuItem key={survey.id} value={survey.id}>
-                {survey.title}
-              </MenuItem>
-            ))}
-          </TextField>
-        </Box>
-
-        {/* Assignment Survey Selection */}
+        {/* Assignment Survey Selection (ahora a la izquierda) */}
         <Box>
           <TextField
             select
@@ -340,6 +321,26 @@ export default function CompanySurveyForm({ onCreated }) {
           >
             <MenuItem value="">-- Asignar Encuesta --</MenuItem>
             {assignmentSurveyOptions.map((survey) => (
+              <MenuItem key={survey.id} value={survey.id}>
+                {survey.title}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Box>
+
+        {/* Survey Selection (ahora a la derecha) */}
+        <Box>
+          <TextField
+            select
+            fullWidth
+            label="Visualizar Encuestas"
+            value={selectedSurvey}
+            onChange={e => setSelectedSurvey(e.target.value)}
+            sx={fieldSx}
+            MenuProps={selectMenuProps}
+          >
+            <MenuItem value="">-- Visualizar Encuesta --</MenuItem>
+            {surveys.map(survey => (
               <MenuItem key={survey.id} value={survey.id}>
                 {survey.title}
               </MenuItem>
