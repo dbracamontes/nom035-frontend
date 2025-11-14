@@ -5,7 +5,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, Grid,
   Chip, Stack, Divider, Snackbar, Alert
 } from "@mui/material";
-import { createCompanySurvey, createSurveyApplication, getCompanies, getEmployeesByCompany, getSurveys, getSurveyById } from "../api/nom035";
+import { createCompanySurvey, createSurveyApplication, getCompanies, getEmployeesByCompany, getSurveys, getSurveyById, getSurveyWithQuestions } from "../api/nom035";
 import { getQuestionsByGuideType } from "../data/nom035Questions";
 
 // Unified field style: responsive, no fixed minWidth/minHeight
@@ -70,6 +70,9 @@ const selectMenuProps = {
 };
 
 export default function CompanySurveyForm({ onCreated }) {
+  // Pagination state for survey questions in the details dialog
+  const [questionPage, setQuestionPage] = useState(0);
+  const questionPageSize = 10;
   const [companies, setCompanies] = useState([]);
   const [surveys, setSurveys] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -88,6 +91,11 @@ export default function CompanySurveyForm({ onCreated }) {
   const [employeeDialogOpen, setEmployeeDialogOpen] = useState(false);
   const [surveyDialogOpen, setSurveyDialogOpen] = useState(false);
   const [surveyDetails, setSurveyDetails] = useState(null);
+
+  // Reset pagination when opening/closing dialog or changing survey
+  useEffect(() => {
+    setQuestionPage(0);
+  }, [surveyDialogOpen, surveyDetails]);
 
   const assignmentSurveyOptions = useMemo(() => {
     const nomSurvey = surveys.find((survey) => {
@@ -237,13 +245,13 @@ export default function CompanySurveyForm({ onCreated }) {
   const handleOpenSurveyDialog = async () => {
     if (selectedSurvey) {
       try {
-        const response = await getSurveyById(selectedSurvey);
+        // Siempre usa el endpoint correcto para obtener TODAS las preguntas
+        const response = await getSurveyWithQuestions(selectedSurvey);
         setSurveyDetails(response.data);
         setSurveyDialogOpen(true);
       } catch (error) {
         console.error("Error cargando detalles de la encuesta:", error);
-        // Si falla, usamos los datos básicos que ya tenemos
-        setSurveyDetails(surveys.find(s => s.id === selectedSurvey));
+        setSurveyDetails(null);
         setSurveyDialogOpen(true);
       }
     }
@@ -670,21 +678,17 @@ export default function CompanySurveyForm({ onCreated }) {
                 Preguntas:
               </Typography>
               {(() => {
-                // Primero intentamos usar las preguntas de la API
-                let questions = surveyDetails?.questions || [];
-                console.log('🔍 DEBUG surveyDetails:', surveyDetails);
-                console.log('🔍 DEBUG questions from API:', questions);
-                
-                // Si no hay preguntas en la API, usamos las preguntas del NOM-035 según el tipo de guía
+                // Permitir que la respuesta sea un array plano o un objeto con questions
+                let questions = Array.isArray(surveyDetails)
+                  ? surveyDetails
+                  : (surveyDetails?.questions || []);
+                // Si no hay preguntas, intentar obtener por tipo de guía
                 if (!questions || questions.length === 0) {
                   const guideType = surveyDetails?.guideType;
-                  console.log('🔍 DEBUG guideType:', guideType);
                   if (guideType) {
                     questions = getQuestionsByGuideType(guideType);
-                    console.log('🔍 DEBUG questions from NOM035 data:', questions);
                   }
                 }
-                
                 if (!questions || questions.length === 0) {
                   return (
                     <Box sx={{ 
@@ -703,15 +707,26 @@ export default function CompanySurveyForm({ onCreated }) {
                     </Box>
                   );
                 }
-                
+
+                const totalPages = Math.ceil(questions.length / questionPageSize);
+                const paginatedQuestions = questions.slice(questionPage * questionPageSize, (questionPage + 1) * questionPageSize);
+
                 return (
                   <Box sx={{ maxHeight: '400px', overflowY: 'auto', pr: 1 }}>
                     <Typography variant="body2" sx={{ color: '#64748b', mb: 2, fontStyle: 'italic' }}>
-                      Mostrando {questions.length} preguntas de la Guía {surveyDetails?.guideType} del NOM-035-STPS-2018
+                      Mostrando {questions.length} preguntas de la Guía {surveyDetails?.guideType || ''} del NOM-035-STPS-2018
                     </Typography>
-                    {questions.map((question, index) => (
+                    {/* Mensaje de advertencia si se detecta posible endpoint incorrecto */}
+                    {questions.length > 0 && questions.length <= 8 && (
+                      <Box sx={{ mb: 2, p: 2, background: '#fffbe6', border: '1px solid #facc15', borderRadius: 2 }}>
+                        <Typography variant="body2" sx={{ color: '#b45309', fontWeight: 600 }}>
+                          ⚠️ Atención: Solo se están mostrando {questions.length} preguntas. Es probable que el sistema esté usando el endpoint incorrecto (/api/surveys/[id] en vez de /api/surveys/[id]/questions).
+                        </Typography>
+                      </Box>
+                    )}
+                    {paginatedQuestions.map((question, index) => (
                       <Box 
-                        key={question.id || index} 
+                        key={question.id || (questionPage * questionPageSize + index)} 
                         sx={{ 
                           mb: 3,
                           p: 3,
@@ -722,9 +737,8 @@ export default function CompanySurveyForm({ onCreated }) {
                         }}
                       >
                         <Typography variant="body1" sx={{ fontWeight: 600, color: '#1e293b', mb: 2 }}>
-                          {index + 1}. {question.text || question.question || question.pregunta || 'Pregunta sin texto'}
+                          {questionPage * questionPageSize + index + 1}. {question.text || question.question || question.pregunta || 'Pregunta sin texto'}
                         </Typography>
-                        
                         {question.category && (
                           <Chip 
                             label={question.category}
@@ -737,7 +751,6 @@ export default function CompanySurveyForm({ onCreated }) {
                             }}
                           />
                         )}
-                        
                         {question.options && Array.isArray(question.options) && (
                           <Box sx={{ mt: 2 }}>
                             <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 500, display: 'block', mb: 1 }}>
@@ -763,6 +776,20 @@ export default function CompanySurveyForm({ onCreated }) {
                         )}
                       </Box>
                     ))}
+                    {/* Controles de paginación */}
+                    {totalPages > 1 && (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                        <Button onClick={() => setQuestionPage(p => Math.max(0, p - 1))} disabled={questionPage === 0} sx={{ mr: 2 }}>
+                          Anterior
+                        </Button>
+                        <Typography sx={{ alignSelf: 'center', fontWeight: 500 }}>
+                          Página {questionPage + 1} de {totalPages}
+                        </Typography>
+                        <Button onClick={() => setQuestionPage(p => Math.min(totalPages - 1, p + 1))} disabled={questionPage === totalPages - 1} sx={{ ml: 2 }}>
+                          Siguiente
+                        </Button>
+                      </Box>
+                    )}
                   </Box>
                 );
               })()}

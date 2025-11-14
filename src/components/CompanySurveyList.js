@@ -23,6 +23,7 @@ export default function CompanySurveyList({ refreshFlag }) {
   const [employees, setEmployees] = useState([]);
   const [surveyApplications, setSurveyApplications] = useState([]);
   const [questionCounts, setQuestionCounts] = useState({});
+    const [questionsBySurvey, setQuestionsBySurvey] = useState({});
   const [detailLoading, setDetailLoading] = useState({});
   const [detailError, setDetailError] = useState({});
   const [expandedCard, setExpandedCard] = useState(null);
@@ -82,8 +83,9 @@ export default function CompanySurveyList({ refreshFlag }) {
     setDetailLoading((prev) => ({ ...prev, [survey.id]: true }));
     try {
       const questionResponse = await getSurveyWithQuestions(survey.surveyId);
-      const count = Array.isArray(questionResponse.data) ? questionResponse.data.length : 0;
-      setQuestionCounts((prev) => ({ ...prev, [survey.surveyId]: count }));
+      const questions = Array.isArray(questionResponse.data) ? questionResponse.data : [];
+      setQuestionCounts((prev) => ({ ...prev, [survey.surveyId]: questions.length }));
+      setQuestionsBySurvey((prev) => ({ ...prev, [survey.surveyId]: questions }));
       setDetailError((prev) => ({ ...prev, [survey.id]: undefined }));
     } catch (error) {
       console.error("Error cargando preguntas de la encuesta:", error);
@@ -503,16 +505,50 @@ export default function CompanySurveyList({ refreshFlag }) {
                         </Typography>
                       ) : (
                         <Stack spacing={2}>
-                          <Typography variant="body2" sx={{ color: '#475569' }}>
+                          <Typography variant="body2" sx={{ color: '#475569', mb: 2 }}>
                             <strong style={{ color: '#6366f1' }}>Preguntas totales:</strong> {questionCounts[survey.surveyId] ?? '—'}
                           </Typography>
-
                           {detailError[survey.id] && (
                             <Typography variant="body2" sx={{ color: '#dc2626' }}>
                               {detailError[survey.id]}
                             </Typography>
                           )}
-
+                          {/* Mostrar la lista completa de preguntas */}
+                          {questionsBySurvey[survey.surveyId] && questionsBySurvey[survey.surveyId].length > 0 && (
+                            <Box sx={{ mb: 2 }}>
+                              <Typography variant="subtitle2" sx={{ color: '#6366f1', mb: 1 }}>
+                                Preguntas de la Guía
+                              </Typography>
+                              {questionsBySurvey[survey.surveyId].map((q, idx) => (
+                                <Box key={q.id} sx={{ mb: 2, p: 2, background: '#f1f5f9', borderRadius: 2 }}>
+                                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
+                                    {idx + 1}. {q.text}
+                                  </Typography>
+                                  {q.category && (
+                                    <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 1 }}>
+                                      División: {q.category}
+                                    </Typography>
+                                  )}
+                                  {q.options && Array.isArray(q.options) && q.options.length > 0 && (
+                                    <Box sx={{ ml: 2 }}>
+                                      <Typography variant="caption" sx={{ color: '#475569' }}>Opciones de respuesta:</Typography>
+                                      <ul style={{ margin: 0, paddingLeft: 16 }}>
+                                        {q.options.map((opt, i) => (
+                                          <li key={i} style={{ color: '#475569', fontSize: '0.95em' }}>
+                                            <strong>{opt.value}:</strong> {opt.text}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </Box>
+                                  )}
+                                </Box>
+                              ))}
+                            </Box>
+                          )}
+                          {/* Seguimiento de asignaciones */}
+                          <Typography variant="subtitle2" sx={{ color: '#1d4ed8', mb: 1 }}>
+                            Seguimiento de asignaciones
+                          </Typography>
                           {(() => {
                             const applicationsForSurvey = getApplicationsForSurvey(survey.id);
                             if (applicationsForSurvey.length === 0) {
@@ -522,7 +558,6 @@ export default function CompanySurveyList({ refreshFlag }) {
                                 </Typography>
                               );
                             }
-
                             return applicationsForSurvey.map((application) => {
                               const statusInfo = formatStatusLabel(application.status);
                               return (
