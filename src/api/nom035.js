@@ -252,3 +252,32 @@ export const getFilteredResponses = (filters = {}) => {
   console.log('📊 API: Getting filtered responses:', url);
   return axios.get(url);
 };
+
+// NEW: Reports (NOM-035 dictamen)
+export const getApplicationDictamen = (applicationId) => axios.get(`${API_BASE}/reports/application/${applicationId}/dictamen`);
+export const getCompanyDictamenSummary = (companyId) => axios.get(`${API_BASE}/reports/company/${companyId}/dictamen-summary`);
+
+// NEW: PDF downloads (responseType: blob)
+export const downloadApplicationDictamenPdf = (applicationId) => {
+  console.log('📥 API: Downloading application dictamen PDF:', applicationId);
+  return axios.get(`${API_BASE}/reports/application/${applicationId}/dictamen.pdf`, { responseType: 'blob' });
+};
+export const downloadCompanyDictamenSummaryPdf = (companyId) => {
+  console.log('📥 API: Downloading company dictamen summary PDF:', companyId);
+  return axios.get(`${API_BASE}/reports/company/${companyId}/dictamen-summary.pdf`, { responseType: 'blob' });
+};
+// NEW (Branded variants): pass optional branding parameters
+export const downloadApplicationDictamenPdfBranded = (applicationId, brand = {}) => {
+  const params = new URLSearchParams();
+  Object.entries(brand).forEach(([k,v]) => { if (v) params.append(k, v); });
+  const url = `${API_BASE}/reports/application/${applicationId}/dictamen.pdf${params.toString() ? '?' + params.toString() : ''}`;
+  console.log('📥 API: Downloading branded application dictamen PDF:', url);
+  return axios.get(url, { responseType: 'blob' });
+};
+export const downloadCompanyDictamenSummaryPdfBranded = (companyId, brand = {}) => {
+  const params = new URLSearchParams();
+  Object.entries(brand).forEach(([k,v]) => { if (v) params.append(k, v); });
+  const url = `${API_BASE}/reports/company/${companyId}/dictamen-summary.pdf${params.toString() ? '?' + params.toString() : ''}`;
+  console.log('📥 API: Downloading branded company dictamen summary PDF:', url);
+  return axios.get(url, { responseType: 'blob' });
+};

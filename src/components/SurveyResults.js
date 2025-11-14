@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useMemo, useContext } from "react";
 import { 
-  getSurveyResponses, getCompanies, getSurveys, getEmployees, getParticipationSummary, getSurveyApplications
+  getSurveyResponses, getCompanies, getSurveys, getEmployees, getParticipationSummary, getSurveyApplications,
+  getCompanyDictamenSummary,
+  downloadCompanyDictamenSummaryPdf,
+  downloadApplicationDictamenPdf,
+  downloadCompanyDictamenSummaryPdfBranded,
+  downloadApplicationDictamenPdfBranded
 } from "../api/nom035";
 import { 
   Box, Typography, Paper, Tab, Tabs, Grid, Card, CardContent, 
@@ -20,7 +25,8 @@ import {
   Assessment as AssessmentIcon,
   Warning as WarningIcon,
   CheckCircle as CheckCircleIcon,
-  ExpandMore as ExpandMoreIcon
+  ExpandMore as ExpandMoreIcon,
+  Download as DownloadIcon
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { UserContext } from '../context/UserContext';
@@ -156,6 +162,18 @@ export default function SurveyResults() {
   const [participationStats, setParticipationStats] = useState({});
   const [moduleResults, setModuleResults] = useState([]);
   const [riskAnalysis, setRiskAnalysis] = useState({});
+  const [dictamenSummary, setDictamenSummary] = useState(null);
+  const [dictamenLoading, setDictamenLoading] = useState(false);
+  const [dictamenError, setDictamenError] = useState(null);
+
+  // Branding states
+  const [brandTitle, setBrandTitle] = useState('');
+  const [brandSubtitle, setBrandSubtitle] = useState('Dictamen NOM-035');
+  const [brandCompanyName, setBrandCompanyName] = useState('');
+  const [brandFooterText, setBrandFooterText] = useState('NOM-035');
+  const [brandPrimaryHex, setBrandPrimaryHex] = useState('#2196F3');
+  const [brandSecondaryHex, setBrandSecondaryHex] = useState('#9C27B0');
+  const [brandLogoClasspath, setBrandLogoClasspath] = useState('');
 
   // Memoized filtered responses para exportar y mostrar detalle
   const filteredResponses = useMemo(() => {
@@ -251,6 +269,63 @@ export default function SurveyResults() {
       headStyles: { fillColor: [33, 150, 243] }
     });
     doc.save('respuestas_nom035.pdf');
+  };
+
+  // Small helper to save a blob as a file
+  const saveBlob = (blob, filename) => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadCompanyPdf = async () => {
+    if (!selectedCompany) return;
+    try {
+      setDictamenLoading(true);
+      // Build branding params if any field filled (excluding defaults)
+      const brand = {
+        title: brandTitle || undefined,
+        subtitle: brandSubtitle || undefined,
+        companyName: brandCompanyName || undefined,
+        footerText: brandFooterText || undefined,
+        primaryHex: brandPrimaryHex || undefined,
+        secondaryHex: brandSecondaryHex || undefined,
+        logoClasspath: brandLogoClasspath || undefined
+      };
+      const anyBrand = Object.values(brand).some(v => v);
+      const res = anyBrand ? await downloadCompanyDictamenSummaryPdfBranded(String(selectedCompany), brand) : await downloadCompanyDictamenSummaryPdf(String(selectedCompany));
+      saveBlob(res.data, `dictamen-summary-company-${selectedCompany}.pdf`);
+    } catch (e) {
+      console.error('Error downloading company dictamen PDF:', e);
+      setDictamenError('No se pudo descargar el PDF');
+    } finally {
+      setDictamenLoading(false);
+    }
+  };
+
+  const handleDownloadApplicationPdf = async (applicationId) => {
+    if (!applicationId) return;
+    try {
+      const brand = {
+        title: brandTitle || undefined,
+        subtitle: brandSubtitle || undefined,
+        companyName: brandCompanyName || undefined,
+        footerText: brandFooterText || undefined,
+        primaryHex: brandPrimaryHex || undefined,
+        secondaryHex: brandSecondaryHex || undefined,
+        logoClasspath: brandLogoClasspath || undefined
+      };
+      const anyBrand = Object.values(brand).some(v => v);
+      const res = anyBrand ? await downloadApplicationDictamenPdfBranded(String(applicationId), brand) : await downloadApplicationDictamenPdf(String(applicationId));
+      saveBlob(res.data, `dictamen-application-${applicationId}.pdf`);
+    } catch (e) {
+      console.error('Error downloading application dictamen PDF:', e);
+    }
   };
 
   useEffect(() => {
@@ -401,6 +476,26 @@ export default function SurveyResults() {
       }
     }
   }, [user, isCompanyRole, selectedCompany]);
+
+  // Fetch dictamen summary whenever selectedCompany changes (and exists)
+  useEffect(() => {
+    const fetchDictamen = async () => {
+      setDictamenSummary(null);
+      setDictamenError(null);
+      if (!selectedCompany) return;
+      try {
+        setDictamenLoading(true);
+        const res = await getCompanyDictamenSummary(String(selectedCompany));
+        setDictamenSummary(res.data || null);
+      } catch (e) {
+        console.error('Error fetching dictamen summary:', e);
+        setDictamenError('No se pudo cargar el dictamen');
+      } finally {
+        setDictamenLoading(false);
+      }
+    };
+    fetchDictamen();
+  }, [selectedCompany]);
 
   if (loading) {
     return (
@@ -1240,6 +1335,7 @@ export default function SurveyResults() {
                       <TableCell><strong>Encuesta</strong></TableCell>
                       <TableCell><strong>Fecha</strong></TableCell>
                       <TableCell><strong>Nivel de riesgo</strong></TableCell>
+                      <TableCell align="center"><strong>Dictamen PDF</strong></TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1266,11 +1362,22 @@ export default function SurveyResults() {
                             <TableCell>{survey.title || r.surveyTitle || r.surveyId || ''}</TableCell>
                             <TableCell>{fecha ? fecha.toLocaleString() : ''}</TableCell>
                             <TableCell>{risk}</TableCell>
+                            <TableCell align="center">
+                              <Button 
+                                size="small" 
+                                variant="outlined" 
+                                startIcon={<DownloadIcon />} 
+                                onClick={() => handleDownloadApplicationPdf(app.id)}
+                                disabled={!app || !app.id}
+                              >
+                                Descargar
+                              </Button>
+                            </TableCell>
                           </TableRow>
                         );
                       }) : (
                         <TableRow>
-                          <TableCell colSpan={4} align="center">
+                          <TableCell colSpan={5} align="center">
                             <Typography color="text.secondary">No hay respuestas para los filtros seleccionados.</Typography>
                           </TableCell>
                         </TableRow>
@@ -1284,6 +1391,27 @@ export default function SurveyResults() {
           )}
         </Box>
       </Paper>
+
+      {/* Branding & PDF Panel */}
+  { (isAdmin || isCompanyRole) && (
+    <Paper sx={{ p: 2, mb: 3, borderRadius: 3 }}>
+      <Stack spacing={2} direction={{ xs: 'column', md: 'row' }} flexWrap="wrap">
+        <TextField label="Título" value={brandTitle} onChange={e=>setBrandTitle(e.target.value)} size="small" sx={{ minWidth: 180 }} />
+        <TextField label="Subtítulo" value={brandSubtitle} onChange={e=>setBrandSubtitle(e.target.value)} size="small" sx={{ minWidth: 180 }} />
+        <TextField label="Nombre Empresa" value={brandCompanyName} onChange={e=>setBrandCompanyName(e.target.value)} size="small" sx={{ minWidth: 180 }} />
+        <TextField label="Footer" value={brandFooterText} onChange={e=>setBrandFooterText(e.target.value)} size="small" sx={{ minWidth: 140 }} />
+        <TextField label="Primary Hex" value={brandPrimaryHex} onChange={e=>setBrandPrimaryHex(e.target.value)} size="small" sx={{ minWidth: 130 }} />
+        <TextField label="Secondary Hex" value={brandSecondaryHex} onChange={e=>setBrandSecondaryHex(e.target.value)} size="small" sx={{ minWidth: 130 }} />
+        <TextField label="Logo Classpath" placeholder="/branding/logo.png" value={brandLogoClasspath} onChange={e=>setBrandLogoClasspath(e.target.value)} size="small" sx={{ minWidth: 180 }} />
+        <Button variant="contained" color="primary" disabled={!selectedCompany || dictamenLoading} onClick={handleDownloadCompanyPdf} startIcon={<DownloadIcon />}>
+          PDF Empresa{dictamenLoading ? '...' : ''}
+        </Button>
+      </Stack>
+      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+        Usa estos campos para personalizar encabezado/colores. Logo debe existir en recursos backend.
+      </Typography>
+    </Paper>
+  ) }
     </Box>
   );
 }
