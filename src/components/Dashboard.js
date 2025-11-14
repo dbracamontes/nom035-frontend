@@ -231,6 +231,8 @@ export default function Dashboard() {
 		completionRate: item.completionRate,
 		fullName: item.surveyTitle
 	}));
+	// Asignar barData globalmente para otros componentes
+	window.dashboardBarData = barData;
 	// Mostrar siempre los factores clave de la NOM-035
 	const factoresClave = [
 		'Sobrecarga',
