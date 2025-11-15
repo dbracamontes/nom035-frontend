@@ -2,11 +2,15 @@ import React, { useEffect, useState, useContext } from "react";
 import { UserContext } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
 import {
-	getCompanyDashboard,
-	getCompanyRisk,
-	getCompanyParticipation,
+	// getCompanyDashboard,
+	// getCompanyRisk,
+	// getCompanyParticipation,
 	getCompanies,
-	getCompanyParticipationSummary
+	// getCompanyParticipationSummary,
+	getEmployees,
+	getSurveyApplications,
+	getSurveys,
+	getCompanyDictamenSummary
 } from "../api/nom035";
 import {
 	Box,
@@ -136,6 +140,11 @@ export default function Dashboard() {
 	const [showAllParticipation, setShowAllParticipation] = useState(false);
 	const [participationSummary, setParticipationSummary] = useState(null);
 
+	// NEW: local data for consistent calculations with SurveyResults
+	const [employees, setEmployees] = useState([]);
+	const [surveys, setSurveys] = useState([]);
+	const [applications, setApplications] = useState([]);
+
 	// Log para depuración: mostrar los nombres de los factores que llegan del backend
 	useEffect(() => {
 		if (riskByFactor && Object.keys(riskByFactor).length > 0) {
@@ -143,27 +152,107 @@ export default function Dashboard() {
 		}
 	}, [riskByFactor]);
 
+	// Helper used in both dashboards
+	const isCompleted = (app) => {
+		const status = (app?.status || app?.applicationStatus || '').toString().toUpperCase();
+		return !!(app?.completedAt || app?.completed || status === 'COMPLETADA' || status === 'COMPLETED' || status === 'COMPLETO');
+	};
+
+	const computeFromLocal = (companyId, empList, appList, surveyList) => {
+		// Scope employees by company
+		const scopedEmployees = (empList || []).filter(e => String(e.companyId || (e.company && e.company.id)) === String(companyId));
+		const scopedEmployeeIds = new Set(scopedEmployees.map(e => e.id));
+
+		// Scope applications to company employees
+		const scopedApps = (appList || []).filter(a => scopedEmployeeIds.has(a.employeeId));
+
+		// Overall participation (matches SurveyResults default: all employees in company)
+		const respondedIds = new Set(scopedApps.filter(isCompleted).map(a => a.employeeId));
+		const totalEmployees = scopedEmployeeIds.size;
+		const responded = [...respondedIds].filter(id => scopedEmployeeIds.has(id)).length;
+		const pending = Math.max(totalEmployees - responded, 0);
+		const summary = { responded, pending, total: totalEmployees };
+		setParticipationSummary(summary);
+
+		// Per-survey participation for bar chart (only surveys assigned in this company)
+		const appsBySurvey = new Map();
+		for (const app of scopedApps) {
+			if (!appsBySurvey.has(app.surveyId)) appsBySurvey.set(app.surveyId, []);
+			appsBySurvey.get(app.surveyId).push(app);
+		}
+		const barItems = [];
+		appsBySurvey.forEach((apps, sId) => {
+			const empIds = new Set(apps.map(a => a.employeeId));
+			const completedIds = new Set(apps.filter(isCompleted).map(a => a.employeeId));
+			const total = empIds.size;
+			const done = [...completedIds].filter(id => empIds.has(id)).length;
+			const completionRate = total > 0 ? Math.round((done / total) * 100) : 0;
+			const s = (surveyList || []).find(x => String(x.id) === String(sId)) || {};
+			barItems.push({
+				name: s.title && s.title.length > 15 ? s.title.substring(0, 15) + "..." : (s.title || `Encuesta ${sId}`),
+				completionRate,
+				fullName: s.title || `Encuesta ${sId}`
+			});
+		});
+		setParticipation(barItems.sort((a,b)=> b.completionRate - a.completionRate));
+
+		// Update dashboard aggregate counts to keep existing cards working
+		setDashboard({
+			employees: scopedEmployees,
+			surveys: (surveyList || [])
+		});
+	};
+
 	const fetchData = async (companyId) => {
 		setDashboardLoading(true);
 		try {
-			const [dashboardRes, riskRes, participationRes, summaryRes] = await Promise.all([
-				getCompanyDashboard(companyId),
-				getCompanyRisk(companyId),
-				getCompanyParticipation(companyId),
-				getCompanyParticipationSummary(companyId)
+			// Load minimal datasets in parallel
+			const [empRes, appRes, survRes] = await Promise.all([
+				getEmployees(),
+				getSurveyApplications(),
+				getSurveys()
 			]);
-			log.info('Dashboard batch loaded', {
-				employees: dashboardRes.data?.employees?.length,
-				surveys: dashboardRes.data?.surveys?.length,
-				riskFactors: Object.keys(riskRes.data || {}).length,
-				participationEntries: participationRes.data?.length
+			const empData = empRes.data || [];
+			const appData = appRes.data || [];
+			const survData = survRes.data || [];
+			setEmployees(empData);
+			setApplications(appData);
+			setSurveys(survData);
+			log.info('Dashboard batch loaded (local compute)', {
+				employees: empData.length,
+				applications: appData.length,
+				surveys: survData.length
 			});
-			setDashboard(dashboardRes.data);
-			setRiskByFactor(riskRes.data);
-			setParticipation(participationRes.data);
-			setParticipationSummary(summaryRes.data);
+
+			// Try to load dictamen summary for future risk usage (optional)
+			try {
+				if (companyId) {
+					const dictRes = await getCompanyDictamenSummary(String(companyId));
+					// If backend ever returns factor averages, map them; otherwise leave empty
+					const d = dictRes?.data;
+					if (d && d.factors) {
+						// expecting format: { factors: [{ name, averageScore }] }
+						const rb = {};
+						(d.factors || []).forEach(f => { if (f && f.name != null && f.averageScore != null) rb[String(f.name)] = Number(f.averageScore); });
+						setRiskByFactor(rb);
+					}
+				}
+			} catch (e) {
+				log.debug('Dictamen summary not available for risk chart', { message: e?.message });
+			}
+
+			// Compute dashboard metrics consistently
+			computeFromLocal(companyId, empData, appData, survData);
 		} catch (error) {
 			log.error('Error fetching dashboard data', { error: error?.message, companyId });
+			// Fallback to empty but consistent state
+			setEmployees([]);
+			setApplications([]);
+			setSurveys([]);
+			setParticipation([]);
+			setParticipationSummary({ responded: 0, pending: 0, total: 0 });
+			setDashboard({ employees: [], surveys: [] });
+			setRiskByFactor({});
 		} finally {
 			setDashboardLoading(false);
 		}
@@ -227,9 +316,9 @@ export default function Dashboard() {
 	if (loading || !user) return <div>Cargando...</div>;
 	const pieData = Object.keys(riskByFactor || {}).map((key) => ({ name: key, value: riskByFactor[key] }));
 	const barData = (participation || []).map((item) => ({
-		name: item.surveyTitle?.length > 15 ? item.surveyTitle.substring(0, 15) + "..." : item.surveyTitle,
+		name: item.surveyTitle?.length > 15 ? item.surveyTitle.substring(0, 15) + "..." : (item.name || ''),
 		completionRate: item.completionRate,
-		fullName: item.surveyTitle
+		fullName: item.fullName || item.name || ''
 	}));
 	// Asignar barData globalmente para otros componentes
 	window.dashboardBarData = barData;
@@ -241,11 +330,11 @@ export default function Dashboard() {
 		'Violencia presenciada',   // Violencia
 		'Organización del jefe'    // Liderazgo negativo
 	];
-	const pieDataLimited = showAllRisk
-		? pieData
-		: factoresClave
-			.map(factor => pieData.find(d => d.name === factor))
-			.filter(Boolean);
+	// If filtering by factoresClave yields no matches, fallback to all factors to avoid empty chart
+	const matchedFactors = factoresClave
+		.map(factor => pieData.find(d => d.name === factor))
+		.filter(Boolean);
+	const pieDataLimited = showAllRisk ? pieData : (matchedFactors.length > 0 ? matchedFactors : pieData);
 
 	// Stable color mapping per factor name (consistent across toggles and renders)
 	const pieColorMap = (() => {
@@ -374,7 +463,7 @@ export default function Dashboard() {
 								)}
 							</Box>
 						</Box>
-						{pieData.length > 0 ? (
+						{pieDataLimited.length > 0 ? (
 							<ResponsiveContainer width="100%" height={pieChartHeight}>
 								<PieChart>
 									<Pie data={pieDataLimited} dataKey="value" nameKey="name" innerRadius={40} outerRadius={100} label>
