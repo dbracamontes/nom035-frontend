@@ -299,7 +299,12 @@ export default function SurveyResults() {
       };
       const anyBrand = Object.values(brand).some(v => v);
       const res = anyBrand ? await downloadCompanyDictamenSummaryPdfBranded(String(selectedCompany), brand) : await downloadCompanyDictamenSummaryPdf(String(selectedCompany));
-      saveBlob(res.data, `dictamen-summary-company-${selectedCompany}.pdf`);
+
+      // Build a safe filename that does NOT expose numeric IDs. Prefer branding company name, then company list name.
+      const companyObj = companies.find(c => String(c.id) === String(selectedCompany)) || {};
+      const rawCompany = brandCompanyName || companyObj.name || 'company';
+      const safeCompany = String(rawCompany).replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_.-]/g, '');
+      saveBlob(res.data, `dictamen-summary-company-${safeCompany}.pdf`);
     } catch (e) {
       console.error('Error downloading company dictamen PDF:', e);
       setDictamenError('No se pudo descargar el PDF');
@@ -322,7 +327,13 @@ export default function SurveyResults() {
       };
       const anyBrand = Object.values(brand).some(v => v);
       const res = anyBrand ? await downloadApplicationDictamenPdfBranded(String(applicationId), brand) : await downloadApplicationDictamenPdf(String(applicationId));
-      saveBlob(res.data, `dictamen-application-${applicationId}.pdf`);
+
+      // Derive a safe filename using employee name if available, otherwise fallback to application token (no numeric id)
+      const app = surveyApplications.find(a => String(a.id) === String(applicationId)) || {};
+      const employee = employees.find(e => String(e.id) === String(app.employeeId)) || {};
+      const rawName = employee.name || employee.email || app.employeeName || `application-${String(applicationId).slice(-6)}`;
+      const safeName = String(rawName).replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_.-]/g, '');
+      saveBlob(res.data, `dictamen-${safeName}.pdf`);
     } catch (e) {
       console.error('Error downloading application dictamen PDF:', e);
     }
