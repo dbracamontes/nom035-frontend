@@ -4,7 +4,8 @@ import {
   Box, Button, Paper, MenuItem, Typography, 
   Card, CardContent, LinearProgress,
   Chip, FormControl, RadioGroup, FormControlLabel, 
-  Radio, Accordion, AccordionSummary, AccordionDetails, Alert, Select, InputLabel
+  Radio, Accordion, AccordionSummary, AccordionDetails, Alert, Select, InputLabel,
+  Checkbox, TextField, FormGroup, Stack, Table, TableBody, TableCell, TableHead, TableRow
 } from "@mui/material";
 import { 
   ExpandMore as ExpandMoreIcon, 
@@ -12,6 +13,13 @@ import {
   Assignment as AssignmentIcon 
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { 
+  normalizeQuestionList,
+  LIKERT_LABELS,
+  questionAnswered,
+  buildResponsePayload,
+  hydrateAnswerFromResponse
+} from "../utils/surveyUtils";
 
 const MENU_PROPS = {
   PaperProps: {
@@ -38,60 +46,9 @@ export default function EmployeeSurveyAnswer() {
   const [enabledSectionMaxIndex, setEnabledSectionMaxIndex] = useState(0);
   const [savingSection, setSavingSection] = useState(false);
 
-  const getAnswer = (qid) => answers[String(qid)] || "";
+  const getAnswer = (qid) => answers[String(qid)];
 
-  const canonicalLabels = ['Siempre','Casi siempre','Algunas veces','Casi nunca','Nunca'];
-  const labelSynonyms = {
-    'siempre': 'Siempre',
-    'casi siempre': 'Casi siempre',
-    'frecuente': 'Casi siempre',
-    'frecuentemente': 'Casi siempre',
-    'muy frecuente': 'Casi siempre',
-    'algunas veces': 'Algunas veces',
-    'a veces': 'Algunas veces',
-    'ocasionalmente': 'Algunas veces',
-    'regularmente': 'Algunas veces',
-    'casi nunca': 'Casi nunca',
-    'rara vez': 'Casi nunca',
-    'raramente': 'Casi nunca',
-    'pocas veces': 'Casi nunca',
-    'nunca': 'Nunca',
-    'always': 'Siempre',
-    'almost always': 'Casi siempre',
-    'sometimes': 'Algunas veces',
-    'almost never': 'Casi nunca',
-    'never': 'Nunca',
-    '1': 'Siempre',
-    '2': 'Casi siempre',
-    '3': 'Algunas veces',
-    '4': 'Casi nunca',
-    '5': 'Nunca'
-  };
-
-  const canonicalizeLabel = (input) => {
-    if (input == null) return null;
-    const s = String(input).trim();
-    if (s === '') return '';
-    if (canonicalLabels.includes(s)) return s;
-    const lower = s.toLowerCase();
-    if (labelSynonyms[lower]) return labelSynonyms[lower];
-    const n = Number(s);
-    if (!Number.isNaN(n) && n >= 1 && n <= 5) return canonicalLabels[n - 1];
-    return s;
-  };
-
-  const normalizeResponseLabel = (question, optId, free, val) => {
-    if (free) return String(free);
-    if (optId != null) {
-      const canon = canonicalizeLabel(optId);
-      if (canon != null) return canon;
-    }
-    if (val != null) {
-      const canon = canonicalizeLabel(val);
-      if (canon != null) return canon;
-    }
-    return null;
-  };
+  const canonicalLabels = LIKERT_LABELS;
   
   useEffect(() => {
     const loadData = async () => {
@@ -104,15 +61,15 @@ export default function EmployeeSurveyAnswer() {
             try {
               const qRes = await getSurveyWithQuestions(s.id);
               const qs = Array.isArray(qRes.data) ? qRes.data : (qRes.data?.questions || []);
-              return { ...s, questions: qs };
+              return { ...s, questions: normalizeQuestionList(qs) };
             } catch (err) {
               try {
                 const sRes = await getSurveyById(s.id);
                 const sd = sRes.data || {};
                 const qs = sd.questions || [];
-                return { ...s, questions: qs };
+                return { ...s, questions: normalizeQuestionList(qs) };
               } catch (err2) {
-                return { ...s, questions: s.questions || [] };
+                return { ...s, questions: normalizeQuestionList(s.questions || []) };
               }
             }
           })
@@ -247,13 +204,11 @@ export default function EmployeeSurveyAnswer() {
         const prevAnswers = {};
         filtered.forEach(r => {
           const qid = r.questionId ?? r.question_id ?? r.question?.id;
-          const optId = r.optionAnswerId ?? r.option_answer_id ?? r.optionAnswer?.id ?? r.option_answer;
-          const free = r.free_text ?? r.textAnswer ?? r.freeText ?? r.text_answer ?? r.freeTextAnswer ?? r.textAnswer;
-          const val = r.value ?? r.valueAnswer ?? r.score;
-
           const q = surveyObj.questions?.find(qq => String(qq.id) === String(qid));
-          const label = normalizeResponseLabel(q, optId, free, val);
-          if (label != null) prevAnswers[String(qid)] = label;
+          const hydrated = hydrateAnswerFromResponse(q, r);
+          if (qid != null && hydrated != null) {
+            prevAnswers[String(qid)] = hydrated;
+          }
         });
         setAnswers(prevAnswers);
 
@@ -326,7 +281,8 @@ export default function EmployeeSurveyAnswer() {
     return map;
   })();
   const questionsInSection = (title) => allQuestions.filter(q => sectionKey(resolvedSurveyTitle(q)) === title);
-  const isSectionComplete = (title) => questionsInSection(title).every(q => !!getAnswer(q.id));
+  const questionHasAnswer = (question) => questionAnswered(question, getAnswer(question.id));
+  const isSectionComplete = (title) => questionsInSection(title).every(questionHasAnswer);
 
   // Initialize/refresh gating when survey or answers change
   useEffect(() => {
@@ -350,7 +306,7 @@ export default function EmployeeSurveyAnswer() {
 
   const handleSurveyChange = async (e) => {
     const surveyId = e.target.value;
-    const survey = surveys.find(s => s.id === surveyId);
+    const survey = surveys.find(s => String(s.id) === String(surveyId));
     setSelectedSurvey(survey || null);
     setAnswers({});
     setExpandedModule(null);
@@ -369,6 +325,313 @@ export default function EmployeeSurveyAnswer() {
     setAnswers(prev => ({ ...prev, [String(questionId)]: value }));
   };
 
+  const renderLikertControl = (question, answerValue, disabled) => {
+    const likertValue = typeof answerValue === 'string' ? answerValue : '';
+    return (
+      <FormControl component="fieldset" fullWidth disabled={disabled}>
+        <RadioGroup
+          value={likertValue}
+          onChange={(e) => !disabled && handleAnswerChange(question.id, e.target.value)}
+        >
+          {LIKERT_LABELS.map(label => {
+            const selected = likertValue === label;
+            return (
+              <FormControlLabel
+                key={label}
+                value={label}
+                disabled={disabled}
+                control={
+                  <Radio 
+                    disabled={disabled}
+                    sx={{
+                      ...(disabled && selected && {
+                        color: 'success.main',
+                        '&.Mui-checked': {
+                          color: 'success.main',
+                        },
+                        '&.Mui-disabled': {
+                          color: 'success.main',
+                        }
+                      }),
+                      ...(disabled && !selected && {
+                        '&.Mui-disabled': {
+                          color: 'rgba(0, 0, 0, 0.26)'
+                        }
+                      })
+                    }}
+                  />
+                }
+                label={
+                  <Typography 
+                    sx={{ 
+                      fontWeight: disabled && selected ? 600 : 400,
+                      color: disabled && selected ? 'success.dark' : 'inherit',
+                      ...(disabled && !selected && {
+                        color: 'text.disabled'
+                      })
+                    }}
+                  >
+                    {label}
+                  </Typography>
+                }
+                sx={{
+                  ...(disabled && {
+                    opacity: selected ? 1 : 0.5,
+                    py: 0.5,
+                    cursor: 'not-allowed',
+                    pointerEvents: 'none'
+                  })
+                }}
+              />
+            );
+          })}
+        </RadioGroup>
+      </FormControl>
+    );
+  };
+
+  const renderSingleChoiceControl = (question, answerValue, disabled) => {
+    const options = question.normalizedOptions || [];
+    if (!options.length) {
+      return <Alert severity="warning">Esta pregunta no tiene opciones configuradas.</Alert>;
+    }
+
+    const selectedOptionId = answerValue?.optionId ? String(answerValue.optionId) : '';
+    const showOtherField = options.some(opt => opt.requiresFreeText && String(opt.id) === selectedOptionId);
+
+    return (
+      <Box>
+        <FormControl component="fieldset" fullWidth disabled={disabled}>
+          <RadioGroup
+            value={selectedOptionId}
+            onChange={(e) => {
+              if (disabled) return;
+              const option = options.find(opt => String(opt.id) === e.target.value);
+              if (!option) return;
+              handleAnswerChange(question.id, {
+                optionId: String(option.id),
+                optionAnswerId: option.optionAnswerId ?? option.id ?? null,
+                label: option.label,
+                otherText: option.requiresFreeText ? (answerValue?.otherText || '') : ''
+              });
+            }}
+          >
+            {options.map(option => {
+              const optionId = String(option.id);
+              return (
+                <FormControlLabel
+                  key={optionId}
+                  value={optionId}
+                  control={<Radio disabled={disabled} />}
+                  label={option.label}
+                  disabled={disabled}
+                />
+              );
+            })}
+          </RadioGroup>
+        </FormControl>
+        {showOtherField && (
+          <TextField
+            label="Especifica"
+            fullWidth
+            sx={{ mt: 2 }}
+            value={answerValue?.otherText || ''}
+            onChange={(e) => handleAnswerChange(question.id, {
+              ...(answerValue || {}),
+              optionId: selectedOptionId,
+              otherText: e.target.value
+            })}
+            disabled={disabled}
+          />
+        )}
+      </Box>
+    );
+  };
+
+  const renderMultiSelectControl = (question, answerValue, disabled) => {
+    const options = question.normalizedOptions || [];
+    if (!options.length) {
+      return <Alert severity="warning">Esta pregunta no tiene opciones configuradas.</Alert>;
+    }
+
+    const selectedIds = Array.isArray(answerValue?.optionIds)
+      ? answerValue.optionIds.map(id => String(id))
+      : [];
+
+    const toggleOption = (optionId) => {
+      if (disabled) return;
+      const stringId = String(optionId);
+      const current = new Set(selectedIds);
+      if (current.has(stringId)) {
+        current.delete(stringId);
+      } else {
+        current.add(stringId);
+      }
+      handleAnswerChange(question.id, {
+        optionIds: Array.from(current),
+        otherText: answerValue?.otherText || ''
+      });
+    };
+
+    const requiresOther = options.some(opt => opt.requiresFreeText && selectedIds.includes(String(opt.id)));
+
+    return (
+      <Box>
+        <FormGroup>
+          {options.map(option => {
+            const optionId = String(option.id);
+            const checked = selectedIds.includes(optionId);
+            return (
+              <FormControlLabel
+                key={optionId}
+                control={<Checkbox checked={checked} onChange={() => toggleOption(optionId)} disabled={disabled} />}
+                label={option.label}
+                disabled={disabled}
+              />
+            );
+          })}
+        </FormGroup>
+        {requiresOther && (
+          <TextField
+            label="Especifica"
+            fullWidth
+            sx={{ mt: 2 }}
+            value={answerValue?.otherText || ''}
+            onChange={(e) => handleAnswerChange(question.id, {
+              optionIds: selectedIds,
+              otherText: e.target.value
+            })}
+            disabled={disabled}
+          />
+        )}
+      </Box>
+    );
+  };
+
+  const renderTextControl = (question, answerValue, disabled) => {
+    const kind = (question.kind || '').toLowerCase();
+    const inputType = ['date', 'time', 'number'].includes(kind) ? kind : 'text';
+    const multiline = kind === 'text' ? Boolean(question.metadata?.multiline ?? (question.text?.length > 120)) : false;
+    const minRows = question.metadata?.rows ?? (multiline ? 3 : 1);
+    const value = typeof answerValue === 'string' ? answerValue : '';
+
+    return (
+      <TextField
+        fullWidth
+        label={question.metadata?.placeholder || 'Respuesta'}
+        type={inputType}
+        multiline={multiline}
+        minRows={minRows}
+        value={value}
+        onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+        disabled={disabled}
+      />
+    );
+  };
+
+  const renderMatrixControl = (question, answerValue, disabled) => {
+    const rows = question.metadata?.rows || [];
+    const columns = question.metadata?.columns || [];
+    if (!rows.length || !columns.length) {
+      return <Alert severity="warning">Esta pregunta matricial no tiene filas u opciones configuradas.</Alert>;
+    }
+
+    const selectionMode = question.metadata?.selection === 'radio' ? 'radio' : 'checkbox';
+    const currentAnswer = (answerValue && typeof answerValue === 'object') ? answerValue : {};
+
+    const toLabel = (item, fallbackLabel) => {
+      if (item == null) return fallbackLabel;
+      if (typeof item === 'string') return item;
+      if (typeof item === 'number') return String(item);
+      return item.label ?? item.text ?? item.title ?? fallbackLabel;
+    };
+
+    return (
+      <Box sx={{ overflowX: 'auto' }}>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ fontWeight: 600 }}>Reactivo</TableCell>
+              {columns.map((col, colIdx) => (
+                <TableCell key={colIdx} align="center" sx={{ fontWeight: 600 }}>
+                  {toLabel(col, `Opción ${colIdx + 1}`)}
+                </TableCell>
+              ))}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {rows.map((row, rowIdx) => {
+              const rowKey = String(row);
+              const displayLabel = toLabel(row, `Fila ${rowIdx + 1}`);
+              const rowValue = currentAnswer[rowKey] ?? (selectionMode === 'radio' ? '' : []);
+              return (
+                <TableRow key={rowKey}>
+                  <TableCell sx={{ fontWeight: 500 }}>{displayLabel}</TableCell>
+                  {columns.map((col, colIdx) => {
+                    const colKey = typeof col === 'object'
+                      ? (col.id ?? col.value ?? col.key ?? toLabel(col, `col-${colIdx}`))
+                      : String(col ?? `col-${colIdx}`);
+                    const checked = selectionMode === 'radio'
+                      ? rowValue === colKey
+                      : Array.isArray(rowValue) && rowValue.includes(colKey);
+                    const handleMatrixChange = () => {
+                      if (disabled) return;
+                      if (selectionMode === 'radio') {
+                        handleAnswerChange(question.id, {
+                          ...currentAnswer,
+                          [rowKey]: colKey
+                        });
+                      } else {
+                        const current = Array.isArray(rowValue) ? [...rowValue] : [];
+                        const exists = current.includes(colKey);
+                        const next = exists ? current.filter(val => val !== colKey) : [...current, colKey];
+                        handleAnswerChange(question.id, {
+                          ...currentAnswer,
+                          [rowKey]: next
+                        });
+                      }
+                    };
+                    return (
+                      <TableCell key={colKey} align="center">
+                        {selectionMode === 'radio' ? (
+                          <Radio checked={checked} onChange={handleMatrixChange} disabled={disabled} />
+                        ) : (
+                          <Checkbox checked={checked} onChange={handleMatrixChange} disabled={disabled} />
+                        )}
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </Box>
+    );
+  };
+
+  const renderQuestionInput = (question, disabled) => {
+    const kind = (question.kind || question.type || '').toLowerCase();
+    const answerValue = getAnswer(question.id);
+
+    if (kind === 'likert') {
+      return renderLikertControl(question, answerValue, disabled);
+    }
+    if (kind === 'single' || kind === 'single_choice' || kind === 'single-choice') {
+      return renderSingleChoiceControl(question, answerValue, disabled);
+    }
+    if (kind === 'multi' || kind === 'multi_select' || kind === 'multi-select') {
+      return renderMultiSelectControl(question, answerValue, disabled);
+    }
+    if (['text', 'date', 'time', 'number'].includes(kind)) {
+      return renderTextControl(question, answerValue, disabled);
+    }
+    if (kind === 'matrix') {
+      return renderMatrixControl(question, answerValue, disabled);
+    }
+    return renderLikertControl(question, answerValue, disabled);
+  };
+
   // Save only the current section's answers and unlock the next section
   const saveCurrentSection = async () => {
     if (!selectedSurvey) return;
@@ -378,7 +641,7 @@ export default function EmployeeSurveyAnswer() {
     if (currentIndex === -1) return;
 
     const sectionQs = questionsInSection(surveyTitleFilter);
-    const unanswered = sectionQs.filter(q => !getAnswer(q.id));
+    const unanswered = sectionQs.filter(q => !questionHasAnswer(q));
     if (unanswered.length > 0) {
       alert(`Por favor responde todas las preguntas de la sección antes de guardar. Faltan ${unanswered.length}.`);
       return;
@@ -394,19 +657,19 @@ export default function EmployeeSurveyAnswer() {
           status: 'en_progreso'
         });
         appId = appRes.data?.id ?? appRes.data?.applicationId;
+        if (appId) {
+          setExistingApplication(prev => prev ?? { id: appId, status: 'en_progreso' });
+        }
       }
 
       // Build payload only for this section
-      const responsesPayload = sectionQs.map(q => {
-        const answerVal = getAnswer(q.id);
-        const score = canonicalLabels.indexOf(answerVal) + 1;
-        return {
-          surveyApplicationId: appId,
-          questionId: q.id,
-          value: score > 0 ? score : null,
-          freeText: score > 0 ? null : answerVal
-        };
-      });
+      const responsesPayload = sectionQs
+        .map(q => buildResponsePayload(q, getAnswer(q.id), appId))
+        .filter(Boolean);
+
+      if (!responsesPayload.length) {
+        throw new Error('No se pudieron construir las respuestas para esta sección.');
+      }
 
       await submitSurveyResponse(responsesPayload);
 
@@ -442,7 +705,7 @@ export default function EmployeeSurveyAnswer() {
     }
 
     const allQs = selectedSurvey.questions || [];
-    const unanswered = allQs.filter(q => !getAnswer(q.id));
+    const unanswered = allQs.filter(q => !questionHasAnswer(q));
     if (unanswered.length > 0) {
       alert(`Por favor responde todas las preguntas. Faltan ${unanswered.length} respuestas.`);
       return;
@@ -459,18 +722,18 @@ export default function EmployeeSurveyAnswer() {
         });
         appId = appRes.data?.id ?? appRes.data?.applicationId;
         console.log('✅ Created application with ID:', appId);
+        if (appId) {
+          setExistingApplication(prev => prev ?? { id: appId, status: 'en_progreso' });
+        }
       }
 
-      const responsesPayload = allQs.map(q => {
-        const answerVal = getAnswer(q.id);
-        const score = canonicalLabels.indexOf(answerVal) + 1;
-        return {
-          surveyApplicationId: appId,
-          questionId: q.id,
-          value: score > 0 ? score : null,
-          freeText: score > 0 ? null : answerVal
-        };
-      });
+      const responsesPayload = allQs
+        .map(q => buildResponsePayload(q, getAnswer(q.id), appId))
+        .filter(Boolean);
+
+      if (!responsesPayload.length) {
+        throw new Error('No se pudieron construir las respuestas para esta encuesta.');
+      }
 
       // Paso 1: Enviar las respuestas
       console.log('📤 Sending responses...');
@@ -512,11 +775,11 @@ export default function EmployeeSurveyAnswer() {
     return acc;
   }, {});
   const totalQuestions = filteredQuestions.length;
-  const answeredCount = filteredQuestions.filter(q => getAnswer(q.id)).length;
+  const answeredCount = filteredQuestions.filter(questionHasAnswer).length;
   const progress = totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
   // NEW: global completion across all sections
   const fullTotalQuestions = allQuestions.length;
-  const fullAnsweredCount = allQuestions.filter(q => getAnswer(q.id)).length;
+  const fullAnsweredCount = allQuestions.filter(questionHasAnswer).length;
   const completedSectionsCount = sectionTitles.filter(t => isSectionComplete(t)).length;
   const allSectionsComplete = sectionTitles.length > 0
     ? completedSectionsCount === sectionTitles.length && sectionTitles.length > 0
@@ -609,7 +872,7 @@ export default function EmployeeSurveyAnswer() {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Typography>{sectionTitleMap[title] || title}</Typography>
                     <Chip 
-                      label={`${questionsInSection(title).filter(q => getAnswer(q.id)).length}/${questionsInSection(title).length}`} 
+                      label={`${questionsInSection(title).filter(questionHasAnswer).length}/${questionsInSection(title).length}`} 
                       size="small" 
                       color={isSectionComplete(title) ? 'success' : 'default'}
                     />
@@ -742,15 +1005,15 @@ export default function EmployeeSurveyAnswer() {
                       {category}
                     </Typography>
                     <Chip 
-                      label={`${questions.filter(q => getAnswer(q.id)).length}/${questions.length}`} 
+                      label={`${questions.filter(questionHasAnswer).length}/${questions.length}`} 
                       size="small" 
-                      color={questions.every(q => getAnswer(q.id)) ? "success" : "default"}
+                      color={questions.every(questionHasAnswer) ? "success" : "default"}
                     />
                   </Box>
                 </AccordionSummary>
                 <AccordionDetails>
                   {questions.map((question, idx) => {
-                    const hasAnswer = getAnswer(question.id);
+                    const hasAnswer = questionHasAnswer(question);
                     return (
                       <Card 
                         key={question.id} 
@@ -782,77 +1045,31 @@ export default function EmployeeSurveyAnswer() {
                         }}
                       >
                         <CardContent>
-                          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 2 }}>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
                             <Typography 
                               variant="body1" 
                               sx={{ 
                                 fontWeight: 500,
-                                color: formDisabled ? 'text.primary' : 'text.primary',
-                                flex: 1
+                                color: 'text.primary'
                               }}
                             >
                               {idx + 1}. {question.text}
                             </Typography>
-                            {formDisabled && hasAnswer && (
-                              <CheckCircleIcon color="success" fontSize="small" />
+                            {question.metadata?.helpText && (
+                              <Typography variant="body2" color="text.secondary">
+                                {question.metadata.helpText}
+                              </Typography>
                             )}
                           </Box>
-                          <FormControl component="fieldset" fullWidth disabled={formDisabled}>
-                            <RadioGroup
-                              value={getAnswer(question.id)}
-                              onChange={(e) => !formDisabled && handleAnswerChange(question.id, e.target.value)}
-                            >
-                              {canonicalLabels.map(label => (
-                                <FormControlLabel
-                                  key={label}
-                                  value={label}
-                                  disabled={formDisabled}
-                                  control={
-                                    <Radio 
-                                      disabled={formDisabled}
-                                      sx={{
-                                        ...(formDisabled && getAnswer(question.id) === label && {
-                                          color: 'success.main',
-                                          '&.Mui-checked': {
-                                            color: 'success.main',
-                                          },
-                                          '&.Mui-disabled': {
-                                            color: 'success.main',
-                                          }
-                                        }),
-                                        ...(formDisabled && getAnswer(question.id) !== label && {
-                                          '&.Mui-disabled': {
-                                            color: 'rgba(0, 0, 0, 0.26)',
-                                          }
-                                        })
-                                      }}
-                                    />
-                                  }
-                                  label={
-                                    <Typography 
-                                      sx={{ 
-                                        fontWeight: formDisabled && getAnswer(question.id) === label ? 600 : 400,
-                                        color: formDisabled && getAnswer(question.id) === label ? 'success.dark' : 'inherit',
-                                        ...(formDisabled && getAnswer(question.id) !== label && {
-                                          color: 'text.disabled'
-                                        })
-                                      }}
-                                    >
-                                      {label}
-                                    </Typography>
-                                  }
-                                  sx={{
-                                    ...(formDisabled && {
-                                      opacity: getAnswer(question.id) === label ? 1 : 0.5,
-                                      py: 0.5,
-                                      cursor: 'not-allowed',
-                                      pointerEvents: 'none'
-                                    })
-                                  }}
-                                />
-                              ))}
-                            </RadioGroup>
-                          </FormControl>
+                          {formDisabled && hasAnswer && (
+                            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+                              <CheckCircleIcon color="success" fontSize="small" />
+                              <Typography variant="body2" color="success.dark">
+                                Respondida
+                              </Typography>
+                            </Stack>
+                          )}
+                          {renderQuestionInput(question, formDisabled)}
                         </CardContent>
                       </Card>
                     );

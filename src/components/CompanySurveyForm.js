@@ -5,8 +5,8 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, Grid,
   Chip, Stack, Divider, Snackbar, Alert
 } from "@mui/material";
-import { createCompanySurvey, createSurveyApplication, getCompanies, getEmployeesByCompany, getSurveys, getSurveyById, getSurveyWithQuestions } from "../api/nom035";
-import { getQuestionsByGuideType } from "../data/nom035Questions";
+import { createCompanySurvey, createSurveyApplication, getCompanies, getEmployeesByCompany, getSurveys, getSurveyWithQuestions } from "../api/nom035";
+import { normalizeQuestionList } from "../utils/surveyUtils";
 
 // Unified field style: responsive, no fixed minWidth/minHeight
 const fieldSx = {
@@ -98,15 +98,29 @@ export default function CompanySurveyForm({ onCreated }) {
   }, [surveyDialogOpen, surveyDetails]);
 
   const assignmentSurveyOptions = useMemo(() => {
-    const nomSurvey = surveys.find((survey) => {
-      const title = (survey.title || "").toLowerCase();
-      return title.includes("nom035") || title.includes("nom-035") || title.includes("nom 035");
+    if (!surveys.length) return [];
+    const sorted = [...surveys].sort((a, b) => {
+      const aActive = a.active === true ? 1 : 0;
+      const bActive = b.active === true ? 1 : 0;
+      if (aActive !== bActive) return bActive - aActive;
+
+      const aTitle = (a.title || "").toLowerCase();
+      const bTitle = (b.title || "").toLowerCase();
+      const aMedica = aTitle.includes("leben");
+      const bMedica = bTitle.includes("leben");
+      if (aMedica !== bMedica) return bMedica ? -1 : 1;
+
+      const aCreated = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (aCreated !== bCreated) return bCreated - aCreated;
+
+      return aTitle.localeCompare(bTitle);
     });
-    return nomSurvey ? [nomSurvey] : [];
+    return sorted;
   }, [surveys]);
 
   useEffect(() => {
-    if (!selectedAssignmentSurvey && assignmentSurveyOptions.length === 1) {
+    if (!selectedAssignmentSurvey && assignmentSurveyOptions.length > 0) {
       setSelectedAssignmentSurvey(String(assignmentSurveyOptions[0].id));
     }
   }, [assignmentSurveyOptions, selectedAssignmentSurvey]);
@@ -245,9 +259,17 @@ export default function CompanySurveyForm({ onCreated }) {
   const handleOpenSurveyDialog = async () => {
     if (selectedSurvey) {
       try {
-        // Siempre usa el endpoint correcto para obtener TODAS las preguntas
+        const baseSurvey = surveys.find((survey) => String(survey.id) === String(selectedSurvey));
         const response = await getSurveyWithQuestions(selectedSurvey);
-        setSurveyDetails(response.data);
+        const questionData = Array.isArray(response.data)
+          ? response.data
+          : (response.data?.questions || []);
+        const normalizedQuestions = normalizeQuestionList(questionData);
+        setSurveyDetails({
+          ...(baseSurvey || {}),
+          questions: normalizedQuestions,
+          questionCount: normalizedQuestions.length
+        });
         setSurveyDialogOpen(true);
       } catch (error) {
         console.error("Error cargando detalles de la encuesta:", error);
@@ -322,7 +344,22 @@ export default function CompanySurveyForm({ onCreated }) {
             <MenuItem value="">-- Asignar Encuesta --</MenuItem>
             {assignmentSurveyOptions.map((survey) => (
               <MenuItem key={survey.id} value={survey.id}>
-                {survey.title}
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                    {survey.title}
+                  </Typography>
+                  {survey.description && (
+                    <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                      {survey.description}
+                    </Typography>
+                  )}
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Chip label={survey.guideType || "Personalizado"} size="small" color="primary" variant="outlined" />
+                    {((survey.title || "").toLowerCase().includes("leben")) && (
+                      <Chip label="Nuevo" size="small" color="secondary" />
+                    )}
+                  </Stack>
+                </Box>
               </MenuItem>
             ))}
           </TextField>
@@ -680,48 +717,48 @@ export default function CompanySurveyForm({ onCreated }) {
               </Typography>
               {(() => {
                 // Permitir que la respuesta sea un array plano o un objeto con questions
-                let questions = Array.isArray(surveyDetails)
+                const questions = Array.isArray(surveyDetails)
                   ? surveyDetails
                   : (surveyDetails?.questions || []);
                 // Si no hay preguntas, intentar obtener por tipo de guía
                 if (!questions || questions.length === 0) {
                   const guideType = surveyDetails?.guideType;
                   if (guideType) {
-                    questions = getQuestionsByGuideType(guideType);
+                    return (
+                      <Box sx={{ 
+                        p: 3, 
+                        textAlign: 'center',
+                        background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)',
+                        borderRadius: 2,
+                        border: '1px solid rgba(251, 146, 60, 0.3)'
+                      }}>
+                        <Typography variant="h6" sx={{ color: '#9a3412', mb: 2, fontWeight: 600 }}>
+                          No se encontraron preguntas registradas
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#c2410c' }}>
+                          Aún no se han importado las preguntas para esta encuesta.
+                        </Typography>
+                      </Box>
+                    );
                   }
                 }
-                if (!questions || questions.length === 0) {
-                  return (
-                    <Box sx={{ 
-                      p: 3, 
-                      textAlign: 'center',
-                      background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
-                      borderRadius: 2,
-                      border: '1px solid rgba(239, 68, 68, 0.1)'
-                    }}>
-                      <Typography variant="h6" sx={{ color: '#dc2626', mb: 2, fontWeight: 500 }}>
-                        ⚠️ Tipo de Guía No Reconocido
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: '#7f1d1d', lineHeight: 1.6 }}>
-                        No se pudo determinar el tipo de guía para esta encuesta.
-                      </Typography>
-                    </Box>
-                  );
-                }
 
-                const totalPages = Math.ceil(questions.length / questionPageSize);
-                const paginatedQuestions = questions.slice(questionPage * questionPageSize, (questionPage + 1) * questionPageSize);
+                const safeQuestions = questions || [];
+                const totalPages = Math.ceil(safeQuestions.length / questionPageSize) || 1;
+                const paginatedQuestions = safeQuestions.slice(questionPage * questionPageSize, (questionPage + 1) * questionPageSize);
 
                 return (
                   <Box sx={{ maxHeight: '400px', overflowY: 'auto', pr: 1 }}>
                     <Typography variant="body2" sx={{ color: '#64748b', mb: 2, fontStyle: 'italic' }}>
-                      Mostrando {questions.length} preguntas de la Guía {surveyDetails?.guideType || ''} del NOM-035-STPS-2018
+                      {safeQuestions.length > 0
+                        ? `Mostrando ${safeQuestions.length} preguntas registradas para "${surveyDetails?.title || 'Encuesta'}"`
+                        : 'Esta encuesta aún no tiene preguntas registradas.'}
                     </Typography>
                     {/* Mensaje de advertencia si se detecta posible endpoint incorrecto */}
-                    {questions.length > 0 && questions.length <= 8 && (
+                    {safeQuestions.length > 0 && safeQuestions.length <= 8 && (
                       <Box sx={{ mb: 2, p: 2, background: '#fffbe6', border: '1px solid #facc15', borderRadius: 2 }}>
                         <Typography variant="body2" sx={{ color: '#b45309', fontWeight: 600 }}>
-                          ⚠️ Atención: Solo se están mostrando {questions.length} preguntas. Es probable que el sistema esté usando el endpoint incorrecto (/api/surveys/[id] en vez de /api/surveys/[id]/questions).
+                          ⚠️ Atención: Solo se están mostrando {safeQuestions.length} preguntas. Es probable que el sistema esté usando el endpoint incorrecto (/api/surveys/[id] en vez de /api/surveys/[id]/questions).
                         </Typography>
                       </Box>
                     )}
@@ -752,14 +789,14 @@ export default function CompanySurveyForm({ onCreated }) {
                             }}
                           />
                         )}
-                        {question.options && Array.isArray(question.options) && (
+                        {question.normalizedOptions && question.normalizedOptions.length > 0 && (
                           <Box sx={{ mt: 2 }}>
                             <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 500, display: 'block', mb: 1 }}>
                               Opciones de respuesta:
                             </Typography>
                             <Stack spacing={1}>
-                              {question.options.map((option, optIndex) => (
-                                <Box key={optIndex} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {question.normalizedOptions.map((option) => (
+                                <Box key={option.id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                   <Typography variant="caption" sx={{ 
                                     color: '#6366f1', 
                                     fontWeight: 600,
@@ -772,6 +809,31 @@ export default function CompanySurveyForm({ onCreated }) {
                                   </Typography>
                                 </Box>
                               ))}
+                            </Stack>
+                          </Box>
+                        )}
+                        {question.type === 'matrix' && question.metadata && (
+                          <Box sx={{ mt: 2 }}>
+                            <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 500, display: 'block', mb: 1 }}>
+                              Matriz ({(question.metadata.selection || 'checkbox') === 'radio' ? 'una respuesta por fila' : 'múltiples respuestas por fila'})
+                            </Typography>
+                            <Stack direction="row" spacing={2} flexWrap="wrap">
+                              <Box>
+                                <Typography variant="overline" sx={{ color: '#94a3b8' }}>Filas</Typography>
+                                <Stack spacing={0.5}>
+                                  {(question.metadata.rows || []).map((row) => (
+                                    <Chip key={row} label={row} size="small" variant="outlined" />
+                                  ))}
+                                </Stack>
+                              </Box>
+                              <Box>
+                                <Typography variant="overline" sx={{ color: '#94a3b8' }}>Columnas</Typography>
+                                <Stack spacing={0.5}>
+                                  {(question.metadata.columns || []).map((col) => (
+                                    <Chip key={col} label={col} size="small" color="primary" variant="outlined" />
+                                  ))}
+                                </Stack>
+                              </Box>
                             </Stack>
                           </Box>
                         )}
