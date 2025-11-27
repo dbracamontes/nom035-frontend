@@ -57,6 +57,41 @@ export const createCompany = data => axios.post(`${API_BASE}/companies`, data);
 export const updateCompany = (id, data) => axios.put(`${API_BASE}/companies/${id}`, data);
 export const deleteCompany = id => axios.delete(`${API_BASE}/companies/${id}`);
 
+// Medica LEBEN endpoints
+export const getMedicaLebenDocs = (companyId) =>
+  axios.get(`${API_BASE}/companies/${companyId}/medica-leben/docs`);
+
+export const uploadMedicaLebenDocs = (companyId, files) => {
+  const formData = new FormData();
+  Object.entries(files).forEach(([key, file]) => {
+    if (file) {
+      formData.append(key, file);
+    }
+  });
+  return axios.post(
+    `${API_BASE}/companies/${companyId}/medica-leben/docs`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  );
+};
+
+export const getMedicaLebenPhotos = (companyId) =>
+  axios.get(`${API_BASE}/companies/${companyId}/medica-leben/photos`);
+
+export const uploadMedicaLebenPhoto = (companyId, photo, description, sortOrder) => {
+  const formData = new FormData();
+  formData.append('photo', photo);
+  if (description) formData.append('description', description);
+  if (sortOrder !== undefined && sortOrder !== null) {
+    formData.append('sortOrder', String(sortOrder));
+  }
+  return axios.post(
+    `${API_BASE}/companies/${companyId}/medica-leben/photos`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  );
+};
+
 // Survey endpoints
 export const getSurveys = () => axios.get(`${API_BASE}/surveys`);
 export const getSurveyById = id => axios.get(`${API_BASE}/surveys/${id}`);

@@ -27,6 +27,7 @@ import CompaniesPage from "./components/CompaniesPage";
 import UserRoleManagement from "./components/UserRoleManagement";
 import LanguageSelector from "./components/LanguageSelector";
 import LoginPage from "./components/LoginPage";
+import MedicaLebenCompaniesPage from "./components/MedicaLebenCompaniesPage";
 import { useTranslation } from 'react-i18next';
 import { UserContext } from "./context/UserContext";
 import { Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
@@ -103,6 +104,18 @@ export default function App() {
       setSelected(0);
     }
   }, [flatMenuOptions.length, selected]);
+
+  // Opciones del submenú Medica LEBEN (índices virtuales independientes del menú NOM-035)
+  const medicaLebenOptions = [
+    {
+      id: 'ml-companies',
+      label: 'Gestión de Empresas Médica LEBEN',
+      component: <MedicaLebenCompaniesPage />,
+      roles: ['ROLE_ADMIN'],
+    },
+  ];
+
+  const [selectedMedicaLeben, setSelectedMedicaLeben] = useState(medicaLebenOptions[0].id);
 
   // Si está cargando, mostrar pantalla de carga
   if (loading) return <div>Cargando...</div>;
@@ -222,14 +235,27 @@ export default function App() {
                 </ListItemButton>
                 <Collapse in={openMedicaLeben} timeout="auto" unmountOnExit>
                   <List component="div" disablePadding>
-                    {/* TODO: agregar opciones de menú específicas de Medica LEBEN */}
+                    {medicaLebenOptions
+                      .filter(opt => !user || opt.roles.some(r => hasRole(r)))
+                      .map(opt => (
+                        <ListItemButton
+                          key={opt.id}
+                          selected={selectedMedicaLeben === opt.id && openMedicaLeben}
+                          onClick={() => setSelectedMedicaLeben(opt.id)}
+                          sx={{ pl: 4 }}
+                        >
+                          <ListItemText primary={opt.label} />
+                        </ListItemButton>
+                      ))}
                   </List>
                 </Collapse>
               </List>
             </Drawer>
             <Box component="main" sx={{ flexGrow: 1, bgcolor: theme.palette.background.default, p: 3, minHeight: "100vh" }}>
               <Toolbar />
-              {flatMenuOptions[selected] && flatMenuOptions[selected].component}
+              {openMedicaLeben
+                ? medicaLebenOptions.find(o => o.id === selectedMedicaLeben)?.component
+                : flatMenuOptions[selected] && flatMenuOptions[selected].component}
             </Box>
           </Box>
         } />
