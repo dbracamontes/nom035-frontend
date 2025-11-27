@@ -12,7 +12,7 @@
     "companySurveys": "Encuestas de Empresa",
     "answerSurvey": "Responder Encuesta",
   "surveyResponses": "Respuestas de Encuestas",
-  "resultsDashboard": "Dashboard de Resultados NOM-035"
+  "resultsDashboard": "Dashboard de Resultados"
   },
   "landing": {
     "welcomeMessage": "¡Bienvenido! Utiliza la barra lateral para gestionar empleados, encuestas, respuestas y ver analíticas.",
@@ -97,7 +97,7 @@
       "submitted": "¡Enviado!"
     },
     "results": {
-      "title": "Dashboard de Resultados NOM-035",
+      "title": "Dashboard de Resultados",
       "filters": {
         "title": "Filtros de Análisis",
         "allCompanies": "Todas las empresas",

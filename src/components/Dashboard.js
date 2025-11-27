@@ -399,7 +399,7 @@ export default function Dashboard() {
 	return (
 		<Box sx={{ p: 3, backgroundColor: '#f8fafc', minHeight: '100vh' }}>
 			<Box sx={{ mb: 3 }}>
-				<Typography variant="h4" sx={{ fontWeight: 700 }}>Dashboard NOM-035</Typography>
+				   <Typography variant="h4" sx={{ fontWeight: 700 }}>Dashboard de Resultados</Typography>
 				<Typography variant="body2" color="text.secondary">Resumen ejecutivo de riesgos psicosociales y participación</Typography>
 			</Box>
 
