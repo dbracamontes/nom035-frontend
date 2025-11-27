@@ -1,5 +1,7 @@
 import React, { useState, useContext, useEffect } from "react";
-import { Box, CssBaseline, Drawer, Toolbar, AppBar, Typography, List, ListItem, ListItemIcon, ListItemText, ThemeProvider, IconButton, Button, Avatar, Stack } from "@mui/material";
+import { Box, CssBaseline, Drawer, Toolbar, AppBar, Typography, List, ListItem, ListItemIcon, ListItemText, ThemeProvider, IconButton, Button, Avatar, Stack, ListSubheader, Collapse, ListItemButton } from "@mui/material";
+import ExpandLess from '@mui/icons-material/ExpandLess';
+import ExpandMore from '@mui/icons-material/ExpandMore';
 import theme from "./theme";
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
@@ -40,6 +42,8 @@ export default function App() {
   }, [i18n]);
   const { user, login, logout, loading } = useContext(UserContext);
   const [selected, setSelected] = useState(0);
+  const [openNom035, setOpenNom035] = useState(true);
+  const [openMedicaLeben, setOpenMedicaLeben] = useState(false);
   const location = useLocation();
   // Función para verificar si el usuario tiene un rol específico
   const hasRole = (roleName) => {
@@ -47,32 +51,58 @@ export default function App() {
     return user.roles.some(role => role.authority === roleName);
   };
 
-  // Opciones de menú completas
-  const allMenuOptions = [
-    // ROLE_ADMIN - Acceso completo al sistema
-    { text: t("navigation.dashboard"), icon: <DashboardIcon />, component: <Dashboard />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
-    { text: t("navigation.companies"), icon: <BusinessIcon />, component: <CompaniesPage />, roles: ['ROLE_ADMIN'] },
-    { text: t("navigation.employees"), icon: <PeopleIcon />, component: <EmployeesPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
-    { text: t("navigation.rolesPrivileges"), icon: <AdminPanelSettingsIcon />, component: <UserRoleManagement />, roles: ['ROLE_ADMIN'] },
-    { text: t("navigation.surveys"), icon: <AssignmentIcon />, component: <><SurveyForm /><SurveyList /></>, roles: ['ROLE_ADMIN'] },
-    { text: t("navigation.companySurveys"), icon: <BusinessIcon />, component: <CompanySurveyPage />, roles: ['ROLE_ADMIN'] },
-    { text: t("navigation.resultsDashboard"), icon: <AnalyticsIcon />, component: <SurveyResults />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
-    { text: t("navigation.surveyResponses"), icon: <TableChartIcon />, component: <SurveyResponsesTable />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
-    // ROLE_EMPLOYEE - Solo responder encuestas asignadas (componente simplificado)
-    { text: t("navigation.answerSurvey"), icon: <QuizIcon />, component: <EmployeeSurveyAnswer />, roles: ['ROLE_EMPLOYEE'] }
+  // Opciones de menú completas agrupadas por categorías
+  const allMenuGroups = [
+    {
+      id: 'main',
+      label: t('navigation.section.main', 'Principal'),
+      items: [
+        { text: t("navigation.dashboard"), icon: <DashboardIcon />, component: <Dashboard />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
+      ],
+    },
+    {
+      id: 'management',
+      label: t('navigation.section.management', 'Gestión'),
+      items: [
+        { text: t("navigation.companies"), icon: <BusinessIcon />, component: <CompaniesPage />, roles: ['ROLE_ADMIN'] },
+        { text: t("navigation.employees"), icon: <PeopleIcon />, component: <EmployeesPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
+        { text: t("navigation.rolesPrivileges"), icon: <AdminPanelSettingsIcon />, component: <UserRoleManagement />, roles: ['ROLE_ADMIN'] },
+      ],
+    },
+    {
+      id: 'surveys',
+      label: t('navigation.section.surveys', 'Encuestas'),
+      items: [
+        { text: t("navigation.surveys"), icon: <AssignmentIcon />, component: <><SurveyForm /><SurveyList /></>, roles: ['ROLE_ADMIN'] },
+        { text: t("navigation.companySurveys"), icon: <BusinessIcon />, component: <CompanySurveyPage />, roles: ['ROLE_ADMIN'] },
+        { text: t("navigation.answerSurvey"), icon: <QuizIcon />, component: <EmployeeSurveyAnswer />, roles: ['ROLE_EMPLOYEE'] },
+      ],
+    },
+    {
+      id: 'reports',
+      label: t('navigation.section.reports', 'Resultados y reportes'),
+      items: [
+        { text: t("navigation.resultsDashboard"), icon: <AnalyticsIcon />, component: <SurveyResults />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
+        { text: t("navigation.surveyResponses"), icon: <TableChartIcon />, component: <SurveyResponsesTable />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
+      ],
+    },
   ];
 
-  // Filtrar opciones de menú según el rol del usuario
-  const menuOptions = user ? allMenuOptions.filter(option => 
-    option.roles.some(role => hasRole(role))
-  ) : allMenuOptions;
+  // Filtrar grupos de menú según el rol del usuario
+  const filteredGroups = (user ? allMenuGroups.map(group => ({
+    ...group,
+    items: group.items.filter(option => option.roles.some(role => hasRole(role)))
+  })).filter(group => group.items.length > 0) : allMenuGroups);
+
+  // Aplanar los items filtrados para mantener el manejo por índice
+  const flatMenuOptions = filteredGroups.flatMap(group => group.items);
 
   // Asegurar que el índice seleccionado es válido tras filtrar
   useEffect(() => {
-    if (selected >= menuOptions.length) {
+    if (selected >= flatMenuOptions.length) {
       setSelected(0);
     }
-  }, [menuOptions.length, selected]);
+  }, [flatMenuOptions.length, selected]);
 
   // Si está cargando, mostrar pantalla de carga
   if (loading) return <div>Cargando...</div>;
@@ -153,22 +183,53 @@ export default function App() {
             >
               <Toolbar />
               <List>
-                {menuOptions.map((option, idx) => (
-                  <ListItem
-                    button
-                    key={option.text}
-                    selected={selected === idx}
-                    onClick={() => setSelected(idx)}
-                  >
-                    <ListItemIcon>{option.icon}</ListItemIcon>
-                    <ListItemText primary={option.text} />
-                  </ListItem>
-                ))}
+                {/* NOM-035 main menu */}
+                <ListItemButton onClick={() => setOpenNom035(prev => !prev)}>
+                  <ListItemText primary="NOM-035" />
+                  {openNom035 ? <ExpandLess /> : <ExpandMore />}
+                </ListItemButton>
+                <Collapse in={openNom035} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding>
+                    {filteredGroups.map(group => (
+                      <React.Fragment key={group.id}>
+                        <ListSubheader component="div">
+                          {group.label}
+                        </ListSubheader>
+                        {group.items.map(option => {
+                          const idx = flatMenuOptions.indexOf(option);
+                          return (
+                            <ListItem
+                              button
+                              key={option.text}
+                              selected={selected === idx}
+                              onClick={() => setSelected(idx)}
+                              sx={{ pl: 4 }}
+                            >
+                              <ListItemIcon>{option.icon}</ListItemIcon>
+                              <ListItemText primary={option.text} />
+                            </ListItem>
+                          );
+                        })}
+                      </React.Fragment>
+                    ))}
+                  </List>
+                </Collapse>
+
+                {/* Medica LEBEN menu (empty for now) */}
+                <ListItemButton onClick={() => setOpenMedicaLeben(prev => !prev)}>
+                  <ListItemText primary="Medica LEBEN" />
+                  {openMedicaLeben ? <ExpandLess /> : <ExpandMore />}
+                </ListItemButton>
+                <Collapse in={openMedicaLeben} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding>
+                    {/* TODO: agregar opciones de menú específicas de Medica LEBEN */}
+                  </List>
+                </Collapse>
               </List>
             </Drawer>
             <Box component="main" sx={{ flexGrow: 1, bgcolor: theme.palette.background.default, p: 3, minHeight: "100vh" }}>
               <Toolbar />
-              {menuOptions[selected].component}
+              {flatMenuOptions[selected] && flatMenuOptions[selected].component}
             </Box>
           </Box>
         } />
