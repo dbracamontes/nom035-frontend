@@ -45,6 +45,7 @@ export default function App() {
   const [selected, setSelected] = useState(0);
   const [openNom035, setOpenNom035] = useState(true);
   const [openMedicaLeben, setOpenMedicaLeben] = useState(false);
+  const [activeSection, setActiveSection] = useState('nom035'); // 'nom035' | 'medicaLeben'
   const location = useLocation();
   // Función para verificar si el usuario tiene un rol específico
   const hasRole = (roleName) => {
@@ -214,8 +215,11 @@ export default function App() {
                             <ListItem
                               button
                               key={option.text}
-                              selected={selected === idx}
-                              onClick={() => setSelected(idx)}
+                              selected={activeSection === 'nom035' && selected === idx}
+                              onClick={() => {
+                                setSelected(idx);
+                                setActiveSection('nom035');
+                              }}
                               sx={{ pl: 4 }}
                             >
                               <ListItemIcon>{option.icon}</ListItemIcon>
@@ -228,32 +232,39 @@ export default function App() {
                   </List>
                 </Collapse>
 
-                {/* Medica LEBEN menu (empty for now) */}
-                <ListItemButton onClick={() => setOpenMedicaLeben(prev => !prev)}>
-                  <ListItemText primary="Medica LEBEN" />
-                  {openMedicaLeben ? <ExpandLess /> : <ExpandMore />}
-                </ListItemButton>
-                <Collapse in={openMedicaLeben} timeout="auto" unmountOnExit>
-                  <List component="div" disablePadding>
-                    {medicaLebenOptions
-                      .filter(opt => !user || opt.roles.some(r => hasRole(r)))
-                      .map(opt => (
-                        <ListItemButton
-                          key={opt.id}
-                          selected={selectedMedicaLeben === opt.id && openMedicaLeben}
-                          onClick={() => setSelectedMedicaLeben(opt.id)}
-                          sx={{ pl: 4 }}
-                        >
-                          <ListItemText primary={opt.label} />
-                        </ListItemButton>
-                      ))}
-                  </List>
-                </Collapse>
+                {/* Medica LEBEN menu */}
+                {(!user || hasRole('ROLE_ADMIN')) && (
+                  <>
+                    <ListItemButton onClick={() => setOpenMedicaLeben(prev => !prev)}>
+                      <ListItemText primary="Medica LEBEN" />
+                      {openMedicaLeben ? <ExpandLess /> : <ExpandMore />}
+                    </ListItemButton>
+                    <Collapse in={openMedicaLeben} timeout="auto" unmountOnExit>
+                      <List component="div" disablePadding>
+                        {medicaLebenOptions
+                          .filter(opt => !user || opt.roles.some(r => hasRole(r)))
+                          .map(opt => (
+                            <ListItemButton
+                              key={opt.id}
+                              selected={activeSection === 'medicaLeben' && selectedMedicaLeben === opt.id}
+                              onClick={() => {
+                                setSelectedMedicaLeben(opt.id);
+                                setActiveSection('medicaLeben');
+                              }}
+                              sx={{ pl: 4 }}
+                            >
+                              <ListItemText primary={opt.label} />
+                            </ListItemButton>
+                          ))}
+                      </List>
+                    </Collapse>
+                  </>
+                )}
               </List>
             </Drawer>
             <Box component="main" sx={{ flexGrow: 1, bgcolor: theme.palette.background.default, p: 3, minHeight: "100vh" }}>
               <Toolbar />
-              {openMedicaLeben
+              {activeSection === 'medicaLeben'
                 ? medicaLebenOptions.find(o => o.id === selectedMedicaLeben)?.component
                 : flatMenuOptions[selected] && flatMenuOptions[selected].component}
             </Box>

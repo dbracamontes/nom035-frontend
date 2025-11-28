@@ -44,7 +44,9 @@ export default function CompanyForm({ company, onSave, onCancel }) {
       newErrors.name = 'El nombre no puede exceder 150 caracteres';
     }
 
-    if (formData.taxId && formData.taxId.length > 20) {
+    if (!formData.taxId || formData.taxId.trim() === '') {
+      newErrors.taxId = 'El RFC/Tax ID es obligatorio';
+    } else if (formData.taxId.length > 20) {
       newErrors.taxId = 'El RFC/Tax ID no puede exceder 20 caracteres';
     }
 
@@ -147,11 +149,12 @@ export default function CompanyForm({ company, onSave, onCancel }) {
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
+              required
               label="RFC / Tax ID"
               value={formData.taxId}
               onChange={handleChange('taxId')}
               error={!!errors.taxId}
-              helperText={errors.taxId || 'RFC de la empresa (opcional)'}
+              helperText={errors.taxId || 'RFC de la empresa'}
               variant="outlined"
               disabled={loading}
               inputProps={{ maxLength: 20 }}

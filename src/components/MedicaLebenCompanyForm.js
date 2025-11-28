@@ -19,8 +19,11 @@ import {
   getMedicaLebenPhotos,
   uploadMedicaLebenPhoto
 } from "../api/nom035";
+import axios from "axios";
 
-export default function MedicaLebenCompanyForm({ company, onClose }) {
+const API_BASE = "http://localhost:8080/api";
+
+export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany }) {
   const [docs, setDocs] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [docFiles, setDocFiles] = useState({
@@ -37,6 +40,10 @@ export default function MedicaLebenCompanyForm({ company, onClose }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [companyName, setCompanyName] = useState(company?.name || "");
+  const [companyTaxId, setCompanyTaxId] = useState(company?.taxId || "");
+  const [companyFolioMercantil, setCompanyFolioMercantil] = useState(company?.folioMercantil || "");
+  const [companyValidationError, setCompanyValidationError] = useState("");
 
   useEffect(() => {
     if (!company) return;
@@ -55,21 +62,48 @@ export default function MedicaLebenCompanyForm({ company, onClose }) {
     load();
   }, [company]);
 
+  useEffect(() => {
+    setCompanyName(company?.name || "");
+    setCompanyTaxId(company?.taxId || "");
+    setCompanyFolioMercantil(company?.folioMercantil || "");
+  }, [company]);
+
   const handleDocFileChange = (field) => (e) => {
     const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
     setDocFiles((prev) => ({ ...prev, [field]: file }));
   };
 
+  const ensureCompanyExists = async () => {
+    if (!isNewCompany || company?.id) {
+      return company;
+    }
+    if (!companyName || companyName.trim() === "") {
+      setCompanyValidationError("El nombre de la empresa es obligatorio");
+      throw new Error("Company validation error");
+    }
+    setCompanyValidationError("");
+    const payload = {
+      name: companyName.trim(),
+      taxId: companyTaxId.trim() || null,
+      folioMercantil: companyFolioMercantil.trim() || null,
+    };
+    const resp = await axios.post(`${API_BASE}/companies`, payload);
+    return resp.data;
+  };
+
   const handleSaveDocs = async () => {
-    if (!company) return;
-    setLoading(true);
-    setError("");
-    setSuccess("");
     try {
-      const resp = await uploadMedicaLebenDocs(company.id, docFiles);
+      setLoading(true);
+      setError("");
+      setSuccess("");
+      const ensuredCompany = await ensureCompanyExists();
+      const resp = await uploadMedicaLebenDocs(ensuredCompany.id, docFiles);
       setDocs(resp.data);
       setSuccess("Documentos guardados correctamente");
     } catch (e) {
+      if (e.message === "Company validation error") {
+        return;
+      }
       console.error(e);
       setError("Error al guardar documentos Médica LEBEN");
     } finally {
@@ -78,18 +112,22 @@ export default function MedicaLebenCompanyForm({ company, onClose }) {
   };
 
   const handleAddPhoto = async () => {
-    if (!company || !photoFile) return;
-    setLoading(true);
-    setError("");
-    setSuccess("");
     try {
+      if (!photoFile) return;
+      setLoading(true);
+      setError("");
+      setSuccess("");
+      const ensuredCompany = await ensureCompanyExists();
       const sortOrder = photos.length;
-      const resp = await uploadMedicaLebenPhoto(company.id, photoFile, photoDescription, sortOrder);
+      const resp = await uploadMedicaLebenPhoto(ensuredCompany.id, photoFile, photoDescription, sortOrder);
       setPhotos((prev) => [...prev, resp.data]);
       setPhotoFile(null);
       setPhotoDescription("");
       setSuccess("Foto agregada correctamente");
     } catch (e) {
+      if (e.message === "Company validation error") {
+        return;
+      }
       console.error(e);
       setError("Error al subir la foto del área de trabajo");
     } finally {
@@ -129,6 +167,48 @@ export default function MedicaLebenCompanyForm({ company, onClose }) {
       )}
       {success && (
         <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>
+      )}
+
+      {isNewCompany && (
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            Datos de la nueva empresa
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                required
+                label="Nombre de la empresa"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                error={!!companyValidationError}
+                helperText={companyValidationError || "Nombre legal o comercial de la empresa"}
+                size="small"
+              />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <TextField
+                fullWidth
+                label="RFC / Tax ID"
+                value={companyTaxId}
+                onChange={(e) => setCompanyTaxId(e.target.value)}
+                size="small"
+                helperText="Opcional"
+              />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <TextField
+                fullWidth
+                label="Folio mercantil"
+                value={companyFolioMercantil}
+                onChange={(e) => setCompanyFolioMercantil(e.target.value)}
+                size="small"
+                helperText="Opcional"
+              />
+            </Grid>
+          </Grid>
+        </Box>
       )}
 
       <Grid container spacing={3}>
