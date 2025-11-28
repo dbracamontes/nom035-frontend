@@ -530,7 +530,7 @@ export default function SurveyResults() {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" sx={{ mb: 3, fontWeight: 700, color: '#212121', letterSpacing: 1 }}>
-        Dashboard de Resultados NOM-035
+        Dashboard de Resultados
       </Typography>
 
       {/* Filtros de selección */}

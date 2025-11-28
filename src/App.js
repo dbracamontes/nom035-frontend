@@ -164,7 +164,7 @@ export default function App() {
                     textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
                   }}
                 >
-                  {t("app.title")}
+                  Plataforma de Encuestas
                 </Typography>
                 {user && (
                   <Stack direction="row" spacing={2} alignItems="center">
@@ -199,7 +199,7 @@ export default function App() {
               <List>
                 {/* NOM-035 main menu */}
                 <ListItemButton onClick={() => setOpenNom035(prev => !prev)}>
-                  <ListItemText primary="NOM-035" />
+                  <ListItemText primary="Encuestas" />
                   {openNom035 ? <ExpandLess /> : <ExpandMore />}
                 </ListItemButton>
                 <Collapse in={openNom035} timeout="auto" unmountOnExit>
