@@ -4,6 +4,22 @@ import axios from 'axios';
 const API_ROOT = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 const API_BASE = `${API_ROOT}/api`;
 
+// Add request interceptor to ensure proper headers (JSON by default).
+// For multipart/form-data requests we will explicitly set the header in each call,
+// and this interceptor will respect that and not override.
+axios.interceptors.request.use(
+  (config) => {
+    const method = (config.method || '').toLowerCase();
+    const existingContentType = config.headers && config.headers['Content-Type'];
+
+    if ((method === 'post' || method === 'put') && !existingContentType) {
+      config.headers['Content-Type'] = 'application/json';
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 // Obtener el usuario autenticado actual
 export const getCurrentUser = () => axios.get(`${API_BASE}/users/me`);
 
@@ -16,18 +32,6 @@ export const generateTemporaryPassword = (userId) => axios.post(`${API_BASE}/use
 // Recuperación de contraseñas
 export const requestPasswordReset = (email) => axios.post(`${API_BASE}/users/password-reset/request`, { email });
 export const confirmPasswordReset = (token, newPassword) => axios.post(`${API_BASE}/users/password-reset/confirm`, { token, newPassword });
-
-// Add request interceptor to ensure proper headers
-axios.interceptors.request.use(
-  (config) => {
-    if (config.method === 'post' || config.method === 'put') {
-      config.headers['Content-Type'] = 'application/json';
-    }
-    // console.log('Request config:', config);
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
 
 // Employee endpoints
 export const getEmployees = () => axios.get(`${API_BASE}/employees`);
