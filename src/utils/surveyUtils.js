@@ -71,6 +71,52 @@ export function detectQuestionKind(questionOrType) {
   return "likert";
 }
 
+const coerceOptionArray = (source) => {
+  if (!source) return [];
+  if (Array.isArray(source)) return source;
+  if (typeof source === "string") {
+    return source
+      .split(/[\r\n,;|]+/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+  }
+  if (typeof source === "object") {
+    return Object.values(source);
+  }
+  return [];
+};
+
+const pickQuestionOptions = (question) => {
+  if (!question) return [];
+  const candidates = [
+    question.options,
+    question.optionAnswers,
+    question.option_answers,
+    question.optionAnswerDtos,
+    question.option_answer_dtos,
+    question.optionAnswerList,
+    question.option_answer_list,
+    question.responseOptions,
+    question.response_options,
+    question.answers,
+    question.metadata?.options
+  ];
+  for (const candidate of candidates) {
+    const list = coerceOptionArray(candidate);
+    if (list.length) return list;
+  }
+  if (typeof question === "object") {
+    for (const [key, value] of Object.entries(question)) {
+      if (!value) continue;
+      if (Array.isArray(value) && /option/i.test(key)) {
+        const list = coerceOptionArray(value);
+        if (list.length) return list;
+      }
+    }
+  }
+  return [];
+};
+
 const normalizeOption = (questionId, option, index) => {
   if (option == null) return null;
   if (typeof option === "string") {
@@ -99,9 +145,10 @@ const normalizeOption = (questionId, option, index) => {
 export function normalizeQuestion(question) {
   if (!question) return null;
   const metadata = parseQuestionMetadata(question.metadata);
-  const normalizedOptions = Array.isArray(question.options)
-    ? question.options.map((opt, idx) => normalizeOption(question.id, opt, idx)).filter(Boolean)
-    : [];
+  const rawOptions = pickQuestionOptions(question);
+  const normalizedOptions = rawOptions
+    .map((opt, idx) => normalizeOption(question.id, opt, idx))
+    .filter(Boolean);
   const normalized = {
     ...question,
     metadata,
@@ -142,7 +189,8 @@ export function questionAnswered(question, answer) {
     if (!rows.length) {
       return Boolean(answer && Object.keys(answer || {}).length);
     }
-    const selection = question?.metadata?.selection === "radio" ? "radio" : "checkbox";
+    const selectionMeta = (question?.metadata?.selection || "").toString().toLowerCase();
+    const selection = selectionMeta === "checkbox" ? "checkbox" : "radio";
     return rows.every((row) => {
       const key = String(row);
       const value = answer ? answer[key] : undefined;

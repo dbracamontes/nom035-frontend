@@ -4,7 +4,8 @@ import {
   Box, Button, TextField, Paper, MenuItem, Typography, 
   Card, CardContent, LinearProgress,
   Chip, Grid, FormControl, RadioGroup, FormControlLabel, 
-  Radio, Accordion, AccordionSummary, AccordionDetails, Alert
+  Radio, Accordion, AccordionSummary, AccordionDetails, Alert,
+  FormGroup, Checkbox
 } from "@mui/material";
 import { 
   ExpandMore as ExpandMoreIcon, 
@@ -12,6 +13,7 @@ import {
   Assignment as AssignmentIcon 
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { normalizeQuestionList } from "../utils/surveyUtils";
 
 // Menu props to make select dropdowns wider and taller so content is visible
 const MENU_PROPS = {
@@ -84,20 +86,115 @@ export default function SurveyAnswer() {
   };
 
   // Normalize stored response pieces into the exact option label used by the UI
-  const normalizeResponseLabel = (question, optId, free, val) => {
-    // If free-text exists, prefer it (but canonicalize just in case)
-    if (free) return String(free);
+  const NOM035_OPTIONS = canonicalLabels.map((label, idx) => ({
+    id: null,
+    label,
+    value: label,
+    numericValue: idx + 1,
+    requiresFreeText: false,
+  }));
 
-    // If optId is provided, try canonicalizing it first
-    if (optId != null) {
-      const canon = canonicalizeLabel(optId);
-      if (canon != null) return canon;
+  const normalizeQuestionType = (question) => {
+    if (!question) return '';
+    if (typeof question.kind === 'string') return question.kind.toLowerCase();
+    return String(question?.type || question?.responseType || '').toLowerCase();
+  };
+
+  const extractQuestionOptions = (question) => {
+    if (Array.isArray(question?.normalizedOptions) && question.normalizedOptions.length > 0) {
+      return question.normalizedOptions.map(opt => ({
+        id: opt.optionAnswerId ?? opt.id ?? null,
+        label: opt.label ?? opt.text ?? opt.value ?? opt.name ?? '',
+        value: opt.value ?? opt.id ?? opt.label ?? '',
+        numericValue: opt.value ?? opt.numericValue ?? null,
+        requiresFreeText: Boolean(opt.requiresFreeText),
+      })).filter(opt => opt.label);
     }
 
-    // If value/score provided, canonicalize that
+    if (!question) return [];
+    let raw = question.options ?? question.optionAnswers ?? question.option_answers ?? null;
+    if (typeof raw === 'string') {
+      raw = raw.split(/[,|;]/).map(part => part.trim()).filter(Boolean);
+    }
+    if (!raw) return [];
+    const list = Array.isArray(raw) ? raw : Object.values(raw);
+    return list
+      .map((opt, index) => {
+        if (opt == null) return null;
+        if (typeof opt === 'string') {
+          const label = opt.trim();
+          if (!label) return null;
+          return {
+            id: null,
+            label,
+            value: label,
+            numericValue: undefined,
+            requiresFreeText: false,
+          };
+        }
+
+        const label = (opt.text ?? opt.label ?? opt.name ?? opt.title ?? opt.value ?? `Opción ${index + 1}`).toString();
+        const rawValue = opt.value ?? opt.code ?? opt.index ?? label;
+        const numericValue = typeof opt.value === 'number'
+          ? opt.value
+          : (opt.value !== undefined && !Number.isNaN(Number(opt.value)) ? Number(opt.value) : (typeof opt.score === 'number' ? opt.score : undefined));
+
+        return {
+          id: opt.id ?? opt.optionAnswerId ?? opt.option_answer_id ?? null,
+          label,
+          value: rawValue != null ? String(rawValue) : label,
+          numericValue,
+          requiresFreeText: Boolean(opt.requiresFreeText ?? opt.requires_free_text),
+        };
+      })
+      .filter(Boolean);
+  };
+
+  const shouldUseNom035Defaults = (question, backendOptions) => {
+    if (backendOptions.length > 0) return false;
+    const type = normalizeQuestionType(question);
+    return type === 'likert' || type === 'scale' || type === 'single_choice' || type === 'radio' || type === '';
+  };
+
+  const resolveQuestionOptions = (question) => {
+    const backendOptions = extractQuestionOptions(question);
+    const useNomDefaults = shouldUseNom035Defaults(question, backendOptions);
+    const options = backendOptions.length > 0 ? backendOptions : (useNomDefaults ? NOM035_OPTIONS : []);
+    return { options, useNomDefaults };
+  };
+
+  const findOptionMatch = (options, answerValue) => {
+    if (!answerValue && answerValue !== 0) return null;
+    const normalized = String(answerValue).trim().toLowerCase();
+    return options.find(opt => {
+      if (opt.value != null && String(opt.value).trim().toLowerCase() === normalized) return true;
+      if (opt.label != null && String(opt.label).trim().toLowerCase() === normalized) return true;
+      if (opt.id != null && String(opt.id) === String(answerValue)) return true;
+      return false;
+    }) || null;
+  };
+
+  const normalizeResponseLabel = (question, optId, free, val) => {
+    if (free) return String(free);
+    const options = extractQuestionOptions(question);
+
+    if (optId != null) {
+      const match = options.find(opt => opt.id != null && String(opt.id) === String(optId));
+      if (match) return match.value;
+    }
+
     if (val != null) {
-      const canon = canonicalizeLabel(val);
-      if (canon != null) return canon;
+      const match = options.find(opt => {
+        if (opt.numericValue != null && !Number.isNaN(Number(opt.numericValue))) {
+          return Number(opt.numericValue) === Number(val);
+        }
+        return String(opt.value).toLowerCase() === String(val).toLowerCase();
+      });
+      if (match) return match.value;
+    }
+
+    if (options.length === 0 && val != null) {
+      return canonicalizeLabel(val);
     }
 
     return null;
@@ -114,16 +211,16 @@ export default function SurveyAnswer() {
           try {
             const qRes = await getSurveyWithQuestions(s.id);
             const qs = Array.isArray(qRes.data) ? qRes.data : (qRes.data?.questions || []);
-            return { ...s, questions: qs };
+            return { ...s, questions: normalizeQuestionList(qs) };
           } catch (err) {
             // Fallback: try the regular survey endpoint which may include questions
             try {
               const sRes = await getSurveyById(s.id);
               const sd = sRes.data || {};
               const qs = sd.questions || [];
-              return { ...s, questions: qs };
+              return { ...s, questions: normalizeQuestionList(qs) };
             } catch (err2) {
-              return { ...s, questions: s.questions || [] };
+              return { ...s, questions: normalizeQuestionList(s.questions || []) };
             }
           }
         }));
@@ -401,7 +498,20 @@ export default function SurveyAnswer() {
     return sampleQuestions;
   };
 
-  const handleAnswerChange = (qid, value) => setAnswers(prev => ({ ...prev, [String(qid)]: value }));
+  const setAnswerValue = (qid, value) =>
+    setAnswers(prev => ({ ...prev, [String(qid)]: value }));
+
+  const toggleMultiSelectAnswer = (qid, optionValue) => {
+    setAnswers(prev => {
+      const key = String(qid);
+      const current = Array.isArray(prev[key]) ? prev[key] : [];
+      const exists = current.some(v => String(v) === String(optionValue));
+      const next = exists
+        ? current.filter(v => String(v) !== String(optionValue))
+        : [...current, optionValue];
+      return { ...prev, [key]: next };
+    });
+  };
 
   // If backend supplies selectedSurvey.modules, each module should include its questions
   // Helper to check completion of a module object
@@ -459,31 +569,65 @@ export default function SurveyAnswer() {
       const responses = [];
       
       for (const question of selectedSurvey.questions) {
-        const raw = answers[question.id];
-        const userAnswer = canonicalizeLabel(raw); // ensure canonical before submit
-        if (userAnswer && String(userAnswer).trim() !== "") {
-          // Determinar si es una respuesta de opción múltiple o texto libre
-          const isMultipleChoice = true; // Forzamos NOM-035
-          
-          if (isMultipleChoice) {
-            // Para preguntas de opción múltiple, necesitamos encontrar el optionAnswerId
-            const optionAnswerId = getOptionAnswerId(userAnswer);
-            
-            responses.push({
-              surveyApplicationId: surveyApplicationId,
-              questionId: parseInt(question.id),
-              optionAnswerId: optionAnswerId,
-              textAnswer: null
-            });
-          } else {
-            responses.push({
-              surveyApplicationId: surveyApplicationId,
-              questionId: parseInt(question.id),
-              optionAnswerId: null,
-              textAnswer: String(userAnswer)
-            });
-          }
+        const answerValue = getAnswer(question.id);
+        const hasAnswer = Array.isArray(answerValue)
+          ? answerValue.length > 0
+          : String(answerValue ?? '').trim() !== '';
+
+        if (!hasAnswer) continue;
+
+        const { options: resolvedOptions, useNomDefaults } = resolveQuestionOptions(question);
+        const basePayload = {
+          surveyApplicationId,
+          questionId: Number(question.id)
+        };
+
+        if (Array.isArray(answerValue)) {
+          const joined = answerValue.join(', ');
+          responses.push({
+            ...basePayload,
+            optionAnswerId: null,
+            textAnswer: joined,
+            freeText: joined
+          });
+          continue;
         }
+
+        if (resolvedOptions.length > 0) {
+          const match = findOptionMatch(resolvedOptions, answerValue);
+          const payload = {
+            ...basePayload,
+            optionAnswerId: match?.id ?? null,
+          };
+          if (match?.numericValue != null && !Number.isNaN(Number(match.numericValue))) {
+            payload.value = Number(match.numericValue);
+          }
+          if (!match?.id) {
+            payload.textAnswer = answerValue;
+            payload.freeText = answerValue;
+          }
+          responses.push(payload);
+          continue;
+        }
+
+        if (useNomDefaults) {
+          const canonical = canonicalizeLabel(answerValue);
+          const match = NOM035_OPTIONS.find(opt => opt.label === canonical);
+          responses.push({
+            ...basePayload,
+            optionAnswerId: null,
+            value: match?.numericValue,
+            textAnswer: canonical
+          });
+          continue;
+        }
+
+        responses.push({
+          ...basePayload,
+          optionAnswerId: null,
+          textAnswer: String(answerValue),
+          freeText: String(answerValue)
+        });
       }
       
       console.log('📦 Formatted responses for backend:', responses);
@@ -550,59 +694,84 @@ export default function SurveyAnswer() {
 
   // Renderizar pregunta individual
   const renderQuestion = (question, index) => {
-    console.log('🔍 Rendering question:', question);
-    
-    // Opciones estándar NOM-035 (forzadas para este survey)
-    const nom035Options = [
-      'Siempre',
-      'Casi siempre', 
-      'Algunas veces',
-      'Casi nunca',
-      'Nunca'
-    ];
-    
-    // Para este survey, forzamos siempre opciones NOM-035 sin importar el backend
-    const questionOptions = nom035Options;
-    
-    // Para encuestas NOM-035, forzar siempre opciones múltiples
-    const useMultipleChoice = true;
-    
+    const questionType = normalizeQuestionType(question);
+    const { options: resolvedOptions, useNomDefaults } = resolveQuestionOptions(question);
+    const hasOptions = resolvedOptions.length > 0;
+    const isMultiSelect = questionType === 'multi_select' && hasOptions;
+    const isDateQuestion = questionType === 'date';
+    const answerValue = getAnswer(question.id);
+    const radioValue = useNomDefaults ? canonicalizeLabel(answerValue) : (answerValue ?? '');
+    const selectedMultiValues = Array.isArray(answerValue) ? answerValue : [];
+
+    const renderRadioOptions = () => (
+      <FormControl component="fieldset">
+        <RadioGroup
+          value={radioValue}
+          onChange={e => {
+            const next = useNomDefaults ? canonicalizeLabel(e.target.value) : e.target.value;
+            setAnswerValue(question.id, next);
+          }}
+          disabled={formDisabled}
+        >
+          {resolvedOptions.map((option, optIndex) => (
+            <FormControlLabel
+              key={option.id ?? option.value ?? optIndex}
+              value={option.value}
+              control={<Radio disabled={formDisabled} />}
+              label={option.label}
+            />
+          ))}
+        </RadioGroup>
+      </FormControl>
+    );
+
+    const renderMultiSelect = () => (
+      <FormControl component="fieldset">
+        <FormGroup>
+          {resolvedOptions.map((option, optIndex) => (
+            <FormControlLabel
+              key={option.id ?? option.value ?? optIndex}
+              control={
+                <Checkbox
+                  checked={selectedMultiValues.some(v => String(v) === String(option.value))}
+                  onChange={() => toggleMultiSelectAnswer(question.id, option.value)}
+                  disabled={formDisabled}
+                />
+              }
+              label={option.label}
+            />
+          ))}
+        </FormGroup>
+      </FormControl>
+    );
+
+    const renderTextField = () => (
+      <TextField
+        fullWidth
+        multiline={!isDateQuestion}
+        type={isDateQuestion ? 'date' : 'text'}
+        rows={isDateQuestion ? 1 : 2}
+        value={typeof answerValue === 'string' ? answerValue : ''}
+        onChange={e => setAnswerValue(question.id, e.target.value)}
+        placeholder="Escriba su respuesta aquí..."
+        variant="outlined"
+        disabled={formDisabled}
+        InputLabelProps={isDateQuestion ? { shrink: true } : undefined}
+      />
+    );
+
     return (
       <Card key={question.id} sx={{ mb: 2, border: '1px solid #e0e0e0' }}>
         <CardContent>
           <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
             {index + 1}. {question.text}
           </Typography>
-          
-          {useMultipleChoice && questionOptions.length > 0 ? (
-            <FormControl component="fieldset">
-              <RadioGroup
-                value={canonicalizeLabel(getAnswer(question.id))}
-                onChange={e => handleAnswerChange(question.id, canonicalizeLabel(e.target.value))}
-                disabled={formDisabled}
-              >
-                {questionOptions.map((option, optIndex) => (
-                  <FormControlLabel
-                    key={optIndex}
-                    value={option}
-                    control={<Radio disabled={formDisabled} />}
-                    label={option}
-                  />
-                ))}
-              </RadioGroup>
-            </FormControl>
-          ) : (
-            <TextField
-              fullWidth
-              multiline
-              rows={2}
-              value={getAnswer(question.id)}
-              onChange={e => handleAnswerChange(question.id, e.target.value)}
-              placeholder="Escriba su respuesta aquí..."
-              variant="outlined"
-              disabled={formDisabled}
-            />
-          )}
+
+          {isMultiSelect
+            ? renderMultiSelect()
+            : hasOptions
+              ? renderRadioOptions()
+              : renderTextField()}
         </CardContent>
       </Card>
     );

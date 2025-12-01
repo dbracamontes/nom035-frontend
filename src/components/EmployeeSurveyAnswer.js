@@ -49,6 +49,14 @@ export default function EmployeeSurveyAnswer() {
   const getAnswer = (qid) => answers[String(qid)];
 
   const canonicalLabels = LIKERT_LABELS;
+  const NOM035_OPTIONS = canonicalLabels.map((label, idx) => ({
+    id: `likert-${idx + 1}`,
+    optionAnswerId: null,
+    label,
+    value: label,
+    requiresFreeText: false,
+    numericValue: idx + 1
+  }));
   
   useEffect(() => {
     const loadData = async () => {
@@ -390,14 +398,137 @@ export default function EmployeeSurveyAnswer() {
     );
   };
 
+  const determineQuestionKind = (question) => {
+    if (!question) return '';
+    if (typeof question.kind === 'string') return question.kind.toLowerCase();
+    return String(question.type || question.responseType || '').toLowerCase();
+  };
+
+  const coerceOptionArray = (source) => {
+    if (!source) return [];
+    if (Array.isArray(source)) return source;
+    if (typeof source === 'string') {
+      return source
+        .split(/[\r\n,;|]+/)
+        .map((part) => part.trim())
+        .filter(Boolean);
+    }
+    if (typeof source === 'object') {
+      return Object.values(source);
+    }
+    return [];
+  };
+
+  const extractQuestionOptions = (question) => {
+    if (!question) return [];
+    if (Array.isArray(question.normalizedOptions) && question.normalizedOptions.length) {
+      return question.normalizedOptions.map((opt, idx) => ({
+        id: opt.optionAnswerId ?? opt.id ?? `${question.id || 'q'}-opt-${idx}`,
+        optionAnswerId: opt.optionAnswerId ?? opt.id ?? null,
+        label: opt.label ?? opt.text ?? opt.value ?? '',
+        value: opt.value ?? opt.id ?? opt.label ?? '',
+        requiresFreeText: Boolean(opt.requiresFreeText)
+      })).filter((opt) => opt.label);
+    }
+
+    const sources = [
+      question.options,
+      question.optionAnswers,
+      question.option_answers,
+      question.optionAnswerDtos,
+      question.option_answer_dtos,
+      question.optionAnswerList,
+      question.option_answer_list,
+      question.responseOptions,
+      question.response_options,
+      question.answers,
+      question.metadata?.options
+    ];
+
+    for (const source of sources) {
+      const list = coerceOptionArray(source)
+        .map((opt, idx) => {
+          if (opt == null) return null;
+          if (typeof opt === 'string') {
+            return {
+              id: `${question.id || 'q'}-opt-${idx}`,
+              optionAnswerId: null,
+              label: opt,
+              value: opt,
+              requiresFreeText: opt.trim().toLowerCase() === 'otros'
+            };
+          }
+          return {
+            id: opt.id ?? opt.optionAnswerId ?? opt.value ?? `${question.id || 'q'}-opt-${idx}`,
+            optionAnswerId: opt.optionAnswerId ?? opt.id ?? null,
+            label: opt.text ?? opt.label ?? opt.name ?? opt.value ?? `Opción ${idx + 1}`,
+            value: opt.value ?? opt.id ?? opt.text ?? opt.label ?? '',
+            requiresFreeText: Boolean(opt.requiresFreeText ?? opt.requires_free_text)
+          };
+        })
+        .filter(Boolean);
+      if (list.length) return list;
+    }
+
+    if (typeof question === 'object') {
+      for (const [key, value] of Object.entries(question)) {
+        if (!value) continue;
+        if (Array.isArray(value) && /option/i.test(key)) {
+          const list = coerceOptionArray(value)
+            .map((opt, idx) => {
+              if (opt == null) return null;
+              if (typeof opt === 'string') {
+                return {
+                  id: `${question.id || 'q'}-opt-${idx}`,
+                  optionAnswerId: null,
+                  label: opt,
+                  value: opt,
+                  requiresFreeText: opt.trim().toLowerCase() === 'otros'
+                };
+              }
+              return {
+                id: opt.id ?? opt.optionAnswerId ?? opt.value ?? `${question.id || 'q'}-opt-${idx}`,
+                optionAnswerId: opt.optionAnswerId ?? opt.id ?? null,
+                label: opt.text ?? opt.label ?? opt.name ?? opt.value ?? `Opción ${idx + 1}`,
+                value: opt.value ?? opt.id ?? opt.text ?? opt.label ?? '',
+                requiresFreeText: Boolean(opt.requiresFreeText ?? opt.requires_free_text)
+              };
+            })
+            .filter(Boolean);
+          if (list.length) return list;
+        }
+      }
+    }
+
+    return [];
+  };
+
+  const shouldUseDefaultLikert = (question, backendOptions) => {
+    if (backendOptions.length > 0) return false;
+    const type = determineQuestionKind(question);
+    return type === 'likert' || type === 'single' || type === 'single_choice' || type === 'radio' || type === '';
+  };
+
+  const resolveQuestionOptions = (question) => {
+    const backendOptions = extractQuestionOptions(question);
+    const useNomDefaults = shouldUseDefaultLikert(question, backendOptions);
+    const options = backendOptions.length ? backendOptions : (useNomDefaults ? NOM035_OPTIONS : []);
+    return { options, useNomDefaults };
+  };
+
+  const optionKey = (option, index) => {
+    if (!option) return String(index);
+    return String(option.optionAnswerId ?? option.id ?? option.value ?? option.label ?? index);
+  };
+
   const renderSingleChoiceControl = (question, answerValue, disabled) => {
-    const options = question.normalizedOptions || [];
+    const { options, useNomDefaults } = resolveQuestionOptions(question);
     if (!options.length) {
       return <Alert severity="warning">Esta pregunta no tiene opciones configuradas.</Alert>;
     }
 
     const selectedOptionId = answerValue?.optionId ? String(answerValue.optionId) : '';
-    const showOtherField = options.some(opt => opt.requiresFreeText && String(opt.id) === selectedOptionId);
+    const showOtherField = options.some((opt, idx) => opt.requiresFreeText && optionKey(opt, idx) === selectedOptionId);
 
     return (
       <Box>
@@ -406,18 +537,18 @@ export default function EmployeeSurveyAnswer() {
             value={selectedOptionId}
             onChange={(e) => {
               if (disabled) return;
-              const option = options.find(opt => String(opt.id) === e.target.value);
+              const option = options.find((opt, idx) => optionKey(opt, idx) === e.target.value);
               if (!option) return;
               handleAnswerChange(question.id, {
-                optionId: String(option.id),
+                optionId: e.target.value,
                 optionAnswerId: option.optionAnswerId ?? option.id ?? null,
                 label: option.label,
                 otherText: option.requiresFreeText ? (answerValue?.otherText || '') : ''
               });
             }}
           >
-            {options.map(option => {
-              const optionId = String(option.id);
+            {options.map((option, idx) => {
+              const optionId = optionKey(option, idx);
               return (
                 <FormControlLabel
                   key={optionId}
@@ -449,7 +580,7 @@ export default function EmployeeSurveyAnswer() {
   };
 
   const renderMultiSelectControl = (question, answerValue, disabled) => {
-    const options = question.normalizedOptions || [];
+    const { options } = resolveQuestionOptions(question);
     if (!options.length) {
       return <Alert severity="warning">Esta pregunta no tiene opciones configuradas.</Alert>;
     }
@@ -478,8 +609,8 @@ export default function EmployeeSurveyAnswer() {
     return (
       <Box>
         <FormGroup>
-          {options.map(option => {
-            const optionId = String(option.id);
+          {options.map((option, idx) => {
+            const optionId = optionKey(option, idx);
             const checked = selectedIds.includes(optionId);
             return (
               <FormControlLabel
@@ -536,7 +667,8 @@ export default function EmployeeSurveyAnswer() {
       return <Alert severity="warning">Esta pregunta matricial no tiene filas u opciones configuradas.</Alert>;
     }
 
-    const selectionMode = question.metadata?.selection === 'radio' ? 'radio' : 'checkbox';
+    const selectionMeta = (question.metadata?.selection || '').toString().toLowerCase();
+    const selectionMode = selectionMeta === 'checkbox' ? 'checkbox' : 'radio';
     const currentAnswer = (answerValue && typeof answerValue === 'object') ? answerValue : {};
 
     const toLabel = (item, fallbackLabel) => {
