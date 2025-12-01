@@ -189,15 +189,16 @@ export function questionAnswered(question, answer) {
     if (!rows.length) {
       return Boolean(answer && Object.keys(answer || {}).length);
     }
-    const selectionMeta = (question?.metadata?.selection || "").toString().toLowerCase();
-    const selection = selectionMeta === "checkbox" ? "checkbox" : "radio";
     return rows.every((row) => {
       const key = String(row);
       const value = answer ? answer[key] : undefined;
-      if (selection === "radio") {
-        return typeof value === "string" && value.trim() !== "";
+      if (Array.isArray(value)) {
+        return value.length > 0;
       }
-      return Array.isArray(value) && value.length > 0;
+      if (value && typeof value === "object") {
+        return Object.keys(value).length > 0;
+      }
+      return typeof value === "string" && value.trim() !== "";
     });
   }
   return Boolean(answer);

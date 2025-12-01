@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { getSurveys, submitSurveyResponse, getSurveyById, getSurveyWithQuestions, createSurveyApplication, getSurveyApplications, getSurveyResponsesByApplication, getCompanySurveyById, getSurveyApplicationCheck, completeSurveyApplication } from "../api/nom035";
 import { 
   Box, Button, Paper, MenuItem, Typography, 
@@ -255,6 +255,15 @@ export default function EmployeeSurveyAnswer() {
 
   // Helpers for sections
   const allQuestions = selectedSurvey?.questions || [];
+  const questionNumberMap = useMemo(() => {
+    const map = {};
+    allQuestions.forEach((question, index) => {
+      if (question?.id != null) {
+        map[String(question.id)] = index + 1;
+      }
+    });
+    return map;
+  }, [selectedSurvey]);
   const resolvedSurveyTitle = (q) => q.surveyTitle || q.survey_title || '';
   const sectionKey = (title) => {
     if (!title) return '';
@@ -585,6 +594,35 @@ export default function EmployeeSurveyAnswer() {
       return <Alert severity="warning">Esta pregunta no tiene opciones configuradas.</Alert>;
     }
 
+    // Forzar radio button en la pregunta 25
+    const isPregunta25 = (questionNumberMap[String(question.id)] === 25);
+
+    if (isPregunta25) {
+      const selectedId = typeof answerValue === 'string' ? answerValue : '';
+      return (
+        <FormControl component="fieldset">
+          <RadioGroup
+            value={selectedId}
+            onChange={e => !disabled && handleAnswerChange(question.id, e.target.value)}
+          >
+            {options.map((option, idx) => {
+              const optionId = optionKey(option, idx);
+              return (
+                <FormControlLabel
+                  key={optionId}
+                  value={optionId}
+                  control={<Radio disabled={disabled} />}
+                  label={option.label}
+                  disabled={disabled}
+                />
+              );
+            })}
+          </RadioGroup>
+        </FormControl>
+      );
+    }
+
+    // Comportamiento normal para otras preguntas
     const selectedIds = Array.isArray(answerValue?.optionIds)
       ? answerValue.optionIds.map(id => String(id))
       : [];
@@ -667,8 +705,8 @@ export default function EmployeeSurveyAnswer() {
       return <Alert severity="warning">Esta pregunta matricial no tiene filas u opciones configuradas.</Alert>;
     }
 
-    const selectionMeta = (question.metadata?.selection || '').toString().toLowerCase();
-    const selectionMode = selectionMeta === 'checkbox' ? 'checkbox' : 'radio';
+    // Siempre forzar selección única por fila para las encuestas NOM-035
+    const selectionMode = 'radio';
     const currentAnswer = (answerValue && typeof answerValue === 'object') ? answerValue : {};
 
     const toLabel = (item, fallbackLabel) => {
@@ -695,7 +733,7 @@ export default function EmployeeSurveyAnswer() {
             {rows.map((row, rowIdx) => {
               const rowKey = String(row);
               const displayLabel = toLabel(row, `Fila ${rowIdx + 1}`);
-              const rowValue = currentAnswer[rowKey] ?? (selectionMode === 'radio' ? '' : []);
+              const rowValue = currentAnswer[rowKey] ?? '';
               return (
                 <TableRow key={rowKey}>
                   <TableCell sx={{ fontWeight: 500 }}>{displayLabel}</TableCell>
@@ -703,33 +741,17 @@ export default function EmployeeSurveyAnswer() {
                     const colKey = typeof col === 'object'
                       ? (col.id ?? col.value ?? col.key ?? toLabel(col, `col-${colIdx}`))
                       : String(col ?? `col-${colIdx}`);
-                    const checked = selectionMode === 'radio'
-                      ? rowValue === colKey
-                      : Array.isArray(rowValue) && rowValue.includes(colKey);
+                    const checked = rowValue === colKey;
                     const handleMatrixChange = () => {
                       if (disabled) return;
-                      if (selectionMode === 'radio') {
-                        handleAnswerChange(question.id, {
-                          ...currentAnswer,
-                          [rowKey]: colKey
-                        });
-                      } else {
-                        const current = Array.isArray(rowValue) ? [...rowValue] : [];
-                        const exists = current.includes(colKey);
-                        const next = exists ? current.filter(val => val !== colKey) : [...current, colKey];
-                        handleAnswerChange(question.id, {
-                          ...currentAnswer,
-                          [rowKey]: next
-                        });
-                      }
+                      handleAnswerChange(question.id, {
+                        ...currentAnswer,
+                        [rowKey]: colKey
+                      });
                     };
                     return (
                       <TableCell key={colKey} align="center">
-                        {selectionMode === 'radio' ? (
-                          <Radio checked={checked} onChange={handleMatrixChange} disabled={disabled} />
-                        ) : (
-                          <Checkbox checked={checked} onChange={handleMatrixChange} disabled={disabled} />
-                        )}
+                        <Radio checked={checked} onChange={handleMatrixChange} disabled={disabled} />
                       </TableCell>
                     );
                   })}
@@ -1185,7 +1207,7 @@ export default function EmployeeSurveyAnswer() {
                                 color: 'text.primary'
                               }}
                             >
-                              {idx + 1}. {question.text}
+                              {(questionNumberMap[String(question.id)] ?? idx + 1)}. {question.text}
                             </Typography>
                             {question.metadata?.helpText && (
                               <Typography variant="body2" color="text.secondary">
