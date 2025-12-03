@@ -17,11 +17,38 @@ import {
   getMedicaLebenDocs,
   uploadMedicaLebenDocs,
   getMedicaLebenPhotos,
-  uploadMedicaLebenPhoto
+  uploadMedicaLebenPhoto,
+  updateCompany
 } from "../api/nom035";
 import axios from "axios";
 
 const API_BASE = "http://localhost:8080/api";
+
+// Utilidad para descargar un archivo respetando el header Authorization global de axios
+const downloadFileWithAxios = async (url, suggestedName) => {
+  try {
+    const response = await axios.get(url, { responseType: "blob" });
+    const blobUrl = window.URL.createObjectURL(response.data);
+
+    // Intentar usar el nombre sugerido; si no hay, extraer del path
+    let filename = suggestedName;
+    if (!filename) {
+      const parts = url.split("/");
+      filename = parts[parts.length - 1] || "archivo";
+    }
+
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (e) {
+    console.error("Error descargando archivo", e);
+    alert("No se pudo descargar el archivo. Verifica tu sesión e inténtalo de nuevo.");
+  }
+};
 
 export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany }) {
   const [docs, setDocs] = useState(null);
@@ -135,14 +162,58 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
     }
   };
 
+  const handleSaveCompanyInfo = async () => {
+    try {
+      if (!company || !company.id) {
+        return; // Nothing to update on backend if company doesn't exist yet
+      }
+      setLoading(true);
+      setError("");
+      setSuccess("");
+
+      const payload = {
+        ...company,
+        name: companyName.trim(),
+        taxId: companyTaxId.trim() || null,
+        folioMercantil: companyFolioMercantil.trim() || null,
+      };
+
+      await updateCompany(company.id, payload);
+      setSuccess("Datos de la empresa guardados correctamente");
+    } catch (e) {
+      console.error("Error al guardar datos de la empresa", e);
+      setError("Error al guardar los datos de la empresa");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const renderDocStatus = (label, field) => {
     const hasValue = docs && docs[field];
+    const url = hasValue ? String(docs[field]) : null;
     const filename = hasValue ? String(docs[field]).split("/").pop() : "Sin archivo";
+
+    const handleDocDoubleClick = async () => {
+      if (!url) return;
+      // Forzar descarga vía axios para que incluya Authorization y evitar redirección a login
+      await downloadFileWithAxios(url, filename === "Sin archivo" ? undefined : filename);
+    };
+
     return (
-      <ListItem>
+      <ListItem
+        onDoubleClick={handleDocDoubleClick}
+        sx={{
+          cursor: hasValue ? "pointer" : "default",
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 1.5,
+        }}
+      >
         <ListItemText
           primary={label}
           secondary={filename}
+          sx={{ mr: 2 }}
         />
         <Chip
           label={hasValue ? "Cargado" : "Pendiente"}
@@ -158,57 +229,64 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
       <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>
         Documentación Médica LEBEN
       </Typography>
-      <Typography variant="subtitle1" sx={{ mb: 3 }}>
-        Empresa: <strong>{company?.name}</strong> (ID: {company?.id})
-      </Typography>
+
+      {/* Datos de la empresa (editable tanto para nueva como existente) */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h6" sx={{ mb: 2 }}>
+          Datos de la empresa
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              required
+              label="Nombre de la empresa"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              error={!!companyValidationError}
+              helperText={companyValidationError || "Nombre legal o comercial de la empresa"}
+              size="small"
+            />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField
+              fullWidth
+              label="RFC / Tax ID"
+              value={companyTaxId}
+              onChange={(e) => setCompanyTaxId(e.target.value)}
+              size="small"
+              helperText="Opcional"
+            />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField
+              fullWidth
+              label="Folio mercantil"
+              value={companyFolioMercantil}
+              onChange={(e) => setCompanyFolioMercantil(e.target.value)}
+              size="small"
+              helperText="Opcional"
+            />
+          </Grid>
+        </Grid>
+        <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end", gap: 2 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<SaveIcon />}
+            onClick={handleSaveCompanyInfo}
+            disabled={loading || !company || !company.id}
+          >
+            Guardar datos de empresa
+          </Button>
+        </Box>
+      </Box>
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
       )}
       {success && (
         <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>
-      )}
-
-      {isNewCompany && (
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
-            Datos de la nueva empresa
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                required
-                label="Nombre de la empresa"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-                error={!!companyValidationError}
-                helperText={companyValidationError || "Nombre legal o comercial de la empresa"}
-                size="small"
-              />
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <TextField
-                fullWidth
-                label="RFC / Tax ID"
-                value={companyTaxId}
-                onChange={(e) => setCompanyTaxId(e.target.value)}
-                size="small"
-                helperText="Opcional"
-              />
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <TextField
-                fullWidth
-                label="Folio mercantil"
-                value={companyFolioMercantil}
-                onChange={(e) => setCompanyFolioMercantil(e.target.value)}
-                size="small"
-                helperText="Opcional"
-              />
-            </Grid>
-          </Grid>
-        </Box>
       )}
 
       <Grid container spacing={3}>
@@ -322,14 +400,28 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
                   </Typography>
                 ) : (
                   <List dense>
-                    {photos.map((p) => (
-                      <ListItem key={p.id}>
-                        <ListItemText
-                          primary={p.description || `Foto #${p.sortOrder + 1}`}
-                          secondary={String(p.url).split("/").pop()}
-                        />
-                      </ListItem>
-                    ))}
+                    {photos.map((p) => {
+                      const photoUrl = p.url ? String(p.url) : null;
+                      const photoFilename = photoUrl ? photoUrl.split("/").pop() : "";
+
+                      const handlePhotoDoubleClick = async () => {
+                        if (!photoUrl) return;
+                        await downloadFileWithAxios(photoUrl, photoFilename || undefined);
+                      };
+
+                      return (
+                        <ListItem
+                          key={p.id}
+                          onDoubleClick={handlePhotoDoubleClick}
+                          sx={{ cursor: photoUrl ? "pointer" : "default" }}
+                        >
+                          <ListItemText
+                            primary={p.description || `Foto #${(p.sortOrder ?? 0) + 1}`}
+                            secondary={photoFilename}
+                          />
+                        </ListItem>
+                      );
+                    })}
                   </List>
                 )}
               </Grid>
@@ -340,7 +432,8 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
 
       <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
         <Button
-          variant="outlined"
+          variant="contained"
+          color="inherit"
           startIcon={<CancelIcon />}
           onClick={onClose}
           disabled={loading}

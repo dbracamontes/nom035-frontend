@@ -46,6 +46,8 @@ export default function App() {
   const [openNom035, setOpenNom035] = useState(true);
   const [openMedicaLeben, setOpenMedicaLeben] = useState(false);
   const [activeSection, setActiveSection] = useState('nom035'); // 'nom035' | 'medicaLeben'
+  const [selectedMedicaLeben, setSelectedMedicaLeben] = useState('ml-companies');
+  const [mlReset, setMlReset] = useState(0); // nuevo trigger para resetear vista ML
   const location = useLocation();
   // Función para verificar si el usuario tiene un rol específico
   const hasRole = (roleName) => {
@@ -111,12 +113,10 @@ export default function App() {
     {
       id: 'ml-companies',
       label: 'Gestión de Empresas Médica LEBEN',
-      component: <MedicaLebenCompaniesPage />,
+      component: <MedicaLebenCompaniesPage resetTrigger={mlReset} />, // pasar trigger
       roles: ['ROLE_ADMIN'],
     },
   ];
-
-  const [selectedMedicaLeben, setSelectedMedicaLeben] = useState(medicaLebenOptions[0].id);
 
   // Si está cargando, mostrar pantalla de carga
   if (loading) return <div>Cargando...</div>;
@@ -250,6 +250,8 @@ export default function App() {
                               onClick={() => {
                                 setSelectedMedicaLeben(opt.id);
                                 setActiveSection('medicaLeben');
+                                // forzar modo 'list' en la página ML si ya estaba abierta
+                                setMlReset(prev => prev + 1);
                               }}
                               sx={{ pl: 4 }}
                             >
