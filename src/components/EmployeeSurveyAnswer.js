@@ -339,7 +339,16 @@ export default function EmployeeSurveyAnswer() {
   };
 
   const handleAnswerChange = (questionId, value) => {
-    setAnswers(prev => ({ ...prev, [String(questionId)]: value }));
+    setAnswers(prev => {
+      const newAnswers = { ...prev, [String(questionId)]: value };
+      // Si la pregunta 31 cambia a 'No', elimina respuestas de 32-35
+      if (String(questionId) === '31' && (value === 'No' || value?.label === 'No')) {
+        for (let qnum = 32; qnum <= 35; qnum++) {
+          delete newAnswers[String(qnum)];
+        }
+      }
+      return newAnswers;
+    });
   };
 
   const renderLikertControl = (question, answerValue, disabled) => {
@@ -795,7 +804,13 @@ export default function EmployeeSurveyAnswer() {
     if (currentIndex === -1) return;
 
     const sectionQs = questionsInSection(surveyTitleFilter);
-    const unanswered = sectionQs.filter(q => !questionHasAnswer(q));
+    // Si la respuesta a la 31 es 'No', no exigir 32-35
+    let unanswered = sectionQs.filter(q => !questionHasAnswer(q));
+    const pregunta31 = allQuestions.find(q => q.number === 31 || q.id === 31);
+    const respuesta31 = pregunta31 ? getAnswer(pregunta31.id) : null;
+    if (pregunta31 && respuesta31 && (respuesta31 === 'No' || respuesta31?.label === 'No')) {
+      unanswered = unanswered.filter(q => !(q.number >= 32 && q.number <= 35));
+    }
     if (unanswered.length > 0) {
       alert(`Por favor responde todas las preguntas de la sección antes de guardar. Faltan ${unanswered.length}.`);
       return;
@@ -859,7 +874,13 @@ export default function EmployeeSurveyAnswer() {
     }
 
     const allQs = selectedSurvey.questions || [];
-    const unanswered = allQs.filter(q => !questionHasAnswer(q));
+    // Si la respuesta a la 31 es 'No', no exigir 32-35
+    let unanswered = allQs.filter(q => !questionHasAnswer(q));
+    const pregunta31 = allQs.find(q => q.number === 31 || q.id === 31);
+    const respuesta31 = pregunta31 ? getAnswer(pregunta31.id) : null;
+    if (pregunta31 && respuesta31 && (respuesta31 === 'No' || respuesta31?.label === 'No')) {
+      unanswered = unanswered.filter(q => !(q.number >= 32 && q.number <= 35));
+    }
     if (unanswered.length > 0) {
       alert(`Por favor responde todas las preguntas. Faltan ${unanswered.length} respuestas.`);
       return;
@@ -922,7 +943,67 @@ export default function EmployeeSurveyAnswer() {
   const filteredQuestions = surveyTitleFilter
     ? allQuestions.filter(q => sectionKey(resolvedSurveyTitle(q)) === surveyTitleFilter)
     : allQuestions;
-  const groupedQuestions = filteredQuestions.reduce((acc, q) => {
+  // Filtrado condicional para preguntas 32-35 según respuesta a la 31
+  console.log('Preguntas antes de filtrar:', filteredQuestions.map(q => ({ number: q.number, id: q.id, text: q.text })));
+  let filteredQuestionsWithLogic = [...filteredQuestions];
+  const preguntaRuido = allQuestions.find(q => q.id === 104);
+  const respuestaRuido = preguntaRuido ? getAnswer(preguntaRuido.id) : null;
+  const showNoiseQuestions = preguntaRuido && (respuestaRuido === 'Si' || respuestaRuido?.label === 'Si');
+  filteredQuestionsWithLogic = filteredQuestionsWithLogic.filter(q => {
+    // Oculta ids 105, 106, 107, 108 si no se ha respondido 'Si' en la 104
+    if ([105, 106, 107, 108].includes(Number(q.id))) {
+      return showNoiseQuestions === true;
+    }
+    return true;
+  });
+  // Filtrado condicional para preguntas 38-41 según respuesta a la 37 (id 110)
+  const preguntaVibracion = allQuestions.find(q => q.id === 110);
+  const respuestaVibracion = preguntaVibracion ? getAnswer(preguntaVibracion.id) : null;
+  const showVibrationQuestions = preguntaVibracion && (respuestaVibracion === 'Si' || respuestaVibracion?.label === 'Si');
+  filteredQuestionsWithLogic = filteredQuestionsWithLogic.filter(q => {
+    // Oculta ids 111, 112, 113, 114 si no se ha respondido 'Si' en la 110
+    if ([111, 112, 113, 114].includes(Number(q.id))) {
+      return showVibrationQuestions === true;
+    }
+    return true;
+  });
+  // Filtrado condicional para preguntas 43-44 según respuesta a la 42 (id 115)
+  const preguntaIluminacion = allQuestions.find(q => q.id === 115);
+  const respuestaIluminacion = preguntaIluminacion ? getAnswer(preguntaIluminacion.id) : null;
+  const showLightQuestions = preguntaIluminacion && (respuestaIluminacion === 'Si' || respuestaIluminacion?.label === 'Si');
+  filteredQuestionsWithLogic = filteredQuestionsWithLogic.filter(q => {
+    // Oculta ids 116, 117 si no se ha respondido 'Si' en la 115
+    if ([116, 117].includes(Number(q.id))) {
+      return showLightQuestions === true;
+    }
+    return true;
+  });
+  // Filtrado condicional para preguntas 46-49 según respuesta a la 45
+  const preguntaQuimicos45 = allQuestions.find(q => q.id === 118 || q.number === 45);
+  const respuestaQuimicos45 = preguntaQuimicos45 ? getAnswer(preguntaQuimicos45.id) : null;
+  const showChemQuestions45 = preguntaQuimicos45 && (respuestaQuimicos45 === 'Si' || respuestaQuimicos45?.label === 'Si');
+  filteredQuestionsWithLogic = filteredQuestionsWithLogic.filter(q => {
+    // Oculta ids 119, 120, 121, 122 si no se ha respondido 'Si' en la 118 (45)
+    if ([119, 120, 121, 122].includes(Number(q.id))) {
+      return showChemQuestions45 === true;
+    }
+    return true;
+  });
+  // Filtrado condicional para preguntas 59-65 según respuesta a la 58
+  // Filtrado condicional para preguntas 58-65 según respuesta a la 57 (id 131)
+  const preguntaQuimicos57 = allQuestions.find(q => q.id === 131);
+  const respuestaQuimicos57 = preguntaQuimicos57 ? getAnswer(preguntaQuimicos57.id) : null;
+  const showQuimicosQuestions57 = preguntaQuimicos57 && (respuestaQuimicos57 === 'Si' || respuestaQuimicos57?.label === 'Si');
+  filteredQuestionsWithLogic = filteredQuestionsWithLogic.filter(q => {
+    // Oculta solo ids 132-138 si no se ha respondido 'Si' en la 131 (57), nunca la 139
+    if ([132, 133, 134, 135, 136, 137, 138].includes(Number(q.id))) {
+      return showQuimicosQuestions57 === true;
+    }
+    return true;
+  });
+  // Si la respuesta a la 31 es 'Si', mostrar 32-35 normalmente
+  // Agrupar preguntas por categoría
+  const groupedQuestions = filteredQuestionsWithLogic.reduce((acc, q) => {
     const cat = q.category || 'General';
     if (!acc[cat]) acc[cat] = [];
     acc[cat].push(q);
