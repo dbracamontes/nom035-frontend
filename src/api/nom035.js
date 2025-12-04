@@ -95,6 +95,11 @@ export const uploadMedicaLebenPhoto = (companyId, photo, description, sortOrder)
     { headers: { 'Content-Type': 'multipart/form-data' } }
   );
 };
+export const deleteMedicaLebenDoc = (companyId, field) =>
+  axios.delete(`${API_BASE}/companies/${companyId}/medica-leben/docs/${field}`);
+
+export const deleteMedicaLebenPhoto = (companyId, photoId) =>
+  axios.delete(`${API_BASE}/companies/${companyId}/medica-leben/photos/${photoId}`);
 
 // Survey endpoints
 export const getSurveys = () => axios.get(`${API_BASE}/surveys`);

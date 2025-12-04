@@ -10,15 +10,24 @@ import {
   Chip,
   List,
   ListItem,
-  ListItemText
+  ListItemText,
+  IconButton
 } from "@mui/material";
-import { Save as SaveIcon, Cancel as CancelIcon, UploadFile as UploadFileIcon, Image as ImageIcon } from "@mui/icons-material";
+import {
+  Save as SaveIcon,
+  Cancel as CancelIcon,
+  UploadFile as UploadFileIcon,
+  Image as ImageIcon,
+  Delete as DeleteIcon
+} from "@mui/icons-material";
 import {
   getMedicaLebenDocs,
   uploadMedicaLebenDocs,
   getMedicaLebenPhotos,
   uploadMedicaLebenPhoto,
-  updateCompany
+  updateCompany,
+  deleteMedicaLebenDoc,
+  deleteMedicaLebenPhoto
 } from "../api/nom035";
 import axios from "axios";
 
@@ -239,6 +248,42 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
     }
   };
 
+  const handleDeleteDoc = async (field) => {
+    if (!company || !company.id) return;
+    if (!window.confirm("\u00bfEliminar este documento?")) return;
+    try {
+      setLoading(true);
+      setError("");
+      setSuccess("");
+      const resp = await deleteMedicaLebenDoc(company.id, field);
+      setDocs(resp.data);
+      setSuccess("Documento eliminado correctamente");
+    } catch (e) {
+      console.error("Error al eliminar documento", e);
+      setError("Error al eliminar el documento");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeletePhoto = async (photoId) => {
+    if (!company || !company.id) return;
+    if (!window.confirm("\u00bfEliminar esta foto?")) return;
+    try {
+      setLoading(true);
+      setError("");
+      setSuccess("");
+      await deleteMedicaLebenPhoto(company.id, photoId);
+      setPhotos((prev) => prev.filter((p) => p.id !== photoId));
+      setSuccess("Foto eliminada correctamente");
+    } catch (e) {
+      console.error("Error al eliminar foto", e);
+      setError("Error al eliminar la foto");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const renderDocStatus = (label, field) => {
     const hasValue = docs && docs[field];
     const url = hasValue ? String(docs[field]) : null;
@@ -267,11 +312,25 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
           secondary={filename}
           sx={{ mr: 2 }}
         />
-        <Chip
-          label={hasValue ? "Cargado" : "Pendiente"}
-          color={hasValue ? "success" : "default"}
-          size="small"
-        />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Chip
+            label={hasValue ? "Cargado" : "Pendiente"}
+            color={hasValue ? "success" : "default"}
+            size="small"
+          />
+          {hasValue && (
+            <IconButton
+              size="small"
+              color="error"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteDoc(field);
+              }}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          )}
+        </Box>
       </ListItem>
     );
   };
@@ -466,12 +525,22 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
                         <ListItem
                           key={p.id}
                           onDoubleClick={handlePhotoDoubleClick}
-                          sx={{ cursor: photoUrl ? "pointer" : "default" }}
+                          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: photoUrl ? "pointer" : "default" }}
                         >
                           <ListItemText
                             primary={p.description || `Foto #${(p.sortOrder ?? 0) + 1}`}
                             secondary={photoFilename}
                           />
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeletePhoto(p.id);
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
                         </ListItem>
                       );
                     })}
