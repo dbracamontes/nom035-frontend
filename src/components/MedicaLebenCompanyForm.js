@@ -22,31 +22,82 @@ import {
 } from "../api/nom035";
 import axios from "axios";
 
-const API_BASE = "http://localhost:8080/api";
+// Use the same env-configured API root as the rest of the frontend (falls back to localhost:8080)
+const API_ROOT = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+const API_BASE = `${API_ROOT}/api`;
 
 // Utilidad para descargar un archivo respetando el header Authorization global de axios
-const downloadFileWithAxios = async (url, suggestedName) => {
-  try {
-    const response = await axios.get(url, { responseType: "blob" });
-    const blobUrl = window.URL.createObjectURL(response.data);
+// Attempts API download endpoints used by the backend first (so downloads use /api/medica-leben/companies/:id/...)
+const downloadFileWithAxios = async (url, suggestedName, companyId = null, resourceType = null) => {
+  const toTrimmed = (u) => (u ? String(u).trim() : null);
+  const trimmed = toTrimmed(url);
+  if (!trimmed) {
+    alert("No hay URL válida para descargar el archivo.");
+    return;
+  }
 
-    // Intentar usar el nombre sugerido; si no hay, extraer del path
-    let filename = suggestedName;
-    if (!filename) {
-      const parts = url.split("/");
-      filename = parts[parts.length - 1] || "archivo";
+  // Prefer backend API download endpoints (these return 200 in your example)
+  const candidates = [];
+  // If the input already looks absolute, try it first
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('//')) {
+    candidates.push(trimmed);
+  }
+
+  // If we have a company id, try the medica-leben API download endpoints used for docs/photos
+  if (companyId) {
+    // Order endpoints based on resourceType hint: 'photo' should try photos first, 'doc' try docs first.
+    if (resourceType === 'photo') {
+      candidates.push(`${API_BASE}/medica-leben/companies/${companyId}/photos/${encodeURIComponent(trimmed)}`);
+      candidates.push(`${API_BASE}/medica-leben/companies/${companyId}/docs/${encodeURIComponent(trimmed)}`);
+    } else {
+      candidates.push(`${API_BASE}/medica-leben/companies/${companyId}/docs/${encodeURIComponent(trimmed)}`);
+      candidates.push(`${API_BASE}/medica-leben/companies/${companyId}/photos/${encodeURIComponent(trimmed)}`);
     }
+  }
 
-    const link = document.createElement("a");
-    link.href = blobUrl;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(blobUrl);
-  } catch (e) {
-    console.error("Error descargando archivo", e);
-    alert("No se pudo descargar el archivo. Verifica tu sesión e inténtalo de nuevo.");
+  // If the backend returned a root-relative path or bare filename, try common upload/static locations on the API host
+  const apiRoot = API_BASE.replace(/\/api\/?$/, '');
+  if (trimmed.startsWith('/')) {
+    candidates.push(`${API_BASE}${trimmed}`); // /api + returned path
+    candidates.push(`${apiRoot}${trimmed}`); // host + returned path
+    candidates.push(`${apiRoot}/uploads${trimmed}`);
+  } else {
+    candidates.push(`${API_BASE}/medica-leben/companies/${companyId || '0'}/photos/${encodeURIComponent(trimmed)}`);
+    candidates.push(`${API_BASE}/medica-leben/companies/${companyId || '0'}/docs/${encodeURIComponent(trimmed)}`);
+    candidates.push(`${apiRoot}/uploads/${trimmed}`);
+    candidates.push(`${apiRoot}/uploads/medica-leben/${trimmed}`);
+    candidates.push(`${apiRoot}/${trimmed}`);
+  }
+
+  // Deduplicate preserving order
+  const seen = new Set();
+  const unique = candidates.filter((c) => c && !seen.has(c) && (seen.add(c), true));
+
+  let lastErr = null;
+  for (const candidate of unique) {
+    try {
+      const res = await axios.get(candidate, { responseType: 'blob' });
+      const blobUrl = window.URL.createObjectURL(res.data);
+      const filename = suggestedName || decodeURIComponent(candidate.split('/').pop() || 'archivo');
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(blobUrl);
+      return;
+    } catch (err) {
+      lastErr = err;
+      // try next candidate
+    }
+  }
+
+  console.error('Error descargando archivo, intentadas URLs:', unique, lastErr);
+  if (lastErr && lastErr.response && (lastErr.response.status === 401 || lastErr.response.status === 403)) {
+    alert('Acceso denegado al descargar el archivo (401/403). Verifica tu sesión.');
+  } else {
+    alert('No se pudo descargar el archivo. Verifica la ruta y tu sesión.');
   }
 };
 
@@ -196,7 +247,8 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
     const handleDocDoubleClick = async () => {
       if (!url) return;
       // Forzar descarga vía axios para que incluya Authorization y evitar redirección a login
-      await downloadFileWithAxios(url, filename === "Sin archivo" ? undefined : filename);
+      // Pass company id so downloader will try the /api/medica-leben/companies/:id/docs/:file endpoint first
+      await downloadFileWithAxios(url, filename === "Sin archivo" ? undefined : filename, company?.id, 'doc');
     };
 
     return (
@@ -406,7 +458,8 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
 
                       const handlePhotoDoubleClick = async () => {
                         if (!photoUrl) return;
-                        await downloadFileWithAxios(photoUrl, photoFilename || undefined);
+                        // Pass company id so downloader will try /api/medica-leben/companies/:id/photos/:file
+                        await downloadFileWithAxios(photoUrl, photoFilename || undefined, company?.id, 'photo');
                       };
 
                       return (
