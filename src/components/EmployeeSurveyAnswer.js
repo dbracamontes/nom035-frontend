@@ -693,16 +693,42 @@ export default function EmployeeSurveyAnswer() {
     const minRows = question.metadata?.rows ?? (multiline ? 3 : 1);
     const value = typeof answerValue === 'string' ? answerValue : '';
 
+    // Para la pregunta de Fecha de Nacimiento (id 75), mostrar solo el input nativo sin label ni placeholder
+    if (kind === 'date' && question.id === 75) {
+      return (
+        <Box sx={{ mt: 2, mb: 2 }}>
+          <input
+            type="date"
+            value={value}
+            onChange={e => handleAnswerChange(question.id, e.target.value)}
+            disabled={disabled}
+            style={{
+              width: '100%',
+              padding: '12px',
+              fontSize: '16px',
+              borderRadius: '4px',
+              border: '1px solid #ccc',
+              boxSizing: 'border-box'
+            }}
+          />
+        </Box>
+      );
+    }
+    // ...existing code...
+    let label = question.metadata?.placeholder;
+    if (!label) {
+      label = 'Respuesta';
+    }
     return (
       <TextField
         fullWidth
-        label={question.metadata?.placeholder || 'Respuesta'}
         type={inputType}
         multiline={multiline}
         minRows={minRows}
         value={value}
         onChange={(e) => handleAnswerChange(question.id, e.target.value)}
         disabled={disabled}
+        label={label}
       />
     );
   };
