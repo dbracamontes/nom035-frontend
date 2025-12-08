@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyId }, ref) => {
   const { t } = useTranslation();
-  const [form, setForm] = useState({ name: "", department: "", position: "", email: "", companyId: "" });
+  const [form, setForm] = useState({ name: "", department: "", position: "", email: "", curp: "", companyId: "" });
   const [companies, setCompanies] = useState([]);
   const { user } = useContext(UserContext);
 
@@ -37,6 +37,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
         department: employee.department || "",
         position: employee.position || "",
         email: employee.email || "",
+        curp: employee.curp || "",
         companyId: (employee.companyId != null ? employee.companyId : (employee.company?.id || companies[0]?.id || ""))
       });
     } else {
@@ -45,6 +46,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
         department: "",
         position: "",
         email: "",
+        curp: "",
         companyId: f.companyId || initialCompanyId || companies[0]?.id || ""
       }));
     }
@@ -68,7 +70,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
         await createEmployee(payload);
       }
       // Reset but preserve current selection preference
-      setForm({ name: "", department: "", position: "", email: "", companyId: (initialCompanyId || form.companyId || companies[0]?.id || "") });
+      setForm({ name: "", department: "", position: "", email: "", curp: "", companyId: (initialCompanyId || form.companyId || companies[0]?.id || "") });
       if (onComplete) onComplete();
     } catch (err) {
       let msg = t("employee.form.error.generic");
@@ -82,7 +84,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
   };
 
   const resetForm = () => {
-    setForm({ name: "", department: "", position: "", email: "", companyId: (initialCompanyId || companies[0]?.id || "") });
+    setForm({ name: "", department: "", position: "", email: "", curp: "", companyId: (initialCompanyId || companies[0]?.id || "") });
   };
 
   useImperativeHandle(ref, () => ({
@@ -97,6 +99,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
         <TextField label={t("employee.form.department")} name="department" value={form.department} onChange={handleChange} required fullWidth sx={{ mb: 2 }} />
         <TextField label={t("employee.form.position")} name="position" value={form.position} onChange={handleChange} fullWidth sx={{ mb: 2 }} />
         <TextField label={t("employee.form.email")} name="email" value={form.email} onChange={handleChange} required fullWidth sx={{ mb: 2 }} />
+        <TextField label={t("employee.form.curp", "CURP")} name="curp" value={form.curp} onChange={handleChange} fullWidth sx={{ mb: 2 }} />
         {hasRole('ROLE_COMPANY') ? (
           <TextField label={t("employee.form.company")} value={companies.find(c => String(c.id) === String(form.companyId))?.name || ''} disabled fullWidth sx={{ mb: 2 }} />
         ) : (
