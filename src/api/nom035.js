@@ -54,6 +54,26 @@ function getAuthHeader() {
 export const updateEmployee = (id, data) => axios.put(`${API_BASE}/employees/${id}`, data);
 export const deleteEmployee = id => axios.delete(`${API_BASE}/employees/${id}`);
 
+// Employee documents endpoints
+export const getEmployeeDocs = (employeeId) =>
+  axios.get(`${API_BASE}/employees/${employeeId}/documents`);
+
+export const createEmployeeDoc = (dto) =>
+  axios.post(`${API_BASE}/employees/${dto.employeeId}/documents`, dto);
+
+export const uploadEmployeeDocFile = (employeeId, docId, file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return axios.post(
+    `${API_BASE}/employees/${employeeId}/documents/${docId}/file`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  );
+};
+
+export const deleteEmployeeDocFile = (employeeId, docId) =>
+  axios.delete(`${API_BASE}/employees/${employeeId}/documents/${docId}/file`);
+
 // Company endpoints
 export const getCompanies = () => axios.get(`${API_BASE}/companies`);
 export const getCompanyById = id => axios.get(`${API_BASE}/companies/${id}`);
@@ -322,6 +342,6 @@ export const downloadCompanyDictamenSummaryPdfBranded = (companyId, brand = {}) 
   const params = new URLSearchParams();
   Object.entries(brand).forEach(([k,v]) => { if (v) params.append(k, v); });
   const url = `${API_BASE}/reports/company/${companyId}/dictamen-summary.pdf${params.toString() ? '?' + params.toString() : ''}`;
-  console.log('📥 API: Downloading branded company dictamen summary PDF:', url);
+  console.log('\ud83d\udce5 API: Downloading branded company dictamen summary PDF:', url);
   return axios.get(url, { responseType: 'blob' });
 };

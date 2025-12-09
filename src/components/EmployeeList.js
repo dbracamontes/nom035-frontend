@@ -1,13 +1,12 @@
 import React, { useEffect, useState, useRef, useCallback, useContext } from "react";
 import { getEmployees, getEmployeesByCompany, getCompanies, deleteEmployee } from "../api/nom035";
-import EmployeeForm from "./EmployeeForm";
 import { Paper, Typography, List, ListItem, ListItemText, IconButton, MenuItem, TextField, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Button, Snackbar, Alert } from "@mui/material";
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import { useTranslation } from 'react-i18next';
 import { UserContext } from "../context/UserContext";
 
-export default function EmployeeList({ refreshFlag, selectedCompany: selectedCompanyProp, onSelectedCompanyChange }) {
+export default function EmployeeList({ refreshFlag, selectedCompany: selectedCompanyProp, onSelectedCompanyChange, onEditEmployee }) {
   const { t } = useTranslation();
   const { user } = useContext(UserContext);
 
@@ -27,11 +26,8 @@ export default function EmployeeList({ refreshFlag, selectedCompany: selectedCom
     if (onSelectedCompanyChange) onSelectedCompanyChange(v);
     else setSelectedCompanyLocal(v);
   };
-  const [editingEmployee, setEditingEmployee] = useState(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
-  const formRef = useRef();
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
 
@@ -151,7 +147,6 @@ export default function EmployeeList({ refreshFlag, selectedCompany: selectedCom
   };
 
   const handleEdit = (employee) => {
-    // Check permission
     if (!canManageEmployee(employee)) {
       const empCompanyId = String(employee.companyId || employee.company_id || (employee.company && employee.company.id) || '');
       const myCompanyId = String(user?.companyId || (user?.company && user.company.id) || '');
@@ -159,26 +154,9 @@ export default function EmployeeList({ refreshFlag, selectedCompany: selectedCom
       setError(t('employee.list.errorNoPermission') || 'No tiene permiso para editar este empleado.');
       return;
     }
-    setEditingEmployee(employee);
-    setDialogOpen(true);
-  };
-
-  const handleDialogClose = () => {
-    setDialogOpen(false);
-    setEditingEmployee(null);
-  };
-
-  const handleFormComplete = () => {
-    setDialogOpen(false);
-    setEditingEmployee(null);
-    fetchEmployees();
-    setSuccessMsg(t('employee.list.successEdit', 'Empleado editado exitosamente'));
-    setSuccessOpen(true);
-  };
-
-  const handleGuardar = () => {
-    if (formRef.current) {
-      formRef.current.submitForm();
+    // Call the new prop to notify the parent page
+    if (onEditEmployee) {
+      onEditEmployee(employee);
     }
   };
 
@@ -223,17 +201,6 @@ export default function EmployeeList({ refreshFlag, selectedCompany: selectedCom
           </ListItem>
         ))}
       </List>
-      {/* Dialog para editar empleado */}
-      <Dialog open={dialogOpen} onClose={handleDialogClose} maxWidth="sm" fullWidth>
-        <DialogTitle>{t("employee.list.editEmployee")}</DialogTitle>
-        <DialogContent>
-          <EmployeeForm ref={formRef} employee={editingEmployee} onComplete={handleFormComplete} isEdit />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleDialogClose}>{t("common.cancel")}</Button>
-          <Button onClick={handleGuardar} variant="contained">{t("common.save")}</Button>
-        </DialogActions>
-      </Dialog>
       <Snackbar open={successOpen} autoHideDuration={3000} onClose={() => setSuccessOpen(false)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
         <Alert onClose={() => setSuccessOpen(false)} severity="success" sx={{ width: '100%' }}>
           {successMsg}
