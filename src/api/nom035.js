@@ -74,6 +74,14 @@ export const uploadEmployeeDocFile = (employeeId, docId, file) => {
 export const deleteEmployeeDocFile = (employeeId, docId) =>
   axios.delete(`${API_BASE}/employees/${employeeId}/documents/${docId}/file`);
 
+// NEW: logical delete (mark document as INACTIVE)
+export const deactivateEmployeeDoc = (employeeId, docId) =>
+  axios.put(`${API_BASE}/employees/${employeeId}/documents/${docId}/deactivate`);
+
+// NEW: catalog of document types
+export const getDocumentTypes = () =>
+  axios.get(`${API_BASE}/document-types`);
+
 // Company endpoints
 export const getCompanies = () => axios.get(`${API_BASE}/companies`);
 export const getCompanyById = id => axios.get(`${API_BASE}/companies/${id}`);

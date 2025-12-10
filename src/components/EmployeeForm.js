@@ -13,6 +13,7 @@ import {
   Button,
   Alert,
   Grid,
+  Tooltip,
 } from "@mui/material";
 import {
   UploadFile as UploadFileIcon,
@@ -27,20 +28,17 @@ import {
   createEmployeeDoc,
   uploadEmployeeDocFile,
   deleteEmployeeDocFile,
+  getDocumentTypes,
+  deactivateEmployeeDoc,
 } from "../api/nom035";
 import { UserContext } from "../context/UserContext";
 import { useTranslation } from 'react-i18next';
-
-const FIXED_DOCS = [
-  { name: "Constancia de Situación Fiscal", key: "csf" },
-  { name: "Comprobante de Domicilio", key: "domicilio" },
-  { name: "Estado de Cuenta Bancario", key: "cuenta" },
-];
 
 const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyId }, ref) => {
   const { t } = useTranslation();
   const [form, setForm] = useState({ name: "", department: "", position: "", email: "", curp: "", companyId: "" });
   const [companies, setCompanies] = useState([]);
+  const [documentTypes, setDocumentTypes] = useState([]);
   const { user } = useContext(UserContext);
 
   // Local state to hold the newly created employee so we can immediately show documents
@@ -99,6 +97,17 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
       });
     });
   }, [user, employee, initialCompanyId]);
+
+  // Load document types catalog once
+  useEffect(() => {
+    getDocumentTypes()
+      .then(res => {
+        setDocumentTypes(res.data || []);
+      })
+      .catch(err => {
+        console.error("Error loading document types", err);
+      });
+  }, []);
 
   useEffect(() => {
     if (employee) {
@@ -202,6 +211,45 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
     setDocFiles((prev) => ({ ...prev, [docId]: file }));
   };
 
+  // nuevo: manejar subida inmediata cuando no existe registro de documento
+  const handleDocImmediateUpload = (fixedDoc) => async (e) => {
+    const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+    if (!file || !effectiveEmployee || !effectiveEmployee.id) return;
+
+    setDocLoading(true);
+    setDocError("");
+    setDocSuccess("");
+
+    try {
+      let doc = docs.find((d) => d.name === fixedDoc.name);
+
+      if (!doc) {
+        const payload = {
+          employeeId: effectiveEmployee.id,
+          name: fixedDoc.name,
+          typeId: fixedDoc.id,
+        };
+        const res = await createEmployeeDoc(payload);
+        doc = res && res.data ? res.data : null;
+        if (!doc || !doc.id) {
+          throw new Error("No se pudo crear el registro de documento");
+        }
+        setDocs((prev) => [...prev, doc]);
+      }
+
+      await uploadEmployeeDocFile(effectiveEmployee.id, doc.id, file);
+
+      setDocSuccess("Documento subido correctamente.");
+      setDocFiles({});
+      await fetchAndPrepareDocs(effectiveEmployee.id);
+    } catch (error) {
+      console.error("Error subiendo documento", error);
+      setDocError("Error al subir el documento.");
+    } finally {
+      setDocLoading(false);
+    }
+  };
+
   const handleSaveDocs = async () => {
     if (!effectiveEmployee || !effectiveEmployee.id) return;
     setDocLoading(true);
@@ -244,8 +292,8 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
     }
   };
 
-  const renderDocItem = (fixedDoc) => {
-    const doc = docs.find(d => d.name === fixedDoc.name);
+  const renderDocItem = (docType) => {
+    const doc = docs.find(d => d.typeId === docType.id || d.name === docType.name);
     const docId = doc?.id;
     const fileToUpload = docId ? docFiles[docId] : null;
     const hasExistingFile = doc?.hasFile;
@@ -254,7 +302,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
 
     return (
       <ListItem
-        key={fixedDoc.key}
+        key={docType.id}
         sx={{
           display: 'flex',
           alignItems: 'center',
@@ -265,7 +313,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
         }}
       >
         <ListItemText
-          primary={fixedDoc.name}
+          primary={docType.name}
           secondary={isAvailable ? fileName : "Registro no disponible"}
           sx={{ mr: 2 }}
         />
@@ -275,41 +323,51 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
             color={!isAvailable ? "default" : (hasExistingFile ? "success" : (fileToUpload ? "primary" : "default"))}
             size="small"
           />
-          <Button
-            variant="outlined"
-            size="small"
-            component="label"
-            startIcon={<UploadFileIcon />}
-            disabled={!isAvailable}
-          >
-            Elegir
-            <input type="file" hidden onChange={handleDocFileChange(docId)} disabled={!isAvailable} />
-          </Button>
+          {/* hide Elegir when there is already a file */}
+          {!hasExistingFile && (
+            <Button
+              variant="outlined"
+              size="small"
+              component="label"
+              startIcon={<UploadFileIcon />}
+            >
+              Elegir
+              <input
+                type="file"
+                hidden
+                onChange={isAvailable ? handleDocFileChange(docId) : handleDocImmediateUpload(docType)}
+              />
+            </Button>
+          )}
           {isAvailable && hasExistingFile && (
-            <IconButton size="small" color="error" onClick={() => handleDeleteDocFile(docId)}>
-              <DeleteIcon fontSize="small" />
-            </IconButton>
+            <Tooltip title="Eliminar archivo">
+              <IconButton size="small" color="error" onClick={() => handleDeleteDocFile(docId)}>
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           )}
         </Box>
       </ListItem>
     );
   };
 
+  const inputSx = { '& .MuiInputBase-root': { height: 40 } };
+
   return (
     <Paper sx={{ p: 3, boxShadow: 3, mt: 2 }}>
       <Box component="form" noValidate autoComplete="off">
         <Typography variant="h6" sx={{ mb: 2 }}>Datos del Empleado</Typography>
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}><TextField label={t("employee.form.name")} name="name" value={form.name} onChange={handleChange} required fullWidth /></Grid>
-          <Grid item xs={12} sm={6}><TextField label={t("employee.form.department")} name="department" value={form.department} onChange={handleChange} required fullWidth /></Grid>
-          <Grid item xs={12} sm={6}><TextField label={t("employee.form.position")} name="position" value={form.position} onChange={handleChange} fullWidth /></Grid>
-          <Grid item xs={12} sm={6}><TextField label={t("employee.form.email")} name="email" value={form.email} onChange={handleChange} required fullWidth /></Grid>
-          <Grid item xs={12} sm={6}><TextField label={t("employee.form.curp", "CURP")} name="curp" value={form.curp} onChange={handleChange} fullWidth /></Grid>
+          <Grid item xs={12} sm={6}><TextField label={t("employee.form.name")} name="name" value={form.name} onChange={handleChange} required fullWidth size="small" sx={inputSx} /></Grid>
+          <Grid item xs={12} sm={6}><TextField label={t("employee.form.department")} name="department" value={form.department} onChange={handleChange} required fullWidth size="small" sx={inputSx} /></Grid>
+          <Grid item xs={12} sm={6}><TextField label={t("employee.form.position")} name="position" value={form.position} onChange={handleChange} fullWidth size="small" sx={inputSx} /></Grid>
+          <Grid item xs={12} sm={6}><TextField label={t("employee.form.email")} name="email" value={form.email} onChange={handleChange} required fullWidth size="small" sx={inputSx} /></Grid>
+          <Grid item xs={12} sm={6}><TextField label={t("employee.form.curp", "CURP")} name="curp" value={form.curp} onChange={handleChange} fullWidth size="small" sx={inputSx} /></Grid>
           <Grid item xs={12} sm={6}>
             {hasRole('ROLE_COMPANY') ? (
-              <TextField label={t("employee.form.company")} value={companies.find(c => String(c.id) === String(form.companyId))?.name || ''} disabled fullWidth />
+              <TextField label={t("employee.form.company")} value={companies.find(c => String(c.id) === String(form.companyId))?.name || ''} disabled fullWidth size="small" sx={inputSx} />
             ) : (
-              <TextField select label={t("employee.form.company")} name="companyId" value={form.companyId} onChange={handleChange} required fullWidth>
+              <TextField select label={t("employee.form.company")} name="companyId" value={form.companyId} onChange={handleChange} required fullWidth size="small" sx={inputSx}>
                 {companies.map(company => (<MenuItem key={company.id} value={company.id}>{company.name}</MenuItem>))}
               </TextField>
             )}
@@ -345,7 +403,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
             <Typography>Cargando documentos...</Typography>
           ) : (
             <List sx={{ p: 0 }}>
-              {FIXED_DOCS.map(renderDocItem)}
+              {documentTypes.map(renderDocItem)}
             </List>
           )}
 
