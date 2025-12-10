@@ -114,7 +114,7 @@ export default function App() {
       id: 'ml-companies',
       label: 'Gestión de Empresas Médica LEBEN',
       component: <MedicaLebenCompaniesPage resetTrigger={mlReset} />, // pasar trigger
-      roles: ['ROLE_ADMIN'],
+      roles: ['ROLE_ADMIN', 'ROLE_GENERADOR', 'ROLE_COTIZADOR'],
     },
   ];
 
@@ -233,7 +233,7 @@ export default function App() {
                 </Collapse>
 
                 {/* Medica LEBEN menu */}
-                {(!user || hasRole('ROLE_ADMIN')) && (
+                {(!user || hasRole('ROLE_ADMIN') || hasRole('ROLE_GENERADOR') || hasRole('ROLE_COTIZADOR')) && (
                   <>
                     <ListItemButton onClick={() => setOpenMedicaLeben(prev => !prev)}>
                       <ListItemText primary="Medica LEBEN" />
