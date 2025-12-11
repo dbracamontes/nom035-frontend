@@ -74,6 +74,12 @@ export const uploadEmployeeDocFile = (employeeId, docId, file) => {
 export const deleteEmployeeDocFile = (employeeId, docId) =>
   axios.delete(`${API_BASE}/employees/${employeeId}/documents/${docId}/file`);
 
+// NEW: download employee document file
+export const downloadEmployeeDocFile = (employeeId, docId) =>
+  axios.get(`${API_BASE}/employees/${employeeId}/documents/${docId}/file`, {
+    responseType: 'blob',
+  });
+
 // NEW: logical delete (mark document as INACTIVE)
 export const deactivateEmployeeDoc = (employeeId, docId) =>
   axios.put(`${API_BASE}/employees/${employeeId}/documents/${docId}/deactivate`);

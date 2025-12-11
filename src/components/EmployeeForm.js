@@ -19,6 +19,7 @@ import {
   UploadFile as UploadFileIcon,
   Delete as DeleteIcon,
   Save as SaveIcon,
+  Download as DownloadIcon,
 } from "@mui/icons-material";
 import {
   createEmployee,
@@ -30,6 +31,7 @@ import {
   deleteEmployeeDocFile,
   getDocumentTypes,
   deactivateEmployeeDoc,
+  downloadEmployeeDocFile,
 } from "../api/nom035";
 import { UserContext } from "../context/UserContext";
 import { useTranslation } from 'react-i18next';
@@ -216,6 +218,14 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
     const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
     if (!file || !effectiveEmployee || !effectiveEmployee.id) return;
 
+    // Validación simple en frontend opcional (5 MB)
+    const maxBytes = 5 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      setDocError("El archivo es demasiado grande. El tamaño máximo permitido es 5 MB.");
+      e.target.value = "";
+      return;
+    }
+
     setDocLoading(true);
     setDocError("");
     setDocSuccess("");
@@ -244,9 +254,15 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
       await fetchAndPrepareDocs(effectiveEmployee.id);
     } catch (error) {
       console.error("Error subiendo documento", error);
-      setDocError("Error al subir el documento.");
+      if (error?.response?.status === 413 ||
+          (typeof error?.response?.data === 'string' && error.response.data.includes('Maximum upload size exceeded'))) {
+        setDocError("El archivo es demasiado grande. El tamaño máximo permitido es 5 MB.");
+      } else {
+        setDocError("Error al subir el documento.");
+      }
     } finally {
       setDocLoading(false);
+      e.target.value = "";
     }
   };
 
@@ -258,6 +274,10 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
     try {
       const uploadPromises = Object.entries(docFiles).map(([docId, file]) => {
         if (file) {
+          const maxBytes = 5 * 1024 * 1024;
+          if (file.size > maxBytes) {
+            throw Object.assign(new Error("file-too-large"), { code: "FILE_TOO_LARGE", docId });
+          }
           return uploadEmployeeDocFile(effectiveEmployee.id, docId, file);
         }
         return Promise.resolve();
@@ -265,10 +285,17 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
       await Promise.all(uploadPromises);
       setDocFiles({});
       setDocSuccess("Documentos guardados correctamente.");
-      fetchAndPrepareDocs(effectiveEmployee.id); // Refresh docs state
+      fetchAndPrepareDocs(effectiveEmployee.id);
     } catch (e) {
       console.error("Error saving employee docs", e);
-      setDocError("Error al guardar los documentos.");
+      if (e?.code === "FILE_TOO_LARGE") {
+        setDocError("Uno o más archivos superan el tamaño máximo permitido de 5 MB.");
+      } else if (e?.response?.status === 413 ||
+                 (typeof e?.response?.data === 'string' && e.response.data.includes('Maximum upload size exceeded'))) {
+        setDocError("El archivo es demasiado grande. El tamaño máximo permitido es 5 MB.");
+      } else {
+        setDocError("Error al guardar los documentos.");
+      }
     } finally {
       setDocLoading(false);
     }
@@ -289,6 +316,25 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
       setDocError("Error al eliminar el archivo.");
     } finally {
       setDocLoading(false);
+    }
+  };
+
+  const handleDownloadDocFile = async (docId, fileName) => {
+    if (!effectiveEmployee || !effectiveEmployee.id) return;
+    try {
+      const response = await downloadEmployeeDocFile(effectiveEmployee.id, docId);
+      const blob = new Blob([response.data]);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName || 'documento-empleado';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Error descargando archivo', e);
+      alert('No se pudo descargar el archivo.');
     }
   };
 
@@ -323,6 +369,17 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
             color={!isAvailable ? "default" : (hasExistingFile ? "success" : (fileToUpload ? "primary" : "default"))}
             size="small"
           />
+          {hasExistingFile && (
+            <Tooltip title="Descargar archivo">
+              <IconButton
+                size="small"
+                color="primary"
+                onClick={() => handleDownloadDocFile(docId, doc?.fileName || docType.name)}
+              >
+                <DownloadIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
           {/* hide Elegir when there is already a file */}
           {!hasExistingFile && (
             <Button

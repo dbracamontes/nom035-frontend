@@ -126,6 +126,8 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
   const [photoDescription, setPhotoDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  // nuevo: lista de documentos que fallaron por tamaño
+  const [failedDocs, setFailedDocs] = useState([]);
   const [success, setSuccess] = useState("");
   const [companyName, setCompanyName] = useState(company?.name || "");
   const [companyTaxId, setCompanyTaxId] = useState(company?.taxId || "");
@@ -157,6 +159,27 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
 
   const handleDocFileChange = (field) => (e) => {
     const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+    if (!file) {
+      setDocFiles((prev) => ({ ...prev, [field]: null }));
+      return;
+    }
+    const maxBytes = 5 * 1024 * 1024; // 5 MB
+    if (file.size > maxBytes) {
+      const friendlyNameMap = {
+        acta_constitutiva: "Acta constitutiva",
+        constancia_situacion_fiscal: "Constancia de situación fiscal",
+        poder_notarial: "Poder notarial otorgado",
+        identificacion_representante: "Identificación representante legal",
+        comprobante_domicilio: "Comprobante de domicilio",
+        estado_cuenta_bancaria: "Estado de cuenta bancaria",
+        comprobante_ema_eba: "Comprobante EMA/EBA último periodo",
+      };
+      const label = friendlyNameMap[field] || field;
+      setError(`El archivo para "${label}" es demasiado grande. Tamaño máximo: 5 MB.`);
+      setFailedDocs((prev) => Array.from(new Set([...prev, label])));
+      e.target.value = "";
+      return;
+    }
     setDocFiles((prev) => ({ ...prev, [field]: file }));
   };
 
@@ -183,7 +206,35 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
       setLoading(true);
       setError("");
       setSuccess("");
+      setFailedDocs([]);
+
       const ensuredCompany = await ensureCompanyExists();
+
+      // Validación previa en frontend para detectar cuáles campos exceden 5MB
+      const maxBytes = 5 * 1024 * 1024;
+      const oversizeFields = Object.entries(docFiles)
+        .filter(([_, file]) => file && file.size > maxBytes)
+        .map(([field]) => field);
+
+      if (oversizeFields.length > 0) {
+        const friendlyNameMap = {
+          acta_constitutiva: "Acta constitutiva",
+          constancia_situacion_fiscal: "Constancia de situación fiscal",
+          poder_notarial: "Poder notarial otorgado",
+          identificacion_representante: "Identificación representante legal",
+          comprobante_domicilio: "Comprobante de domicilio",
+          estado_cuenta_bancaria: "Estado de cuenta bancaria",
+          comprobante_ema_eba: "Comprobante EMA/EBA último periodo",
+        };
+        const names = oversizeFields.map((f) => friendlyNameMap[f] || f);
+        setFailedDocs(names);
+        setError(
+          `Uno o más documentos superan el tamaño máximo permitido de 5 MB: ${names.join(", ")}.`
+        );
+        setLoading(false);
+        return;
+      }
+
       const resp = await uploadMedicaLebenDocs(ensuredCompany.id, docFiles);
       setDocs(resp.data);
       setSuccess("Documentos guardados correctamente");
@@ -192,7 +243,19 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
         return;
       }
       console.error(e);
-      setError("Error al guardar documentos Médica LEBEN");
+      // Intentar detectar error de tamaño máximo en la respuesta del backend
+      const resp = e?.response;
+      const isMaxSizeError =
+        resp?.status === 413 ||
+        (typeof resp?.data === "string" && resp.data.includes("Maximum upload size exceeded"));
+      if (isMaxSizeError) {
+        // No sabemos qué campo exacto falló del lado del backend, pero avisamos del límite global
+        setError(
+          "La carga de documentos excede el tamaño máximo permitido de 5 MB. Intenta subir archivos más pequeños."
+        );
+      } else {
+        setError("Error al guardar documentos Médica LEBEN");
+      }
     } finally {
       setLoading(false);
     }
@@ -394,7 +457,15 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+          {failedDocs.length > 0 && (
+            <>
+              <br />
+              <strong>Documentos afectados:</strong> {failedDocs.join(", ")}
+            </>
+          )}
+        </Alert>
       )}
       {success && (
         <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>
