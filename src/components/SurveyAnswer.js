@@ -518,7 +518,12 @@ export default function SurveyAnswer() {
   const isModuleComplete = (module) => {
     if (!module || !Array.isArray(module.questions)) return false;
     return module.questions.every(q => {
-      const v = answers[q.id] ?? answers[String(q.id)] ?? '';
+      const key = String(q.id ?? q.number);
+      const v = answers[key] ?? '';
+      // Para multi_select, solo cuenta como completada si hay al menos una opción seleccionada
+      if (q.type === 'multi_select' || q.type === 'checkbox' || q.allowMultiple) {
+        return Array.isArray(v) && v.length > 0;
+      }
       return String(v).trim() !== '';
     });
   };
@@ -527,7 +532,14 @@ export default function SurveyAnswer() {
   const getTotalProgress = () => {
     if (!selectedSurvey?.questions) return 0;
     const totalQuestions = selectedSurvey.questions.length;
-    const answeredQuestions = selectedSurvey.questions.filter(q => String(getAnswer(q.id)).trim() !== "").length;
+    const answeredQuestions = selectedSurvey.questions.filter(q => {
+      const key = String(q.id ?? q.number);
+      const v = answers[key] ?? '';
+      if (q.type === 'multi_select' || q.type === 'checkbox' || q.allowMultiple) {
+        return Array.isArray(v) && v.length > 0;
+      }
+      return String(v).trim() !== "";
+    }).length;
     return Math.round((answeredQuestions / totalQuestions) * 100);
   };
 
