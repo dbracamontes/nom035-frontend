@@ -20,8 +20,8 @@
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.8.4",
     "or": "^0.2.0",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-i18next": "^16.0.1",
     "react-router-dom": "^7.9.5",
     "react-scripts": "5.0.1",
@@ -54,6 +54,8 @@
     ]
   },
   "devDependencies": {
+    "ajv": "^8.17.1",
+    "ajv-keywords": "^5.1.0",
     "typescript": "^5.3.3"
   }
 }
