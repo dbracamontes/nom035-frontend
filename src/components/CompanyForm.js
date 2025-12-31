@@ -13,7 +13,8 @@ export default function CompanyForm({ company, onSave, onCancel }) {
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: '',
-    taxId: ''
+    taxId: '',
+    folioMercantil: ''
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -23,12 +24,14 @@ export default function CompanyForm({ company, onSave, onCancel }) {
     if (company) {
       setFormData({
         name: company.name || '',
-        taxId: company.taxId || ''
+        taxId: company.taxId || '',
+        folioMercantil: company.folioMercantil || ''
       });
     } else {
       setFormData({
         name: '',
-        taxId: ''
+        taxId: '',
+        folioMercantil: ''
       });
     }
     setErrors({});
@@ -50,6 +53,12 @@ export default function CompanyForm({ company, onSave, onCancel }) {
       newErrors.taxId = 'El RFC/Tax ID no puede exceder 20 caracteres';
     }
 
+    if (!formData.folioMercantil || formData.folioMercantil.trim() === '') {
+      newErrors.folioMercantil = 'El Folio Mercantil es obligatorio';
+    } else if (formData.folioMercantil.length > 50) {
+      newErrors.folioMercantil = 'El Folio Mercantil no puede exceder 50 caracteres';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -67,7 +76,8 @@ export default function CompanyForm({ company, onSave, onCancel }) {
     try {
       const dataToSend = {
         name: formData.name.trim(),
-        taxId: formData.taxId.trim() || null
+        taxId: formData.taxId.trim(),
+        folioMercantil: formData.folioMercantil.trim()
       };
 
       if (company && company.id) {
@@ -159,6 +169,22 @@ export default function CompanyForm({ company, onSave, onCancel }) {
               disabled={loading}
               inputProps={{ maxLength: 20 }}
               placeholder="Ej: ABC123456XYZ"
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              required
+              label="Folio Mercantil"
+              value={formData.folioMercantil}
+              onChange={handleChange('folioMercantil')}
+              error={!!errors.folioMercantil}
+              helperText={errors.folioMercantil || 'Folio mercantil de la empresa'}
+              variant="outlined"
+              disabled={loading}
+              inputProps={{ maxLength: 50 }}
+              placeholder="Ej: FM-12345"
             />
           </Grid>
 

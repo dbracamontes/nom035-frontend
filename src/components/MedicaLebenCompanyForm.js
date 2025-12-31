@@ -290,15 +290,31 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
       if (!company || !company.id) {
         return; // Nothing to update on backend if company doesn't exist yet
       }
+      
+      // Validar campos obligatorios
+      if (!companyName.trim()) {
+        setCompanyValidationError("El nombre de la empresa es obligatorio");
+        return;
+      }
+      if (!companyTaxId.trim()) {
+        setError("El RFC / Tax ID es obligatorio");
+        return;
+      }
+      if (!companyFolioMercantil.trim()) {
+        setError("El Folio Mercantil es obligatorio");
+        return;
+      }
+      
       setLoading(true);
       setError("");
       setSuccess("");
+      setCompanyValidationError("");
 
       const payload = {
         ...company,
         name: companyName.trim(),
-        taxId: companyTaxId.trim() || null,
-        folioMercantil: companyFolioMercantil.trim() || null,
+        taxId: companyTaxId.trim(),
+        folioMercantil: companyFolioMercantil.trim(),
       };
 
       await updateCompany(company.id, payload);
@@ -425,21 +441,25 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
           <Grid item xs={12} md={3}>
             <TextField
               fullWidth
+              required
               label="RFC / Tax ID"
               value={companyTaxId}
               onChange={(e) => setCompanyTaxId(e.target.value)}
               size="small"
-              helperText="Opcional"
+              helperText="RFC de la empresa"
+              inputProps={{ maxLength: 20 }}
             />
           </Grid>
           <Grid item xs={12} md={3}>
             <TextField
               fullWidth
+              required
               label="Folio mercantil"
               value={companyFolioMercantil}
               onChange={(e) => setCompanyFolioMercantil(e.target.value)}
               size="small"
-              helperText="Opcional"
+              helperText="Folio mercantil de la empresa"
+              inputProps={{ maxLength: 50 }}
             />
           </Grid>
         </Grid>
