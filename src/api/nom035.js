@@ -233,7 +233,7 @@ export const getParticipationSummary = () => axios.get(`${API_BASE}/dashboard/pa
 
 // Survey Response endpoints
 export const submitSurveyResponse = data => {
-  console.log('📤 API: Sending to /api/responses:', JSON.stringify(data, null, 2));
+  console.log('API: Sending to /api/responses:', JSON.stringify(data, null, 2));
   return axios.post(`${API_BASE}/responses`, data, {
     headers: {
       'Content-Type': 'application/json',
@@ -249,7 +249,7 @@ export const getSurveyResponsesByApplication = (surveyApplicationId) => axios.ge
 
 // Survey Application endpoints (for managing survey sessions)
 export const createSurveyApplication = data => {
-  console.log('📤 API: Creating survey application:', JSON.stringify(data, null, 2));
+  console.log('API: Creating survey application:', JSON.stringify(data, null, 2));
   return axios.post(`${API_BASE}/survey-applications`, data, {
     headers: {
       'Content-Type': 'application/json',
@@ -263,13 +263,13 @@ export const getSurveyApplicationCheck = (employeeId, surveyId) => {
   return axios.get(`${API_BASE}/survey-applications/check?${params.toString()}`);
 };
 export const completeSurveyApplication = (applicationId) => {
-  console.log('✅ API: Completing survey application:', applicationId);
+  console.log('API: Completing survey application:', applicationId);
   return axios.put(`${API_BASE}/survey-applications/${applicationId}/complete`);
 };
 
 // Statistics and Analytics endpoints
 export const getResponseStatistics = () => {
-  console.log('📊 API: Getting response statistics');
+  console.log('API: Getting response statistics');
   return axios.get(`${API_BASE}/responses/statistics`);
 };
 
@@ -284,7 +284,7 @@ export const getParticipationStatistics = (companyId = null, surveyId = null) =>
     url += `?${params.toString()}`;
   }
   
-  console.log('📊 API: Getting participation statistics:', url);
+  console.log('API: Getting participation statistics:', url);
   return axios.get(url);
 };
 
@@ -295,7 +295,7 @@ export const getModuleStatistics = (surveyId = null) => {
     url += `?surveyId=${surveyId}`;
   }
   
-  console.log('📊 API: Getting module statistics:', url);
+  console.log('API: Getting module statistics:', url);
   return axios.get(url);
 };
 
@@ -310,7 +310,7 @@ export const getRiskAnalysis = (companyId = null, surveyId = null) => {
     url += `?${params.toString()}`;
   }
   
-  console.log('📊 API: Getting risk analysis:', url);
+  console.log('API: Getting risk analysis:', url);
   return axios.get(url);
 };
 
@@ -327,7 +327,7 @@ export const getFilteredResponses = (filters = {}) => {
     url += `?${params.toString()}`;
   }
   
-  console.log('📊 API: Getting filtered responses:', url);
+  console.log('API: Getting filtered responses:', url);
   return axios.get(url);
 };
 
@@ -337,11 +337,11 @@ export const getCompanyDictamenSummary = (companyId) => axios.get(`${API_BASE}/r
 
 // NEW: PDF downloads (responseType: blob)
 export const downloadApplicationDictamenPdf = (applicationId) => {
-  console.log('📥 API: Downloading application dictamen PDF:', applicationId);
+  console.log('API: Downloading application dictamen PDF:', applicationId);
   return axios.get(`${API_BASE}/reports/application/${applicationId}/dictamen.pdf`, { responseType: 'blob' });
 };
 export const downloadCompanyDictamenSummaryPdf = (companyId) => {
-  console.log('📥 API: Downloading company dictamen summary PDF:', companyId);
+  console.log('API: Downloading company dictamen summary PDF:', companyId);
   return axios.get(`${API_BASE}/reports/company/${companyId}/dictamen-summary.pdf`, { responseType: 'blob' });
 };
 // NEW (Branded variants): pass optional branding parameters
@@ -349,13 +349,26 @@ export const downloadApplicationDictamenPdfBranded = (applicationId, brand = {})
   const params = new URLSearchParams();
   Object.entries(brand).forEach(([k,v]) => { if (v) params.append(k, v); });
   const url = `${API_BASE}/reports/application/${applicationId}/dictamen.pdf${params.toString() ? '?' + params.toString() : ''}`;
-  console.log('📥 API: Downloading branded application dictamen PDF:', url);
+  console.log('API: Downloading branded application dictamen PDF:', url);
   return axios.get(url, { responseType: 'blob' });
 };
 export const downloadCompanyDictamenSummaryPdfBranded = (companyId, brand = {}) => {
   const params = new URLSearchParams();
   Object.entries(brand).forEach(([k,v]) => { if (v) params.append(k, v); });
   const url = `${API_BASE}/reports/company/${companyId}/dictamen-summary.pdf${params.toString() ? '?' + params.toString() : ''}`;
-  console.log('\ud83d\udce5 API: Downloading branded company dictamen summary PDF:', url);
+  console.log('API: Downloading branded company dictamen summary PDF:', url);
+  return axios.get(url, { responseType: 'blob' });
+};
+
+// NEW: Ponderaciones PDF downloads
+export const downloadApplicationPonderacionesPdf = (applicationId) => {
+  console.log('API: Downloading application ponderaciones PDF:', applicationId);
+  return axios.get(`${API_BASE}/reports/application/${applicationId}/ponderaciones.pdf`, { responseType: 'blob' });
+};
+export const downloadApplicationPonderacionesPdfBranded = (applicationId, brand = {}) => {
+  const params = new URLSearchParams();
+  Object.entries(brand).forEach(([k,v]) => { if (v) params.append(k, v); });
+  const url = `${API_BASE}/reports/application/${applicationId}/ponderaciones.pdf${params.toString() ? '?' + params.toString() : ''}`;
+  console.log('API: Downloading branded application ponderaciones PDF:', url);
   return axios.get(url, { responseType: 'blob' });
 };

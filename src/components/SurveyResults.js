@@ -5,7 +5,9 @@ import {
   downloadCompanyDictamenSummaryPdf,
   downloadApplicationDictamenPdf,
   downloadCompanyDictamenSummaryPdfBranded,
-  downloadApplicationDictamenPdfBranded
+  downloadApplicationDictamenPdfBranded,
+  downloadApplicationPonderacionesPdf,
+  downloadApplicationPonderacionesPdfBranded
 } from "../api/nom035";
 import { 
   Box, Typography, Paper, Tab, Tabs, Grid, Card, CardContent, 
@@ -316,26 +318,41 @@ export default function SurveyResults() {
   const handleDownloadApplicationPdf = async (applicationId) => {
     if (!applicationId) return;
     try {
-      const brand = {
-        title: brandTitle || undefined,
-        subtitle: brandSubtitle || undefined,
-        companyName: brandCompanyName || undefined,
-        footerText: brandFooterText || undefined,
-        primaryHex: brandPrimaryHex || undefined,
-        secondaryHex: brandSecondaryHex || undefined,
-        logoClasspath: brandLogoClasspath || undefined
-      };
-      const anyBrand = Object.values(brand).some(v => v);
-      const res = anyBrand ? await downloadApplicationDictamenPdfBranded(String(applicationId), brand) : await downloadApplicationDictamenPdf(String(applicationId));
+      // Detectar el tipo de encuesta automáticamente
+      const app = surveyApplications.find(a => String(a.id) === String(applicationId)) || {};
+      const survey = surveys.find(s => s.id === app.surveyId) || {};
+      const surveyTitle = survey.title || '';
+      
+      // Determinar si es Medica Leben basándose en el título
+      const isMedicaLeben = surveyTitle.toLowerCase().includes('medica leben') || surveyTitle.toLowerCase().includes('médica leben');
+      
+      // Llamar al endpoint correspondiente según el tipo de encuesta
+      let res;
+      if (isMedicaLeben) {
+        // Medica Leben → descargar ponderaciones SIN branding personalizado (usa defaults del backend)
+        res = await downloadApplicationPonderacionesPdf(String(applicationId));
+      } else {
+        // NOM-035 → descargar dictamen CON branding personalizado si está configurado
+        const brand = {
+          title: brandTitle || undefined,
+          subtitle: brandSubtitle || undefined,
+          companyName: brandCompanyName || undefined,
+          footerText: brandFooterText || undefined,
+          primaryHex: brandPrimaryHex || undefined,
+          secondaryHex: brandSecondaryHex || undefined,
+          logoClasspath: brandLogoClasspath || undefined
+        };
+        const anyBrand = Object.values(brand).some(v => v);
+        res = anyBrand ? await downloadApplicationDictamenPdfBranded(String(applicationId), brand) : await downloadApplicationDictamenPdf(String(applicationId));
+      }
 
       // Derive a safe filename using employee name if available, otherwise fallback to application token (no numeric id)
-      const app = surveyApplications.find(a => String(a.id) === String(applicationId)) || {};
       const employee = employees.find(e => String(e.id) === String(app.employeeId)) || {};
       const rawName = employee.name || employee.email || app.employeeName || `application-${String(applicationId).slice(-6)}`;
       const safeName = String(rawName).replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_.-]/g, '');
-      saveBlob(res.data, `dictamen-${safeName}.pdf`);
+      saveBlob(res.data, `ponderacion-${safeName}.pdf`);
     } catch (e) {
-      console.error('Error downloading application dictamen PDF:', e);
+      console.error('Error downloading application PDF:', e);
     }
   };
 
@@ -1346,7 +1363,7 @@ export default function SurveyResults() {
                       <TableCell><strong>Encuesta</strong></TableCell>
                       <TableCell><strong>Fecha</strong></TableCell>
                       <TableCell><strong>Nivel de riesgo</strong></TableCell>
-                      <TableCell align="center"><strong>Dictamen PDF</strong></TableCell>
+                      <TableCell align="center"><strong>Ponderación PDF</strong></TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
