@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { getSurveys, submitSurveyResponse, getSurveyById, getSurveyWithQuestions, createSurveyApplication, getSurveyApplications, getSurveyResponsesByApplication, getCompanySurveyById, getSurveyApplicationCheck, completeSurveyApplication } from "../api/nom035";
+import React, { useState, useEffect, useCallback, useMemo, useRef, useDeferredValue } from "react";
+import { getSurveys, submitSurveyResponse, getSurveyById, getSurveyWithQuestions, createSurveyApplication, getSurveyApplications, getSurveyResponsesByApplication, completeSurveyApplication } from "../api/nom035";
 import { 
   Box, Button, Paper, MenuItem, Typography, 
   Card, CardContent, LinearProgress,
@@ -12,7 +12,6 @@ import {
   CheckCircle as CheckCircleIcon,
   Assignment as AssignmentIcon 
 } from '@mui/icons-material';
-import { useTranslation } from 'react-i18next';
 import { 
   normalizeQuestionList,
   LIKERT_LABELS,
@@ -31,8 +30,39 @@ const MENU_PROPS = {
   }
 };
 
+const QUESTIONS_PER_PAGE = 10;
+
+const toNumericId = (value) => {
+  const parsed = parseInt(value, 10);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
+const extractSurveyIdFromApplication = (application) => {
+  if (!application) return null;
+
+  const direct = toNumericId(application.surveyId ?? application.survey_id);
+  if (direct != null) return direct;
+
+  const nestedSurvey = application.survey || application.surveyDto || application.survey_dto;
+  const nestedId = toNumericId(
+    nestedSurvey?.id ??
+    nestedSurvey?.surveyId ??
+    nestedSurvey?.survey_id
+  );
+  if (nestedId != null) return nestedId;
+
+  const companySurvey = application.companySurvey ?? application.company_survey;
+  const companySurveyId = toNumericId(
+    companySurvey?.surveyId ??
+    companySurvey?.survey_id ??
+    companySurvey?.survey?.id
+  );
+  if (companySurveyId != null) return companySurveyId;
+
+  return null;
+};
+
 export default function EmployeeSurveyAnswer() {
-  const { t } = useTranslation();
   const [surveys, setSurveys] = useState([]);
   const [selectedSurvey, setSelectedSurvey] = useState(null);
   const [answers, setAnswers] = useState({});
@@ -45,8 +75,27 @@ export default function EmployeeSurveyAnswer() {
   // NEW: gating state for sequential sections
   const [enabledSectionMaxIndex, setEnabledSectionMaxIndex] = useState(0);
   const [savingSection, setSavingSection] = useState(false);
+  const [surveyApplications, setSurveyApplications] = useState([]);
+  const [sectionPageIndex, setSectionPageIndex] = useState(0);
+  const initialDataLoadedRef = useRef(false);
+  const responsesCacheRef = useRef(new Map());
+  const deferredAnswers = useDeferredValue(answers);
 
-  const getAnswer = (qid) => answers[String(qid)];
+  const refreshSurveyApplications = useCallback(async () => {
+    try {
+      const response = await getSurveyApplications();
+      const appList = response.data || [];
+      setSurveyApplications(appList);
+      return appList;
+    } catch (error) {
+      console.error('Error fetching survey applications:', error);
+      setSurveyApplications([]);
+      return [];
+    }
+  }, []);
+
+  const getAnswer = useCallback((qid) => answers[String(qid)], [answers]);
+  const getStableAnswer = useCallback((qid) => deferredAnswers[String(qid)], [deferredAnswers]);
 
   const canonicalLabels = LIKERT_LABELS;
   const NOM035_OPTIONS = canonicalLabels.map((label, idx) => ({
@@ -57,55 +106,49 @@ export default function EmployeeSurveyAnswer() {
     requiresFreeText: false,
     numericValue: idx + 1
   }));
+  const mapResponsesToAnswers = useCallback((surveyObj, responses) => {
+    if (!surveyObj?.questions || !Array.isArray(responses)) {
+      return {};
+    }
+    const questionLookup = surveyObj.questions.reduce((acc, question) => {
+      if (question?.id != null) {
+        acc[String(question.id)] = question;
+      }
+      return acc;
+    }, {});
+    const parsedAnswers = {};
+    responses.forEach((response) => {
+      const qid = response?.questionId ?? response?.question_id ?? response?.question?.id;
+      if (qid == null) return;
+      const question = questionLookup[String(qid)];
+      if (!question) return;
+      const hydrated = hydrateAnswerFromResponse(question, response);
+      if (hydrated != null) {
+        parsedAnswers[String(qid)] = hydrated;
+      }
+    });
+    return parsedAnswers;
+  }, []);
   
   useEffect(() => {
+    if (initialDataLoadedRef.current) return;
+    initialDataLoadedRef.current = true;
+
     const loadData = async () => {
       try {
-        // Primero obtener las encuestas asignadas al empleado actual
-        const appsRes = await getSurveyApplications();
-        const apps = appsRes.data || [];
-        console.log('Survey applications for employee:', apps);
-        
-        // Obtener los surveyIds directamente de las applications
+        const apps = await refreshSurveyApplications();
+
         const assignedSurveyIds = new Set();
-        const csIdToSurveyId = {};
-        
         apps.forEach(app => {
-          // Intentar obtener surveyId directamente de la application
-          let surveyId = app.surveyId ?? app.survey_id ?? null;
-          
-          // Si no está directamente, intentar desde el survey anidado
-          if (!surveyId && app.survey) {
-            surveyId = app.survey.id ?? app.survey.surveyId;
-          }
-          
-          // Si no está directamente, intentar desde companySurvey anidado
-          if (!surveyId && app.companySurvey) {
-            surveyId = app.companySurvey.surveyId ?? app.companySurvey.survey_id ?? app.companySurvey.survey?.id;
-          }
-          
-          // Si encontramos el surveyId, agregarlo al set
-          if (surveyId) {
-            const sid = parseInt(surveyId);
-            if (!isNaN(sid)) {
-              assignedSurveyIds.add(sid);
-              // También guardar el mapeo para uso posterior
-              const csId = app.companySurveyId ?? app.company_survey_id ?? app.companySurvey ?? app.company_survey;
-              if (csId) {
-                csIdToSurveyId[parseInt(csId)] = sid;
-              }
-            }
+          const surveyId = extractSurveyIdFromApplication(app);
+          if (surveyId != null) {
+            assignedSurveyIds.add(surveyId);
           }
         });
 
-        console.log('Assigned survey IDs:', Array.from(assignedSurveyIds));
-
-        // Obtener todas las encuestas y filtrar solo las asignadas
         const surveysRes = await getSurveys();
         const surveysData = surveysRes.data || [];
-        console.log('All surveys:', surveysData.map(s => ({ id: s.id, title: s.title })));
         const filteredSurveys = surveysData.filter(s => assignedSurveyIds.has(parseInt(s.id)));
-        console.log('Filtered surveys:', filteredSurveys.map(s => ({ id: s.id, title: s.title })));
 
         const surveysWithQuestions = await Promise.all(
           filteredSurveys.map(async (s) => {
@@ -126,10 +169,8 @@ export default function EmployeeSurveyAnswer() {
           })
         );
 
-        console.log('Surveys assigned to employee:', surveysWithQuestions);
         setSurveys(surveysWithQuestions);
 
-        // Compute completed surveys for current employee (usar las variables ya obtenidas)
         try {
           const completedMap = {};
           const toLower = (s) => (s || '').toString().toLowerCase();
@@ -137,12 +178,7 @@ export default function EmployeeSurveyAnswer() {
             const st = toLower(a.status);
             const completed = !!a.completedAt || st === 'completado' || st === 'completada' || st === 'completed';
             if (!completed) return;
-            let appSurveyId = a.surveyId ?? a.survey_id ?? null;
-            if (!appSurveyId) {
-              const csId = a.companySurveyId ?? a.company_survey_id ?? a.companySurvey ?? a.company_survey;
-              const parsed = parseInt(csId);
-              if (!isNaN(parsed)) appSurveyId = csIdToSurveyId[parsed] ?? null;
-            }
+            const appSurveyId = extractSurveyIdFromApplication(a);
             if (appSurveyId != null) {
               const sid = parseInt(appSurveyId);
               if (!isNaN(sid)) completedMap[sid] = true;
@@ -155,13 +191,15 @@ export default function EmployeeSurveyAnswer() {
       } catch (err) {
         console.error('Error loading surveys:', err);
         setSurveys([]);
+        initialDataLoadedRef.current = false;
       }
     };
 
     loadData();
-  }, []);
+  }, [refreshSurveyApplications]);
   
-  const checkExistingSubmission = useCallback(async (surveyObj = selectedSurvey) => {
+  const checkExistingSubmission = useCallback(async (surveyObj = selectedSurvey, options = {}) => {
+    const { forceRefresh = false } = options || {};
     setExistingApplication(null);
     // NO resetear formDisabled aquí - solo se debe establecer en true si está completada
     // setFormDisabled(false); REMOVIDO
@@ -169,35 +207,17 @@ export default function EmployeeSurveyAnswer() {
     if (!surveyObj) return;
 
     try {
-      const appsRes = await getSurveyApplications();
-      const apps = appsRes.data || [];
-
-      const csIds = apps.map(a => a.companySurveyId ?? a.company_survey_id ?? a.companySurvey ?? a.company_survey).filter(Boolean).map(id => parseInt(id));
-      const uniqueCsIds = [...new Set(csIds)];
-      const csIdToSurveyId = {};
-      if (uniqueCsIds.length > 0) {
-        await Promise.all(uniqueCsIds.map(async (csId) => {
-          try {
-            const csRes = await getCompanySurveyById(csId);
-            const cs = csRes.data || csRes;
-            csIdToSurveyId[csId] = cs.surveyId ?? cs.survey_id ?? (cs.survey?.id);
-          } catch (err) {
-            console.warn('Could not fetch companySurvey for id', csId, err?.message || err);
-          }
-        }));
+      let apps = surveyApplications;
+      if (forceRefresh || !apps || apps.length === 0) {
+        apps = await refreshSurveyApplications();
       }
+      if (!apps || apps.length === 0) return;
 
       // Recolectar TODAS las apps para esta encuesta y seleccionar la más relevante
       const matches = apps.filter(a => {
-        let appSurveyId = a.surveyId ?? a.survey_id ?? null;
-        const csId = a.companySurveyId ?? a.company_survey_id ?? a.companySurvey ?? a.company_survey;
-        if (!appSurveyId && csId) {
-          const parsed = parseInt(csId);
-          if (!isNaN(parsed)) appSurveyId = csIdToSurveyId[parsed] ?? null;
-        }
-
+        const appSurveyId = extractSurveyIdFromApplication(a);
         try {
-          return parseInt(appSurveyId) === parseInt(surveyObj.id);
+          return appSurveyId != null && parseInt(appSurveyId) === parseInt(surveyObj.id);
         } catch (e) {
           return false;
         }
@@ -226,37 +246,35 @@ export default function EmployeeSurveyAnswer() {
         }
       }
 
-      if (match) {
+        if (match) {
         setExistingApplication(match);
 
         const appId = match.id ?? match.applicationId ?? match.surveyApplicationId;
-        const responsesRes = await getSurveyResponsesByApplication(appId);
-        const filtered = responsesRes.data || [];
-
-        const prevAnswers = {};
-        filtered.forEach(r => {
-          const qid = r.questionId ?? r.question_id ?? r.question?.id;
-          const q = surveyObj.questions?.find(qq => String(qq.id) === String(qid));
-          const hydrated = hydrateAnswerFromResponse(q, r);
-          if (qid != null && hydrated != null) {
-            prevAnswers[String(qid)] = hydrated;
+          let hydratedAnswers = {};
+          if (!appId) {
+            setAnswers({});
+          } else {
+          let responsesData = [];
+          if (!forceRefresh && responsesCacheRef.current.has(appId)) {
+            responsesData = responsesCacheRef.current.get(appId);
+          } else {
+            const responsesRes = await getSurveyResponsesByApplication(appId);
+            responsesData = responsesRes.data || [];
+            responsesCacheRef.current.set(appId, responsesData);
           }
-        });
-        setAnswers(prevAnswers);
+            hydratedAnswers = mapResponsesToAnswers(surveyObj, responsesData);
+            setAnswers(hydratedAnswers);
+        }
 
         // Verificar si está completada - mejorado para detectar el enum COMPLETADO del backend
         const st = (match.status ?? '').toLowerCase();
         const hasCompletedAt = !!match.completedAt;
         const statusIsCompleted = st === 'completado' || st === 'completada' || st === 'completed';
-        const allQuestionsAnswered = surveyObj.questions && filtered.length >= surveyObj.questions.length;
+          const totalQuestions = Array.isArray(surveyObj.questions) ? surveyObj.questions.length : 0;
+          const answeredQuestionCount = Object.keys(hydratedAnswers).length;
+          const allQuestionsAnswered = totalQuestions > 0 && answeredQuestionCount >= totalQuestions;
         
         if (hasCompletedAt || statusIsCompleted || allQuestionsAnswered) {
-          console.log('✅ Survey marked as completed:', { 
-            status: match.status, 
-            hasCompletedAt, 
-            statusIsCompleted, 
-            allQuestionsAnswered 
-          });
           setFormDisabled(true);
         } else {
           // Solo establecer en false si NO está completada
@@ -265,11 +283,32 @@ export default function EmployeeSurveyAnswer() {
       } else {
         // No hay aplicación existente, habilitar el formulario
         setFormDisabled(false);
+        setAnswers({});
+      }
+
+      if (apps && apps.length > 0) {
+        try {
+          const completedMap = {};
+          const toLowerStatus = (s) => (s || '').toString().toLowerCase();
+          apps.forEach(a => {
+            const st = toLowerStatus(a.status);
+            const completed = !!a.completedAt || st === 'completado' || st === 'completada' || st === 'completed';
+            if (!completed) return;
+            const appSurveyId = extractSurveyIdFromApplication(a);
+            if (appSurveyId != null) {
+              const sid = parseInt(appSurveyId);
+              if (!isNaN(sid)) completedMap[sid] = true;
+            }
+          });
+          setCompletedSurveys(completedMap);
+        } catch (e) {
+          console.warn('Could not compute completed surveys:', e?.message || e);
+        }
       }
     } catch (err) {
       console.error('Error checking existing submission:', err);
     }
-  }, [selectedSurvey]);
+  }, [selectedSurvey, surveyApplications, refreshSurveyApplications]);
 
   useEffect(() => {
     if (selectedSurvey) {
@@ -278,7 +317,7 @@ export default function EmployeeSurveyAnswer() {
   }, [selectedSurvey, checkExistingSubmission]);
 
   // Helpers for sections
-  const allQuestions = selectedSurvey?.questions || [];
+  const allQuestions = useMemo(() => selectedSurvey?.questions || [], [selectedSurvey]);
   const questionNumberMap = useMemo(() => {
     const map = {};
     allQuestions.forEach((question, index) => {
@@ -287,7 +326,7 @@ export default function EmployeeSurveyAnswer() {
       }
     });
     return map;
-  }, [selectedSurvey]);
+  }, [allQuestions]);
   const resolvedSurveyTitle = (q) => q.surveyTitle || q.survey_title || '';
   const sectionKey = (title) => {
     if (!title) return '';
@@ -302,7 +341,7 @@ export default function EmployeeSurveyAnswer() {
     return dashIdx > 0 ? s.slice(0, dashIdx) : s;
   };
   // Derive ordered distinct section titles by walking questions
-  const sectionTitles = (() => {
+  const sectionTitles = useMemo(() => {
     const seen = new Set();
     const order = [];
     allQuestions.forEach(q => {
@@ -310,9 +349,9 @@ export default function EmployeeSurveyAnswer() {
       if (key && !seen.has(key)) { seen.add(key); order.push(key); }
     });
     return order;
-  })();
+  }, [allQuestions]);
   // NEW: map internal key -> full original title for display
-  const sectionTitleMap = (() => {
+  const sectionTitleMap = useMemo(() => {
     const map = {};
     allQuestions.forEach(q => {
       const full = resolvedSurveyTitle(q);
@@ -320,10 +359,23 @@ export default function EmployeeSurveyAnswer() {
       if (key && !map[key]) map[key] = full; // first occurrence keeps full text
     });
     return map;
-  })();
-  const questionsInSection = (title) => allQuestions.filter(q => sectionKey(resolvedSurveyTitle(q)) === title);
-  const questionHasAnswer = (question) => questionAnswered(question, getAnswer(question.id));
-  const isSectionComplete = (title) => questionsInSection(title).every(questionHasAnswer);
+  }, [allQuestions]);
+  const questionsInSection = useCallback(
+    (title) => allQuestions.filter(q => sectionKey(resolvedSurveyTitle(q)) === title),
+    [allQuestions]
+  );
+  const questionHasAnswer = useCallback(
+    (question) => questionAnswered(question, getStableAnswer(question.id)),
+    [getStableAnswer]
+  );
+  const questionHasAnswerImmediate = useCallback(
+    (question) => questionAnswered(question, getAnswer(question.id)),
+    [getAnswer]
+  );
+  const isSectionComplete = useCallback(
+    (title) => questionsInSection(title).every(questionHasAnswer),
+    [questionsInSection, questionHasAnswer]
+  );
 
   // Initialize/refresh gating when survey or answers change
   useEffect(() => {
@@ -343,7 +395,7 @@ export default function EmployeeSurveyAnswer() {
       const firstIncomplete = sectionTitles.find(t => !isSectionComplete(t)) || sectionTitles[0];
       setSurveyTitleFilter(firstIncomplete);
     }
-  }, [selectedSurvey, answers]);
+  }, [selectedSurvey, sectionTitles, isSectionComplete, surveyTitleFilter]);
 
   const handleSurveyChange = async (e) => {
     const surveyId = e.target.value;
@@ -355,11 +407,12 @@ export default function EmployeeSurveyAnswer() {
     // Reset gating for new survey
     setEnabledSectionMaxIndex(0);
     setSurveyTitleFilter('');
-    
-    // Verificar si esta encuesta ya tiene respuestas guardadas
-    if (survey) {
-      await checkExistingSubmission(survey);
-    }
+    setSectionPageIndex(0);
+  };
+
+  const handleSectionFilterChange = (value) => {
+    setSurveyTitleFilter(value);
+    setSectionPageIndex(0);
   };
 
   const handleAnswerChange = (questionId, value) => {
@@ -564,7 +617,7 @@ export default function EmployeeSurveyAnswer() {
   };
 
   const renderSingleChoiceControl = (question, answerValue, disabled) => {
-    const { options, useNomDefaults } = resolveQuestionOptions(question);
+    const { options } = resolveQuestionOptions(question);
     if (!options.length) {
       return <Alert severity="warning">Esta pregunta no tiene opciones configuradas.</Alert>;
     }
@@ -764,8 +817,6 @@ export default function EmployeeSurveyAnswer() {
       return <Alert severity="warning">Esta pregunta matricial no tiene filas u opciones configuradas.</Alert>;
     }
 
-    // Siempre forzar selección única por fila para las encuestas NOM-035
-    const selectionMode = 'radio';
     const currentAnswer = (answerValue && typeof answerValue === 'object') ? answerValue : {};
 
     const toLabel = (item, fallbackLabel) => {
@@ -855,7 +906,7 @@ export default function EmployeeSurveyAnswer() {
 
     const sectionQs = questionsInSection(surveyTitleFilter);
     // Si la respuesta a la 31 es 'No', no exigir 32-35
-    let unanswered = sectionQs.filter(q => !questionHasAnswer(q));
+    let unanswered = sectionQs.filter(q => !questionHasAnswerImmediate(q));
     const pregunta31 = allQuestions.find(q => q.number === 31 || q.id === 31);
     const respuesta31 = pregunta31 ? getAnswer(pregunta31.id) : null;
     if (pregunta31 && respuesta31 && (respuesta31 === 'No' || respuesta31?.label === 'No')) {
@@ -875,9 +926,14 @@ export default function EmployeeSurveyAnswer() {
           surveyId: selectedSurvey.id,
           status: 'en_progreso'
         });
-        appId = appRes.data?.id ?? appRes.data?.applicationId;
+        const createdApp = appRes.data || {};
+        appId = createdApp.id ?? createdApp.applicationId ?? createdApp.surveyApplicationId ?? appRes.data?.id;
         if (appId) {
-          setExistingApplication(prev => prev ?? { id: appId, status: 'en_progreso' });
+          setExistingApplication(prev => prev ?? { ...(createdApp || {}), id: appId, status: createdApp.status ?? 'en_progreso' });
+          setSurveyApplications(prev => {
+            const exists = prev.some(app => (app.id ?? app.applicationId ?? app.surveyApplicationId) === appId);
+            return exists ? prev : [...prev, { ...createdApp, id: appId }];
+          });
         }
       }
 
@@ -925,7 +981,7 @@ export default function EmployeeSurveyAnswer() {
 
     const allQs = selectedSurvey.questions || [];
     // Si la respuesta a la 31 es 'No', no exigir 32-35
-    let unanswered = allQs.filter(q => !questionHasAnswer(q));
+    let unanswered = allQs.filter(q => !questionHasAnswerImmediate(q));
     const pregunta31 = allQs.find(q => q.number === 31 || q.id === 31);
     const respuesta31 = pregunta31 ? getAnswer(pregunta31.id) : null;
     if (pregunta31 && respuesta31 && (respuesta31 === 'No' || respuesta31?.label === 'No')) {
@@ -940,15 +996,18 @@ export default function EmployeeSurveyAnswer() {
       let appId = existingApplication?.id ?? existingApplication?.applicationId ?? existingApplication?.surveyApplicationId;
       
       if (!appId) {
-        console.log('📝 Creating new survey application...');
         const appRes = await createSurveyApplication({
           surveyId: selectedSurvey.id,
           status: 'en_progreso'
         });
-        appId = appRes.data?.id ?? appRes.data?.applicationId;
-        console.log('✅ Created application with ID:', appId);
+        const createdApp = appRes.data || {};
+        appId = createdApp.id ?? createdApp.applicationId ?? createdApp.surveyApplicationId ?? appRes.data?.id;
         if (appId) {
-          setExistingApplication(prev => prev ?? { id: appId, status: 'en_progreso' });
+          setExistingApplication(prev => prev ?? { ...(createdApp || {}), id: appId, status: createdApp.status ?? 'en_progreso' });
+          setSurveyApplications(prev => {
+            const exists = prev.some(app => (app.id ?? app.applicationId ?? app.surveyApplicationId) === appId);
+            return exists ? prev : [...prev, { ...createdApp, id: appId }];
+          });
         }
       }
 
@@ -961,17 +1020,12 @@ export default function EmployeeSurveyAnswer() {
       }
 
       // Paso 1: Enviar las respuestas
-      console.log('📤 Sending responses...');
       await submitSurveyResponse(responsesPayload);
-      console.log('✅ Responses sent successfully');
       
       // Paso 2: Marcar la aplicación como completada
-      console.log('🏁 Marking application as completed...');
-      const completeRes = await completeSurveyApplication(appId);
-      console.log('✅ Application marked as completed:', completeRes.data);
+      await completeSurveyApplication(appId);
       
       // Paso 3: Actualizar el estado local INMEDIATAMENTE
-      console.log('🔒 Setting formDisabled to true...');
       setShowSuccessMessage(true);
       setFormDisabled(true);
       // Marcar encuesta seleccionada como completada para mostrar distintivo en el dropdown
@@ -980,9 +1034,7 @@ export default function EmployeeSurveyAnswer() {
       }
       
       // Paso 4: Recargar la información de la encuesta para reflejar el estado completado
-      console.log('🔄 Reloading survey application data...');
-      await checkExistingSubmission(selectedSurvey);
-      console.log('✅ Survey application reloaded');
+      await checkExistingSubmission(selectedSurvey, { forceRefresh: true });
     } catch (err) {
       console.error('❌ Error submitting survey:', err);
       alert('Error al enviar la encuesta: ' + (err.response?.data?.message || err.message));
@@ -993,82 +1045,126 @@ export default function EmployeeSurveyAnswer() {
   const filteredQuestions = surveyTitleFilter
     ? allQuestions.filter(q => sectionKey(resolvedSurveyTitle(q)) === surveyTitleFilter)
     : allQuestions;
-  // Filtrado condicional para preguntas 32-35 según respuesta a la 31
-  console.log('Preguntas antes de filtrar:', filteredQuestions.map(q => ({ number: q.number, id: q.id, text: q.text })));
-  let filteredQuestionsWithLogic = [...filteredQuestions];
-  const preguntaRuido = allQuestions.find(q => q.id === 104);
-  const respuestaRuido = preguntaRuido ? getAnswer(preguntaRuido.id) : null;
-  const showNoiseQuestions = preguntaRuido && (respuestaRuido === 'Si' || respuestaRuido?.label === 'Si');
-  filteredQuestionsWithLogic = filteredQuestionsWithLogic.filter(q => {
-    // Oculta ids 105, 106, 107, 108 si no se ha respondido 'Si' en la 104
-    if ([105, 106, 107, 108].includes(Number(q.id))) {
-      return showNoiseQuestions === true;
+  const filteredQuestionsWithLogic = useMemo(() => {
+    let result = [...filteredQuestions];
+
+    const preguntaRuido = allQuestions.find(q => q.id === 104);
+    const respuestaRuido = preguntaRuido ? getStableAnswer(preguntaRuido.id) : null;
+    const showNoiseQuestions = preguntaRuido && (respuestaRuido === 'Si' || respuestaRuido?.label === 'Si');
+    if (!showNoiseQuestions) {
+      result = result.filter(q => ![105, 106, 107, 108].includes(Number(q.id)));
     }
-    return true;
-  });
-  // Filtrado condicional para preguntas 38-41 según respuesta a la 37 (id 110)
-  const preguntaVibracion = allQuestions.find(q => q.id === 110);
-  const respuestaVibracion = preguntaVibracion ? getAnswer(preguntaVibracion.id) : null;
-  const showVibrationQuestions = preguntaVibracion && (respuestaVibracion === 'Si' || respuestaVibracion?.label === 'Si');
-  filteredQuestionsWithLogic = filteredQuestionsWithLogic.filter(q => {
-    // Oculta ids 111, 112, 113, 114 si no se ha respondido 'Si' en la 110
-    if ([111, 112, 113, 114].includes(Number(q.id))) {
-      return showVibrationQuestions === true;
+
+    const preguntaVibracion = allQuestions.find(q => q.id === 110);
+    const respuestaVibracion = preguntaVibracion ? getStableAnswer(preguntaVibracion.id) : null;
+    const showVibrationQuestions = preguntaVibracion && (respuestaVibracion === 'Si' || respuestaVibracion?.label === 'Si');
+    if (!showVibrationQuestions) {
+      result = result.filter(q => ![111, 112, 113, 114].includes(Number(q.id)));
     }
-    return true;
-  });
-  // Filtrado condicional para preguntas 43-44 según respuesta a la 42 (id 115)
-  const preguntaIluminacion = allQuestions.find(q => q.id === 115);
-  const respuestaIluminacion = preguntaIluminacion ? getAnswer(preguntaIluminacion.id) : null;
-  const showLightQuestions = preguntaIluminacion && (respuestaIluminacion === 'Si' || respuestaIluminacion?.label === 'Si');
-  filteredQuestionsWithLogic = filteredQuestionsWithLogic.filter(q => {
-    // Oculta ids 116, 117 si no se ha respondido 'Si' en la 115
-    if ([116, 117].includes(Number(q.id))) {
-      return showLightQuestions === true;
+
+    const preguntaIluminacion = allQuestions.find(q => q.id === 115);
+    const respuestaIluminacion = preguntaIluminacion ? getStableAnswer(preguntaIluminacion.id) : null;
+    const showLightQuestions = preguntaIluminacion && (respuestaIluminacion === 'Si' || respuestaIluminacion?.label === 'Si');
+    if (!showLightQuestions) {
+      result = result.filter(q => ![116, 117].includes(Number(q.id)));
     }
-    return true;
-  });
-  // Filtrado condicional para preguntas 46-49 según respuesta a la 45
-  const preguntaQuimicos45 = allQuestions.find(q => q.id === 118 || q.number === 45);
-  const respuestaQuimicos45 = preguntaQuimicos45 ? getAnswer(preguntaQuimicos45.id) : null;
-  const showChemQuestions45 = preguntaQuimicos45 && (respuestaQuimicos45 === 'Si' || respuestaQuimicos45?.label === 'Si');
-  filteredQuestionsWithLogic = filteredQuestionsWithLogic.filter(q => {
-    // Oculta ids 119, 120, 121, 122 si no se ha respondido 'Si' en la 118 (45)
-    if ([119, 120, 121, 122].includes(Number(q.id))) {
-      return showChemQuestions45 === true;
+
+    const preguntaQuimicos45 = allQuestions.find(q => q.id === 118 || q.number === 45);
+    const respuestaQuimicos45 = preguntaQuimicos45 ? getStableAnswer(preguntaQuimicos45.id) : null;
+    const showChemQuestions45 = preguntaQuimicos45 && (respuestaQuimicos45 === 'Si' || respuestaQuimicos45?.label === 'Si');
+    if (!showChemQuestions45) {
+      result = result.filter(q => ![119, 120, 121, 122].includes(Number(q.id)));
     }
-    return true;
-  });
-  // Filtrado condicional para preguntas 59-65 según respuesta a la 58
-  // Filtrado condicional para preguntas 58-65 según respuesta a la 57 (id 131)
-  const preguntaQuimicos57 = allQuestions.find(q => q.id === 131);
-  const respuestaQuimicos57 = preguntaQuimicos57 ? getAnswer(preguntaQuimicos57.id) : null;
-  const showQuimicosQuestions57 = preguntaQuimicos57 && (respuestaQuimicos57 === 'Si' || respuestaQuimicos57?.label === 'Si');
-  filteredQuestionsWithLogic = filteredQuestionsWithLogic.filter(q => {
-    // Oculta solo ids 132-138 si no se ha respondido 'Si' en la 131 (57), nunca la 139
-    if ([132, 133, 134, 135, 136, 137, 138].includes(Number(q.id))) {
-      return showQuimicosQuestions57 === true;
+
+    const preguntaQuimicos57 = allQuestions.find(q => q.id === 131);
+    const respuestaQuimicos57 = preguntaQuimicos57 ? getStableAnswer(preguntaQuimicos57.id) : null;
+    const showQuimicosQuestions57 = preguntaQuimicos57 && (respuestaQuimicos57 === 'Si' || respuestaQuimicos57?.label === 'Si');
+    if (!showQuimicosQuestions57) {
+      result = result.filter(q => ![132, 133, 134, 135, 136, 137, 138].includes(Number(q.id)));
     }
-    return true;
-  });
-  // Si la respuesta a la 31 es 'Si', mostrar 32-35 normalmente
-  // Agrupar preguntas por categoría
-  const groupedQuestions = filteredQuestionsWithLogic.reduce((acc, q) => {
-    const cat = q.category || 'General';
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(q);
-    return acc;
-  }, {});
-  const totalQuestions = filteredQuestions.length;
-  const answeredCount = filteredQuestions.filter(questionHasAnswer).length;
-  const progress = totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
-  // NEW: global completion across all sections
-  const fullTotalQuestions = allQuestions.length;
-  const fullAnsweredCount = allQuestions.filter(questionHasAnswer).length;
-  const completedSectionsCount = sectionTitles.filter(t => isSectionComplete(t)).length;
-  const allSectionsComplete = sectionTitles.length > 0
-    ? completedSectionsCount === sectionTitles.length && sectionTitles.length > 0
-    : (fullTotalQuestions > 0 && fullAnsweredCount === fullTotalQuestions);
+
+    return result;
+  }, [filteredQuestions, allQuestions, getStableAnswer]);
+
+  const {
+    currentPageQuestions,
+    totalPages,
+    currentPageIndex,
+    pageStart,
+    pageEnd,
+    totalItemsInSection
+  } = useMemo(() => {
+    const totalItems = filteredQuestionsWithLogic.length;
+    const totalPagesCalc = totalItems > 0
+      ? Math.ceil(totalItems / QUESTIONS_PER_PAGE)
+      : 0;
+    const clampedIndex = totalPagesCalc === 0
+      ? 0
+      : Math.min(sectionPageIndex, totalPagesCalc - 1);
+    const sliceStart = clampedIndex * QUESTIONS_PER_PAGE;
+    const sliceEnd = sliceStart + QUESTIONS_PER_PAGE;
+    const slice = filteredQuestionsWithLogic.slice(sliceStart, sliceEnd);
+    const visualStart = totalItems === 0 ? 0 : sliceStart + 1;
+    const visualEnd = totalItems === 0 ? 0 : Math.min(totalItems, sliceStart + slice.length);
+
+    return {
+      currentPageQuestions: slice,
+      totalPages: totalPagesCalc,
+      currentPageIndex: clampedIndex,
+      pageStart: visualStart,
+      pageEnd: visualEnd,
+      totalItemsInSection: totalItems
+    };
+  }, [filteredQuestionsWithLogic, sectionPageIndex]);
+
+  const groupedQuestions = useMemo(() => {
+    return currentPageQuestions.reduce((acc, q) => {
+      const cat = q.category || 'General';
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(q);
+      return acc;
+    }, {});
+  }, [currentPageQuestions]);
+
+  const { totalQuestions, answeredCount, progress } = useMemo(() => {
+    const total = filteredQuestions.length;
+    const answered = filteredQuestions.filter(questionHasAnswer).length;
+    return {
+      totalQuestions: total,
+      answeredCount: answered,
+      progress: total > 0 ? (answered / total) * 100 : 0
+    };
+  }, [filteredQuestions, questionHasAnswer]);
+
+  const {
+    fullTotalQuestions,
+    fullAnsweredCount,
+    completedSectionsCount,
+    allSectionsComplete
+  } = useMemo(() => {
+    const fullTotal = allQuestions.length;
+    const fullAnswered = allQuestions.filter(questionHasAnswer).length;
+    const completedSections = sectionTitles.filter(t => isSectionComplete(t)).length;
+    const complete = sectionTitles.length > 0
+      ? completedSections === sectionTitles.length
+      : (fullTotal > 0 && fullAnswered === fullTotal);
+
+    return {
+      fullTotalQuestions: fullTotal,
+      fullAnsweredCount: fullAnswered,
+      completedSectionsCount: completedSections,
+      allSectionsComplete: complete
+    };
+  }, [allQuestions, sectionTitles, questionHasAnswer, isSectionComplete]);
+
+  useEffect(() => {
+    const totalItems = filteredQuestionsWithLogic.length;
+    const maxPage = totalItems === 0 ? 0 : Math.ceil(totalItems / QUESTIONS_PER_PAGE) - 1;
+    setSectionPageIndex(prev => {
+      const normalized = Math.min(Math.max(prev, 0), Math.max(maxPage, 0));
+      return normalized === prev ? prev : normalized;
+    });
+  }, [filteredQuestionsWithLogic.length]);
 
   return (
     <Box sx={{ maxWidth: 900, mx: 'auto', mt: 4 }}>
@@ -1149,7 +1245,7 @@ export default function EmployeeSurveyAnswer() {
               labelId="survey-title-filter-label"
               value={surveyTitleFilter}
               label="Sección"
-              onChange={(e) => setSurveyTitleFilter(e.target.value)}
+              onChange={(e) => handleSectionFilterChange(e.target.value)}
               MenuProps={MENU_PROPS}
             >
               {sectionTitles.map((title, idx) => (
@@ -1257,112 +1353,173 @@ export default function EmployeeSurveyAnswer() {
         )}
 
         {/* Preguntas Agrupadas por Categoría */}
-        {selectedSurvey && Object.keys(groupedQuestions).length > 0 && (
-          <Box sx={{ mt: 3 }}>
-            {Object.entries(groupedQuestions).map(([category, questions]) => (
-              <Accordion 
-                key={category}
-                expanded={expandedModule === category}
-                onChange={() => setExpandedModule(expandedModule === category ? null : category)}
-                sx={{ 
-                  mb: 2,
-                  ...(formDisabled && {
-                    bgcolor: '#f8f9fa',
-                    '&:before': {
-                      display: 'none',
-                    }
-                  })
-                }}
-              >
-                <AccordionSummary 
-                  expandIcon={<ExpandMoreIcon />}
-                  sx={{
+        {selectedSurvey && totalItemsInSection > 0 && (
+          <>
+            {totalPages > 1 && (
+              <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Mostrando preguntas {pageStart}-{pageEnd} de {totalItemsInSection}
+                </Typography>
+                <Stack direction="row" spacing={2}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => setSectionPageIndex(prev => Math.max(0, prev - 1))}
+                    disabled={currentPageIndex === 0}
+                  >
+                    Página anterior
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => setSectionPageIndex(prev => Math.min(totalPages - 1, prev + 1))}
+                    disabled={totalPages === 0 || currentPageIndex >= totalPages - 1}
+                  >
+                    Página siguiente
+                  </Button>
+                </Stack>
+              </Box>
+            )}
+
+            <Box sx={{ mt: 2 }}>
+              {Object.keys(groupedQuestions).length === 0 && (
+                <Alert severity="info">No hay preguntas visibles para esta página.</Alert>
+              )}
+              {Object.entries(groupedQuestions).map(([category, questions]) => (
+                <Accordion 
+                  key={category}
+                  expanded={expandedModule === category}
+                  onChange={() => setExpandedModule(expandedModule === category ? null : category)}
+                  sx={{ 
+                    mb: 2,
                     ...(formDisabled && {
-                      bgcolor: '#e9ecef',
-                      '&:hover': {
-                        bgcolor: '#dee2e6'
+                      bgcolor: '#f8f9fa',
+                      '&:before': {
+                        display: 'none',
                       }
                     })
                   }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-                    <Typography variant="h6" sx={{ fontWeight: formDisabled ? 600 : 500 }}>
-                      {category}
-                    </Typography>
-                    <Chip 
-                      label={`${questions.filter(questionHasAnswer).length}/${questions.length}`} 
-                      size="small" 
-                      color={questions.every(questionHasAnswer) ? "success" : "default"}
-                    />
-                  </Box>
-                </AccordionSummary>
-                <AccordionDetails>
-                  {questions.map((question, idx) => {
-                    const hasAnswer = questionHasAnswer(question);
-                    return (
-                      <Card 
-                        key={question.id} 
-                        sx={{ 
-                          mb: 2, 
-                          bgcolor: formDisabled 
-                            ? (hasAnswer ? '#e8f5e9' : '#f5f5f5')
-                            : (hasAnswer ? '#f0f9ff' : 'white'),
-                          border: formDisabled ? '2px solid' : '1px solid',
-                          borderColor: formDisabled 
-                            ? (hasAnswer ? 'success.light' : 'grey.300')
-                            : (hasAnswer ? 'primary.light' : 'grey.300'),
-                          position: 'relative',
-                          ...(formDisabled && {
-                            '&::before': hasAnswer ? {
-                              content: '""',
-                              position: 'absolute',
-                              top: 10,
-                              right: 10,
-                              width: 24,
-                              height: 24,
-                              borderRadius: '50%',
-                              bgcolor: 'success.main',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            } : {}
-                          })
-                        }}
-                      >
-                        <CardContent>
-                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
-                            <Typography 
-                              variant="body1" 
-                              sx={{ 
-                                fontWeight: 500,
-                                color: 'text.primary'
-                              }}
-                            >
-                              {(questionNumberMap[String(question.id)] ?? idx + 1)}. {question.text}
-                            </Typography>
-                            {question.metadata?.helpText && (
-                              <Typography variant="body2" color="text.secondary">
-                                {question.metadata.helpText}
+                  <AccordionSummary 
+                    expandIcon={<ExpandMoreIcon />}
+                    sx={{
+                      ...(formDisabled && {
+                        bgcolor: '#e9ecef',
+                        '&:hover': {
+                          bgcolor: '#dee2e6'
+                        }
+                      })
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                      <Typography variant="h6" sx={{ fontWeight: formDisabled ? 600 : 500 }}>
+                        {category}
+                      </Typography>
+                      <Chip 
+                        label={`${questions.filter(questionHasAnswer).length}/${questions.length}`} 
+                        size="small" 
+                        color={questions.every(questionHasAnswer) ? "success" : "default"}
+                      />
+                    </Box>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    {questions.map((question, idx) => {
+                      const hasAnswer = questionHasAnswer(question);
+                      return (
+                        <Card 
+                          key={question.id} 
+                          sx={{ 
+                            mb: 2, 
+                            bgcolor: formDisabled 
+                              ? (hasAnswer ? '#e8f5e9' : '#f5f5f5')
+                              : (hasAnswer ? '#f0f9ff' : 'white'),
+                            border: formDisabled ? '2px solid' : '1px solid',
+                            borderColor: formDisabled 
+                              ? (hasAnswer ? 'success.light' : 'grey.300')
+                              : (hasAnswer ? 'primary.light' : 'grey.300'),
+                            position: 'relative',
+                            ...(formDisabled && {
+                              '&::before': hasAnswer ? {
+                                content: '""',
+                                position: 'absolute',
+                                top: 10,
+                                right: 10,
+                                width: 24,
+                                height: 24,
+                                borderRadius: '50%',
+                                bgcolor: 'success.main',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              } : {}
+                            })
+                          }}
+                        >
+                          <CardContent>
+                            <Box sx={{ mb: 2 }}>
+                              <Typography 
+                                variant="body1" 
+                                sx={{ 
+                                  fontWeight: 500,
+                                  color: 'text.primary'
+                                }}
+                              >
+                                {(questionNumberMap[String(question.id)] ?? idx + 1)}. {question.text}
                               </Typography>
+                              {question.metadata?.helpText && (
+                                <Typography variant="body2" color="text.secondary">
+                                  {question.metadata.helpText}
+                                </Typography>
+                              )}
+                            </Box>
+                            {formDisabled && hasAnswer && (
+                              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+                                <CheckCircleIcon color="success" fontSize="small" />
+                                <Typography variant="body2" color="success.dark">
+                                  Respondida
+                                </Typography>
+                              </Stack>
                             )}
-                          </Box>
-                          {formDisabled && hasAnswer && (
-                            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                              <CheckCircleIcon color="success" fontSize="small" />
-                              <Typography variant="body2" color="success.dark">
-                                Respondida
-                              </Typography>
-                            </Stack>
-                          )}
-                          {renderQuestionInput(question, formDisabled)}
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </AccordionDetails>
-              </Accordion>
-            ))}
+                            {renderQuestionInput(question, formDisabled)}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </AccordionDetails>
+                </Accordion>
+              ))}
+            </Box>
+          </>
+        )}
+
+        {selectedSurvey && totalItemsInSection > 0 && totalPages > 1 && (
+          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Página {currentPageIndex + 1} de {totalPages}
+            </Typography>
+            <Stack direction="row" spacing={2}>
+              <Button
+                variant="outlined"
+                onClick={() => setSectionPageIndex(prev => Math.max(0, prev - 1))}
+                disabled={currentPageIndex === 0}
+              >
+                Página anterior
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => setSectionPageIndex(prev => Math.min(totalPages - 1, prev + 1))}
+                disabled={currentPageIndex >= totalPages - 1}
+              >
+                Página siguiente
+              </Button>
+            </Stack>
           </Box>
+        )}
+
+        {selectedSurvey && totalItemsInSection === 0 && (
+          <Alert severity="info" sx={{ mt: 3 }}>
+            No hay preguntas disponibles para esta sección.
+          </Alert>
         )}
 
         {/* Botones de Guardado por Sección */}

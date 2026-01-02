@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from "react";
-import { Box, CssBaseline, Drawer, Toolbar, AppBar, Typography, List, ListItem, ListItemIcon, ListItemText, ThemeProvider, IconButton, Button, Avatar, Stack, ListSubheader, Collapse, ListItemButton } from "@mui/material";
+import { Box, CssBaseline, Drawer, Toolbar, AppBar, Typography, List, ListItemIcon, ListItemText, ThemeProvider, IconButton, Button, Avatar, Stack, ListSubheader, Collapse, ListItemButton } from "@mui/material";
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import theme from "./theme";
@@ -212,8 +212,7 @@ export default function App() {
                         {group.items.map(option => {
                           const idx = flatMenuOptions.indexOf(option);
                           return (
-                            <ListItem
-                              button
+                            <ListItemButton
                               key={option.text}
                               selected={activeSection === 'nom035' && selected === idx}
                               onClick={() => {
@@ -224,7 +223,7 @@ export default function App() {
                             >
                               <ListItemIcon>{option.icon}</ListItemIcon>
                               <ListItemText primary={option.text} />
-                            </ListItem>
+                            </ListItemButton>
                           );
                         })}
                       </React.Fragment>
