@@ -61,11 +61,54 @@ export default function EmployeeSurveyAnswer() {
   useEffect(() => {
     const loadData = async () => {
       try {
+        // Primero obtener las encuestas asignadas al empleado actual
+        const appsRes = await getSurveyApplications();
+        const apps = appsRes.data || [];
+        console.log('Survey applications for employee:', apps);
+        
+        // Obtener los surveyIds directamente de las applications
+        const assignedSurveyIds = new Set();
+        const csIdToSurveyId = {};
+        
+        apps.forEach(app => {
+          // Intentar obtener surveyId directamente de la application
+          let surveyId = app.surveyId ?? app.survey_id ?? null;
+          
+          // Si no está directamente, intentar desde el survey anidado
+          if (!surveyId && app.survey) {
+            surveyId = app.survey.id ?? app.survey.surveyId;
+          }
+          
+          // Si no está directamente, intentar desde companySurvey anidado
+          if (!surveyId && app.companySurvey) {
+            surveyId = app.companySurvey.surveyId ?? app.companySurvey.survey_id ?? app.companySurvey.survey?.id;
+          }
+          
+          // Si encontramos el surveyId, agregarlo al set
+          if (surveyId) {
+            const sid = parseInt(surveyId);
+            if (!isNaN(sid)) {
+              assignedSurveyIds.add(sid);
+              // También guardar el mapeo para uso posterior
+              const csId = app.companySurveyId ?? app.company_survey_id ?? app.companySurvey ?? app.company_survey;
+              if (csId) {
+                csIdToSurveyId[parseInt(csId)] = sid;
+              }
+            }
+          }
+        });
+
+        console.log('Assigned survey IDs:', Array.from(assignedSurveyIds));
+
+        // Obtener todas las encuestas y filtrar solo las asignadas
         const surveysRes = await getSurveys();
         const surveysData = surveysRes.data || [];
+        console.log('All surveys:', surveysData.map(s => ({ id: s.id, title: s.title })));
+        const filteredSurveys = surveysData.filter(s => assignedSurveyIds.has(parseInt(s.id)));
+        console.log('Filtered surveys:', filteredSurveys.map(s => ({ id: s.id, title: s.title })));
 
         const surveysWithQuestions = await Promise.all(
-          surveysData.map(async (s) => {
+          filteredSurveys.map(async (s) => {
             try {
               const qRes = await getSurveyWithQuestions(s.id);
               const qs = Array.isArray(qRes.data) ? qRes.data : (qRes.data?.questions || []);
@@ -83,30 +126,11 @@ export default function EmployeeSurveyAnswer() {
           })
         );
 
-        console.log('Surveys loaded with questions:', surveysWithQuestions);
+        console.log('Surveys assigned to employee:', surveysWithQuestions);
         setSurveys(surveysWithQuestions);
 
-        // Compute completed surveys for current employee
+        // Compute completed surveys for current employee (usar las variables ya obtenidas)
         try {
-          const appsRes = await getSurveyApplications();
-          const apps = appsRes.data || [];
-          const csIds = apps.map(a => a.companySurveyId ?? a.company_survey_id ?? a.companySurvey ?? a.company_survey)
-                            .filter(Boolean)
-                            .map(id => parseInt(id));
-          const uniqueCsIds = [...new Set(csIds)];
-          const csIdToSurveyId = {};
-          if (uniqueCsIds.length > 0) {
-            await Promise.all(uniqueCsIds.map(async (csId) => {
-              try {
-                const csRes = await getCompanySurveyById(csId);
-                const cs = csRes.data || csRes;
-                csIdToSurveyId[csId] = cs.surveyId ?? cs.survey_id ?? (cs.survey?.id);
-              } catch (err) {
-                console.warn('Could not fetch companySurvey for id', csId, err?.message || err);
-              }
-            }));
-          }
-
           const completedMap = {};
           const toLower = (s) => (s || '').toString().toLowerCase();
           apps.forEach(a => {
