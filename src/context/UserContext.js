@@ -43,8 +43,9 @@ export const UserProvider = ({ children }) => {
 	// Nuevo login: valida contra backend usando Basic Auth
 	const login = async (username, password) => {
 		const basicAuth = btoa(`${username}:${password}`);
+		const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 		try {
-			const res = await axios.get("http://localhost:8080/api/users/me", {
+			const res = await axios.get(`${API_URL}/api/users/me`, {
 				headers: { Authorization: `Basic ${basicAuth}` }
 			});
 			const normalized = normalizeUser(res.data);
