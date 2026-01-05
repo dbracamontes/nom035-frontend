@@ -1421,7 +1421,7 @@ export default function SurveyResults() {
       </Paper>
 
       {/* Branding & PDF Panel */}
-  { (isAdmin || isCompanyRole) && (
+  { false && (isAdmin || isCompanyRole) && (
     <Paper sx={{ p: 2, mb: 3, borderRadius: 3 }}>
       <Stack spacing={2} direction={{ xs: 'column', md: 'row' }} flexWrap="wrap">
         <TextField label="Título" value={brandTitle} onChange={e=>setBrandTitle(e.target.value)} size="small" sx={{ minWidth: 180 }} />
