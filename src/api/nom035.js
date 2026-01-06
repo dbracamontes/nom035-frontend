@@ -372,3 +372,9 @@ export const downloadApplicationPonderacionesPdfBranded = (applicationId, brand 
   console.log('API: Downloading branded application ponderaciones PDF:', url);
   return axios.get(url, { responseType: 'blob' });
 };
+
+// NEW: Médica Leben individual JSON report
+export const getMedicaLebenApplicationReport = (applicationId) => {
+  console.log('API: Getting Medica Leben application report:', applicationId);
+  return axios.get(`${API_BASE}/reports/medica-leben/application/${applicationId}`);
+};

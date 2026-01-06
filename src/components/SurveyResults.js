@@ -33,6 +33,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { UserContext } from '../context/UserContext';
 import { getLogger } from '../utils/logger';
+import { useNavigate } from 'react-router-dom';
 
 // Definición de módulos NOM-035 para análisis (colores azul y morado)
 const NOM035_MODULES = {
@@ -354,6 +355,19 @@ export default function SurveyResults() {
     } catch (e) {
       console.error('Error downloading application PDF:', e);
     }
+  };
+
+  const navigate = useNavigate();
+
+  const handleViewMedicaLebenReport = (applicationId, surveyTitle) => {
+    if (!applicationId) return;
+    const title = (surveyTitle || '').toLowerCase();
+    const isMedicaLeben = title.includes('medica leben') || title.includes('médica leben');
+    if (!isMedicaLeben) {
+      alert('Solo aplica para encuestas Médica Leben');
+      return;
+    }
+    navigate(`/medica-leben-report/${applicationId}`);
   };
 
   useEffect(() => {
@@ -1364,6 +1378,7 @@ export default function SurveyResults() {
                       <TableCell><strong>Fecha</strong></TableCell>
                       <TableCell><strong>Nivel de riesgo</strong></TableCell>
                       <TableCell align="center"><strong>Ponderación PDF</strong></TableCell>
+                      <TableCell align="center"><strong>Reporte individual</strong></TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1401,11 +1416,23 @@ export default function SurveyResults() {
                                 Descargar
                               </Button>
                             </TableCell>
+                            <TableCell align="center">
+                              {String(survey.title || r.surveyTitle || '').toLowerCase().includes('encuesta médica leben') && (
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  onClick={() => handleViewMedicaLebenReport(app.id, survey.title || r.surveyTitle || '')}
+                                  disabled={!app || !app.id}
+                                >
+                                  Ver reporte
+                                </Button>
+                              )}
+                            </TableCell>
                           </TableRow>
                         );
                       }) : (
                         <TableRow>
-                          <TableCell colSpan={5} align="center">
+                          <TableCell colSpan={6} align="center">
                             <Typography color="text.secondary">No hay respuestas para los filtros seleccionados.</Typography>
                           </TableCell>
                         </TableRow>

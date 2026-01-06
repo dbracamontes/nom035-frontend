@@ -7,9 +7,11 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
+import { useNavigate } from 'react-router-dom';
 
 export default function SurveyResponsesTable() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [rows, setRows] = useState([]);
   const [surveys, setSurveys] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -98,7 +100,9 @@ export default function SurveyResponsesTable() {
 
       return {
         id: appId,
+        surveyId,
         survey: findSurveyTitle(surveyId),
+        employeeId,
         employee: findEmployeeName(employeeId),
         riskLevel: app?.riskLevel || '',
         date: app?.completedAt || app?.startedAt || '',
@@ -127,6 +131,41 @@ export default function SurveyResponsesTable() {
     });
     doc.save("survey_responses.pdf");
   };
+
+  const handleViewMedicaLebenReport = (applicationId, surveyTitle) => {
+    if (!applicationId) return;
+    const title = (surveyTitle || '').toLowerCase();
+    const isMedicaLeben = title.includes('medica leben') || title.includes('médica leben');
+    if (!isMedicaLeben) {
+      alert('Solo aplica para encuestas Médica Leben');
+      return;
+    }
+    navigate(`/medica-leben-report/${applicationId}`);
+  };
+
+  const columns = [
+    { field: "survey", headerName: t('responses.survey'), width: 200 },
+    { field: "employee", headerName: t('responses.employee'), width: 200 },
+    { field: "riskLevel", headerName: t('responses.riskLevel'), width: 140 },
+    { field: "date", headerName: t('responses.date'), width: 200 },
+    { field: "answers", headerName: t('responses.answers'), width: 500 },
+    {
+      field: 'actions',
+      headerName: 'Reporte Médica Leben',
+      width: 220,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => (
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={() => handleViewMedicaLebenReport(params.row.id, params.row.survey)}
+        >
+          Ver reporte individual
+        </Button>
+      )
+    }
+  ];
 
   return (
     <div style={{ height: 500, width: "100%" }}>
@@ -163,13 +202,7 @@ export default function SurveyResponsesTable() {
       </Box>
       <DataGrid
         rows={rows}
-        columns={[
-          { field: "survey", headerName: t('responses.survey'), width: 200 },
-          { field: "employee", headerName: t('responses.employee'), width: 200 },
-          { field: "riskLevel", headerName: t('responses.riskLevel'), width: 140 },
-          { field: "date", headerName: t('responses.date'), width: 200 },
-          { field: "answers", headerName: t('responses.answers'), width: 500 }
-        ]}
+        columns={columns}
         pageSize={10}
         rowsPerPageOptions={[10, 20, 50]}
         autoHeight

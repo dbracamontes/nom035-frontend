@@ -28,6 +28,7 @@ import UserRoleManagement from "./components/UserRoleManagement";
 import LanguageSelector from "./components/LanguageSelector";
 import LoginPage from "./components/LoginPage";
 import MedicaLebenCompaniesPage from "./components/MedicaLebenCompaniesPage";
+import MedicaLebenReportPage from './components/MedicaLebenReportPage';
 import { useTranslation } from 'react-i18next';
 import { UserContext } from "./context/UserContext";
 import { Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
@@ -271,6 +272,7 @@ export default function App() {
             </Box>
           </Box>
         } />
+        <Route path="/medica-leben-report/:applicationId" element={<MedicaLebenReportPage />} />
       </Routes>
     </ThemeProvider>
   );
