@@ -76,7 +76,7 @@ export default function MedicaLebenReportPage() {
             <Typography variant="subtitle2" gutterBottom>Puntaje global</Typography>
             <Typography variant="h4">{data.globalScore} / {data.globalMaxPossible}</Typography>
             <Typography variant="body2" color="text.secondary">
-              Mínimo posible: {data.globalMinPossible}
+              Mínimo posible: {data.globalMinPossible} · Máximo posible: {data.globalMaxPossible}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Promedio global: {data.globalAverage?.toFixed?.(2) ?? data.globalAverage}
@@ -90,7 +90,7 @@ export default function MedicaLebenReportPage() {
               />
             )}
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Respuestas totales: {data.totalResponses}
+              Respuestas: {data.totalResponses}{data.totalQuestions != null && <> / {data.totalQuestions}</>}
             </Typography>
           </Paper>
         </Grid>
@@ -143,10 +143,10 @@ export default function MedicaLebenReportPage() {
                         secondary={
                           <>
                             <Typography variant="body2" color="text.secondary">
-                              Puntaje: {c.score} / {c.maxPossible} (mín {c.minPossible})
+                              Puntaje: {c.score} / {c.maxPossible} (mín {c.minPossible} · máx {c.maxPossible})
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                              Promedio: {c.average?.toFixed?.(2) ?? c.average} · Respuestas: {c.count}
+                              Promedio: {c.average?.toFixed?.(2) ?? c.average} · Respuestas: {c.count} / {c.totalQuestionsInCategory ?? 'N/A'}
                             </Typography>
                           </>
                         }
