@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, useDeferredValue } from "react";
 import { getSurveys, submitSurveyResponse, getSurveyById, getSurveyWithQuestions, createSurveyApplication, getSurveyApplications, getSurveyResponsesByApplication, completeSurveyApplication } from "../api/nom035";
+import debounce from 'lodash.debounce';
 import { 
   Box, Button, Paper, MenuItem, Typography, 
   Card, CardContent, LinearProgress,
@@ -79,6 +80,7 @@ export default function EmployeeSurveyAnswer() {
   const [sectionPageIndex, setSectionPageIndex] = useState(0);
   const initialDataLoadedRef = useRef(false);
   const responsesCacheRef = useRef(new Map());
+  const [autoSaving, setAutoSaving] = useState(false);
   const deferredAnswers = useDeferredValue(answers);
 
   const refreshSurveyApplications = useCallback(async () => {
@@ -415,17 +417,96 @@ export default function EmployeeSurveyAnswer() {
     setSectionPageIndex(0);
   };
 
+  // Función de guardado automático con debounce
+  const autoSaveAnswers = useCallback(async () => {
+    if (!selectedSurvey || formDisabled) return;
+    
+    try {
+      setAutoSaving(true);
+      
+      // Ensure we have a survey application id
+      let appId = existingApplication?.id ?? existingApplication?.applicationId ?? existingApplication?.surveyApplicationId;
+      if (!appId) {
+        const appRes = await createSurveyApplication({
+          surveyId: selectedSurvey.id,
+          status: 'en_progreso'
+        });
+        const createdApp = appRes.data || {};
+        appId = createdApp.id ?? createdApp.applicationId ?? createdApp.surveyApplicationId ?? appRes.data?.id;
+        if (appId) {
+          setExistingApplication({ ...(createdApp || {}), id: appId, status: createdApp.status ?? 'en_progreso' });
+          setSurveyApplications(prev => {
+            const exists = prev.some(app => (app.id ?? app.applicationId ?? app.surveyApplicationId) === appId);
+            return exists ? prev : [...prev, { ...createdApp, id: appId }];
+          });
+        }
+      }
+
+      if (!appId) {
+        console.warn('No se pudo crear la aplicación de encuesta para auto-guardado');
+        return;
+      }
+
+      // Guardar solo las respuestas que existen actualmente
+      const allQs = selectedSurvey.questions || [];
+      const responsesPayload = allQs
+        .map(q => buildResponsePayload(q, getAnswer(q.id), appId))
+        .filter(Boolean);
+
+      if (responsesPayload.length > 0) {
+        await submitSurveyResponse(responsesPayload);
+        console.log('✅ Auto-guardado exitoso:', responsesPayload.length, 'respuestas');
+      }
+    } catch (err) {
+      console.error('Error en auto-guardado:', err);
+    } finally {
+      setAutoSaving(false);
+    }
+  }, [selectedSurvey, formDisabled, existingApplication, getAnswer]);
+
+  // Debounced version - se ejecuta 2 segundos después del último cambio
+  const debouncedAutoSave = useMemo(
+    () => debounce(autoSaveAnswers, 2000),
+    [autoSaveAnswers]
+  );
+
   const handleAnswerChange = (questionId, value) => {
     setAnswers(prev => {
       const newAnswers = { ...prev, [String(questionId)]: value };
-      // Si la pregunta 31 cambia a 'No', elimina respuestas de 32-35
-      if (String(questionId) === '31' && (value === 'No' || value?.label === 'No')) {
-        for (let qnum = 32; qnum <= 35; qnum++) {
-          delete newAnswers[String(qnum)];
-        }
+      
+      // Limpiar respuestas de preguntas que se ocultan al responder "No"
+      // Pregunta 31 (ID 104): Si cambia a 'No', elimina respuestas de IDs 105-108
+      if (Number(questionId) === 104 && (value === 'No' || value?.label === 'No')) {
+        [105, 106, 107, 108].forEach(id => delete newAnswers[String(id)]);
       }
+      
+      // Pregunta 37 (ID 110): Si cambia a 'No', elimina respuestas de IDs 111-114
+      if (Number(questionId) === 110 && (value === 'No' || value?.label === 'No')) {
+        [111, 112, 113, 114].forEach(id => delete newAnswers[String(id)]);
+      }
+      
+      // Pregunta 42 (ID 115): Si cambia a 'No', elimina respuestas de IDs 116-117
+      if (Number(questionId) === 115 && (value === 'No' || value?.label === 'No')) {
+        [116, 117].forEach(id => delete newAnswers[String(id)]);
+      }
+      
+      // Pregunta 45 (ID 118): Si cambia a 'No', elimina respuestas de IDs 119-122
+      if (Number(questionId) === 118 && (value === 'No' || value?.label === 'No')) {
+        [119, 120, 121, 122].forEach(id => delete newAnswers[String(id)]);
+      }
+      
+      // Pregunta 58 (ID 131): Si cambia a 'No', elimina respuestas de IDs 132-138
+      if (Number(questionId) === 131 && (value === 'No' || value?.label === 'No')) {
+        [132, 133, 134, 135, 136, 137, 138].forEach(id => delete newAnswers[String(id)]);
+      }
+      
       return newAnswers;
     });
+    
+    // Activar auto-guardado después de cada cambio
+    if (!formDisabled) {
+      debouncedAutoSave();
+    }
   };
 
   const renderLikertControl = (question, answerValue, disabled) => {
@@ -658,9 +739,14 @@ export default function EmployeeSurveyAnswer() {
         </FormControl>
         {showOtherField && (
           <TextField
-            label="Especifica"
+            label="Especifica (opcional)"
             fullWidth
-            sx={{ mt: 2 }}
+            sx={{ 
+              mt: 2,
+              '& .MuiInputBase-root': {
+                backgroundColor: (answerValue?.otherText && answerValue.otherText.trim()) ? '#e3f2fd' : 'white'
+              }
+            }}
             value={answerValue?.otherText || ''}
             onChange={(e) => handleAnswerChange(question.id, {
               ...(answerValue || {}),
@@ -748,9 +834,14 @@ export default function EmployeeSurveyAnswer() {
         </FormGroup>
         {requiresOther && (
           <TextField
-            label="Especifica"
+            label="Especifica (opcional)"
             fullWidth
-            sx={{ mt: 2 }}
+            sx={{ 
+              mt: 2,
+              '& .MuiInputBase-root': {
+                backgroundColor: (answerValue?.otherText && answerValue.otherText.trim()) ? '#e3f2fd' : 'white'
+              }
+            }}
             value={answerValue?.otherText || ''}
             onChange={(e) => handleAnswerChange(question.id, {
               optionIds: selectedIds,
@@ -769,6 +860,10 @@ export default function EmployeeSurveyAnswer() {
     const multiline = kind === 'text' ? Boolean(question.metadata?.multiline ?? (question.text?.length > 120)) : false;
     const minRows = question.metadata?.rows ?? (multiline ? 3 : 1);
     const value = typeof answerValue === 'string' ? answerValue : '';
+    
+    // Solo las preguntas 159, 163, 168 son opcionales
+    const isOptional = [159, 163, 168].includes(question.id);
+    const hasValue = value && value.trim().length > 0;
 
     // Para la pregunta de Fecha de Nacimiento (id 75), mostrar solo el input nativo sin label ni placeholder
     if (kind === 'date' && question.id === 75) {
@@ -785,7 +880,8 @@ export default function EmployeeSurveyAnswer() {
               fontSize: '16px',
               borderRadius: '4px',
               border: '1px solid #ccc',
-              boxSizing: 'border-box'
+              boxSizing: 'border-box',
+              backgroundColor: (isOptional && hasValue) ? '#e3f2fd' : 'white'
             }}
           />
         </Box>
@@ -794,7 +890,7 @@ export default function EmployeeSurveyAnswer() {
     // ...existing code...
     let label = question.metadata?.placeholder;
     if (!label) {
-      label = 'Respuesta';
+      label = isOptional ? 'Respuesta (opcional)' : 'Respuesta';
     }
     return (
       <TextField
@@ -806,6 +902,11 @@ export default function EmployeeSurveyAnswer() {
         onChange={(e) => handleAnswerChange(question.id, e.target.value)}
         disabled={disabled}
         label={label}
+        sx={{
+          '& .MuiInputBase-root': {
+            backgroundColor: (isOptional && hasValue) ? '#e3f2fd' : 'white'
+          }
+        }}
       />
     );
   };
@@ -897,6 +998,80 @@ export default function EmployeeSurveyAnswer() {
   };
 
   // Save only the current section's answers and unlock the next section
+  // Función helper para obtener IDs de preguntas que deben estar ocultas o son opcionales
+  const getOptionalQuestionIds = useCallback(() => {
+    const optionalIds = [];
+
+    // Helper para verificar si una respuesta es "No"
+    const isNoAnswer = (answer) => {
+      if (!answer) return true; // No respondió = considera como "No"
+      if (typeof answer === 'string') return answer.toLowerCase() === 'no';
+      if (answer.label) return answer.label.toLowerCase() === 'no';
+      if (answer.optionId) {
+        // Si tiene optionId, buscar la opción y ver su texto
+        const question = allQuestions.find(q => q.id === answer.questionId);
+        if (question && question.options) {
+          const option = question.options.find(o => String(o.id) === String(answer.optionId));
+          if (option && option.text) return option.text.toLowerCase() === 'no';
+        }
+      }
+      return false;
+    };
+
+    // Pregunta 31 (ID 104): Si responde "No" → oculta 32-35 (IDs 105-108)
+    const pregunta31 = allQuestions.find(q => q.id === 104);
+    const respuesta31 = pregunta31 ? getAnswer(pregunta31.id) : null;
+    if (isNoAnswer(respuesta31)) {
+      optionalIds.push(105, 106, 107, 108);
+    }
+
+    // Pregunta 37 (ID 110): Si responde "No" → oculta 38-41 (IDs 111-114)
+    const pregunta37 = allQuestions.find(q => q.id === 110);
+    const respuesta37 = pregunta37 ? getAnswer(pregunta37.id) : null;
+    if (isNoAnswer(respuesta37)) {
+      optionalIds.push(111, 112, 113, 114);
+    }
+
+    // Pregunta 42 (ID 115): Si responde "No" → oculta 43-44 (IDs 116-117)
+    const pregunta42 = allQuestions.find(q => q.id === 115);
+    const respuesta42 = pregunta42 ? getAnswer(pregunta42.id) : null;
+    if (isNoAnswer(respuesta42)) {
+      optionalIds.push(116, 117);
+    }
+
+    // Pregunta 45 (ID 118): Si responde "No" → oculta 46-49 (IDs 119-122)
+    const pregunta45 = allQuestions.find(q => q.id === 118);
+    const respuesta45 = pregunta45 ? getAnswer(pregunta45.id) : null;
+    if (isNoAnswer(respuesta45)) {
+      optionalIds.push(119, 120, 121, 122);
+    }
+
+    // Pregunta 58 (ID 131): Si responde "No" → oculta 59-65 (IDs 132-138)
+    const pregunta58 = allQuestions.find(q => q.id === 131);
+    const respuesta58 = pregunta58 ? getAnswer(pregunta58.id) : null;
+    if (isNoAnswer(respuesta58)) {
+      optionalIds.push(132, 133, 134, 135, 136, 137, 138);
+    }
+
+    // Solo estas 3 preguntas de tipo texto son opcionales:
+    // ID 159 (Pregunta 86): Especificar cantidad de cigarros - OPCIONAL
+    // ID 163 (Pregunta 90): Especificar consumo de alcohol - OPCIONAL
+    // ID 168 (Pregunta 95): Especificar otra enfermedad - OPCIONAL
+    const textQuestionIds = [159, 163, 168];
+    optionalIds.push(...textQuestionIds);
+
+    console.log('🔍 DEBUG getOptionalQuestionIds:', {
+      respuesta31, isNo31: isNoAnswer(respuesta31),
+      respuesta37, isNo37: isNoAnswer(respuesta37),
+      respuesta42, isNo42: isNoAnswer(respuesta42),
+      respuesta45, isNo45: isNoAnswer(respuesta45),
+      respuesta58, isNo58: isNoAnswer(respuesta58),
+      optionalIds
+    });
+
+    return optionalIds;
+  }, [allQuestions, getAnswer]);
+
   const saveCurrentSection = async () => {
     if (!selectedSurvey) return;
     if (!surveyTitleFilter) return;
@@ -905,15 +1080,31 @@ export default function EmployeeSurveyAnswer() {
     if (currentIndex === -1) return;
 
     const sectionQs = questionsInSection(surveyTitleFilter);
-    // Si la respuesta a la 31 es 'No', no exigir 32-35
-    let unanswered = sectionQs.filter(q => !questionHasAnswerImmediate(q));
-    const pregunta31 = allQuestions.find(q => q.number === 31 || q.id === 31);
-    const respuesta31 = pregunta31 ? getAnswer(pregunta31.id) : null;
-    if (pregunta31 && respuesta31 && (respuesta31 === 'No' || respuesta31?.label === 'No')) {
-      unanswered = unanswered.filter(q => !(q.number >= 32 && q.number <= 35));
-    }
+    
+    // Obtener IDs de preguntas ocultas u opcionales (texto libre)
+    const optionalIds = getOptionalQuestionIds();
+    
+    console.log('🔍 DEBUG saveCurrentSection:', {
+      totalQuestions: sectionQs.length,
+      optionalIds,
+      sectionTitle: surveyTitleFilter
+    });
+    
+    // Filtrar preguntas sin responder, excluyendo las opcionales
+    let unanswered = sectionQs.filter(q => {
+      // Si la pregunta es opcional (oculta o texto libre), no bloquea el guardado
+      if (optionalIds.includes(Number(q.id))) return false;
+      const hasAnswer = questionHasAnswerImmediate(q);
+      if (!hasAnswer) {
+        console.log('❌ Pregunta sin responder:', q.id, q.text?.substring(0, 50));
+      }
+      return !hasAnswer;
+    });
+    
+    console.log('📊 Preguntas sin responder (obligatorias):', unanswered.length);
+    
     if (unanswered.length > 0) {
-      alert(`Por favor responde todas las preguntas de la sección antes de guardar. Faltan ${unanswered.length}.`);
+      alert(`Por favor responde todas las preguntas obligatorias de la sección antes de guardar. Faltan ${unanswered.length}.`);
       return;
     }
 
@@ -980,15 +1171,19 @@ export default function EmployeeSurveyAnswer() {
     }
 
     const allQs = selectedSurvey.questions || [];
-    // Si la respuesta a la 31 es 'No', no exigir 32-35
-    let unanswered = allQs.filter(q => !questionHasAnswerImmediate(q));
-    const pregunta31 = allQs.find(q => q.number === 31 || q.id === 31);
-    const respuesta31 = pregunta31 ? getAnswer(pregunta31.id) : null;
-    if (pregunta31 && respuesta31 && (respuesta31 === 'No' || respuesta31?.label === 'No')) {
-      unanswered = unanswered.filter(q => !(q.number >= 32 && q.number <= 35));
-    }
+    
+    // Obtener IDs de preguntas ocultas u opcionales (texto libre)
+    const optionalIds = getOptionalQuestionIds();
+    
+    // Filtrar preguntas sin responder, excluyendo las opcionales
+    let unanswered = allQs.filter(q => {
+      // Si la pregunta es opcional (oculta o texto libre), no bloquea el envío
+      if (optionalIds.includes(Number(q.id))) return false;
+      return !questionHasAnswerImmediate(q);
+    });
+    
     if (unanswered.length > 0) {
-      alert(`Por favor responde todas las preguntas. Faltan ${unanswered.length} respuestas.`);
+      alert(`Por favor responde todas las preguntas obligatorias. Faltan ${unanswered.length} respuestas.`);
       return;
     }
 
@@ -1196,6 +1391,14 @@ export default function EmployeeSurveyAnswer() {
         <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <AssignmentIcon color="primary" />
           {formDisabled ? 'Encuesta Completada' : 'Responder Encuesta'}
+          {autoSaving && (
+            <Chip 
+              label="Guardando..." 
+              size="small" 
+              color="info" 
+              sx={{ ml: 2 }}
+            />
+          )}
         </Typography>
 
         {/* Dropdown de Selección de Encuesta */}
