@@ -374,9 +374,82 @@ export default function EmployeeSurveyAnswer() {
     (question) => questionAnswered(question, getAnswer(question.id)),
     [getAnswer]
   );
+
+  // Función helper para obtener IDs de preguntas que deben estar ocultas o son opcionales
+  const getOptionalQuestionIds = useCallback(() => {
+    const optionalIds = [];
+
+    // Helper para verificar si una respuesta es "No"
+    const isNoAnswer = (answer) => {
+      if (!answer) return true; // No respondió = considera como "No"
+      if (typeof answer === 'string') return answer.toLowerCase() === 'no';
+      if (answer.label) return answer.label.toLowerCase() === 'no';
+      if (answer.optionId) {
+        // Si tiene optionId, buscar la opción y ver su texto
+        const question = allQuestions.find(q => q.id === answer.questionId);
+        if (question && question.options) {
+          const option = question.options.find(o => String(o.id) === String(answer.optionId));
+          if (option && option.text) return option.text.toLowerCase() === 'no';
+        }
+      }
+      return false;
+    };
+
+    // Pregunta 31 (ID 104): Si responde "No" → oculta 32-35 (IDs 105-108)
+    const pregunta31 = allQuestions.find(q => q.id === 104);
+    const respuesta31 = pregunta31 ? getAnswer(pregunta31.id) : null;
+    if (isNoAnswer(respuesta31)) {
+      optionalIds.push(105, 106, 107, 108);
+    }
+
+    // Pregunta 37 (ID 110): Si responde "No" → oculta 38-41 (IDs 111-114)
+    const pregunta37 = allQuestions.find(q => q.id === 110);
+    const respuesta37 = pregunta37 ? getAnswer(pregunta37.id) : null;
+    if (isNoAnswer(respuesta37)) {
+      optionalIds.push(111, 112, 113, 114);
+    }
+
+    // Pregunta 42 (ID 115): Si responde "No" → oculta 43-44 (IDs 116-117)
+    const pregunta42 = allQuestions.find(q => q.id === 115);
+    const respuesta42 = pregunta42 ? getAnswer(pregunta42.id) : null;
+    if (isNoAnswer(respuesta42)) {
+      optionalIds.push(116, 117);
+    }
+
+    // Pregunta 45 (ID 118): Si responde "No" → oculta 46-49 (IDs 119-122)
+    const pregunta45 = allQuestions.find(q => q.id === 118);
+    const respuesta45 = pregunta45 ? getAnswer(pregunta45.id) : null;
+    if (isNoAnswer(respuesta45)) {
+      optionalIds.push(119, 120, 121, 122);
+    }
+
+    // Pregunta 58 (ID 131): Si responde "No" → oculta 59-65 (IDs 132-138)
+    const pregunta58 = allQuestions.find(q => q.id === 131);
+    const respuesta58 = pregunta58 ? getAnswer(pregunta58.id) : null;
+    if (isNoAnswer(respuesta58)) {
+      optionalIds.push(132, 133, 134, 135, 136, 137, 138);
+    }
+
+    // Solo estas 3 preguntas de tipo texto son opcionales:
+    // ID 159 (Pregunta 86): Especificar cantidad de cigarros - OPCIONAL
+    // ID 163 (Pregunta 90): Especificar consumo de alcohol - OPCIONAL
+    // ID 168 (Pregunta 95): Especificar otra enfermedad - OPCIONAL
+    const textQuestionIds = [159, 163, 168];
+    optionalIds.push(...textQuestionIds);
+
+    return optionalIds;
+  }, [allQuestions, getAnswer]);
+
   const isSectionComplete = useCallback(
-    (title) => questionsInSection(title).every(questionHasAnswer),
-    [questionsInSection, questionHasAnswer]
+    (title) => {
+      const sectionQs = questionsInSection(title);
+      const optionalIds = getOptionalQuestionIds();
+      // Filtrar preguntas opcionales (ocultas por condiciones o texto libre opcional)
+      const requiredQs = sectionQs.filter(q => !optionalIds.includes(Number(q.id)));
+      // La sección está completa si todas las preguntas REQUERIDAS tienen respuesta
+      return requiredQs.length === 0 || requiredQs.every(questionHasAnswer);
+    },
+    [questionsInSection, questionHasAnswer, getOptionalQuestionIds]
   );
 
   // Initialize/refresh gating when survey or answers change
@@ -998,80 +1071,6 @@ export default function EmployeeSurveyAnswer() {
   };
 
   // Save only the current section's answers and unlock the next section
-  // Función helper para obtener IDs de preguntas que deben estar ocultas o son opcionales
-  const getOptionalQuestionIds = useCallback(() => {
-    const optionalIds = [];
-
-    // Helper para verificar si una respuesta es "No"
-    const isNoAnswer = (answer) => {
-      if (!answer) return true; // No respondió = considera como "No"
-      if (typeof answer === 'string') return answer.toLowerCase() === 'no';
-      if (answer.label) return answer.label.toLowerCase() === 'no';
-      if (answer.optionId) {
-        // Si tiene optionId, buscar la opción y ver su texto
-        const question = allQuestions.find(q => q.id === answer.questionId);
-        if (question && question.options) {
-          const option = question.options.find(o => String(o.id) === String(answer.optionId));
-          if (option && option.text) return option.text.toLowerCase() === 'no';
-        }
-      }
-      return false;
-    };
-
-    // Pregunta 31 (ID 104): Si responde "No" → oculta 32-35 (IDs 105-108)
-    const pregunta31 = allQuestions.find(q => q.id === 104);
-    const respuesta31 = pregunta31 ? getAnswer(pregunta31.id) : null;
-    if (isNoAnswer(respuesta31)) {
-      optionalIds.push(105, 106, 107, 108);
-    }
-
-    // Pregunta 37 (ID 110): Si responde "No" → oculta 38-41 (IDs 111-114)
-    const pregunta37 = allQuestions.find(q => q.id === 110);
-    const respuesta37 = pregunta37 ? getAnswer(pregunta37.id) : null;
-    if (isNoAnswer(respuesta37)) {
-      optionalIds.push(111, 112, 113, 114);
-    }
-
-    // Pregunta 42 (ID 115): Si responde "No" → oculta 43-44 (IDs 116-117)
-    const pregunta42 = allQuestions.find(q => q.id === 115);
-    const respuesta42 = pregunta42 ? getAnswer(pregunta42.id) : null;
-    if (isNoAnswer(respuesta42)) {
-      optionalIds.push(116, 117);
-    }
-
-    // Pregunta 45 (ID 118): Si responde "No" → oculta 46-49 (IDs 119-122)
-    const pregunta45 = allQuestions.find(q => q.id === 118);
-    const respuesta45 = pregunta45 ? getAnswer(pregunta45.id) : null;
-    if (isNoAnswer(respuesta45)) {
-      optionalIds.push(119, 120, 121, 122);
-    }
-
-    // Pregunta 58 (ID 131): Si responde "No" → oculta 59-65 (IDs 132-138)
-    const pregunta58 = allQuestions.find(q => q.id === 131);
-    const respuesta58 = pregunta58 ? getAnswer(pregunta58.id) : null;
-    if (isNoAnswer(respuesta58)) {
-      optionalIds.push(132, 133, 134, 135, 136, 137, 138);
-    }
-
-    // Solo estas 3 preguntas de tipo texto son opcionales:
-    // ID 159 (Pregunta 86): Especificar cantidad de cigarros - OPCIONAL
-    // ID 163 (Pregunta 90): Especificar consumo de alcohol - OPCIONAL
-    // ID 168 (Pregunta 95): Especificar otra enfermedad - OPCIONAL
-    const textQuestionIds = [159, 163, 168];
-    optionalIds.push(...textQuestionIds);
-
-    console.log('🔍 DEBUG getOptionalQuestionIds:', {
-      respuesta31, isNo31: isNoAnswer(respuesta31),
-      respuesta37, isNo37: isNoAnswer(respuesta37),
-      respuesta42, isNo42: isNoAnswer(respuesta42),
-      respuesta45, isNo45: isNoAnswer(respuesta45),
-      respuesta58, isNo58: isNoAnswer(respuesta58),
-      optionalIds
-    });
-
-    return optionalIds;
-  }, [allQuestions, getAnswer]);
-
   const saveCurrentSection = async () => {
     if (!selectedSurvey) return;
     if (!surveyTitleFilter) return;
