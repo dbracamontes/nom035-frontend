@@ -225,6 +225,34 @@ export default function MedicaLebenReportPage() {
               <Typography variant="body2" color="text.secondary">Sin notas adicionales.</Typography>
             )}
           </Paper>
+
+          <Paper sx={{ p: 2, mt: 2 }}>
+            <Typography variant="h6" gutterBottom>Preguntas no contestadas</Typography>
+            {Array.isArray(data.unansweredQuestions) && data.unansweredQuestions.length > 0 ? (
+              <>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  Total: {data.unansweredQuestions.length}
+                </Typography>
+                <List dense sx={{ maxHeight: 240, overflow: 'auto' }}>
+                  {data.unansweredQuestions.map((q, idx) => (
+                    <ListItem key={q.id ?? idx} alignItems="flex-start">
+                      <ListItemText
+                        primary={
+                          <Typography variant="subtitle2">
+                            #{q.id}: {q.text}
+                          </Typography>
+                        }
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              </>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                Todas las preguntas se encuentran respondidas según el backend.
+              </Typography>
+            )}
+          </Paper>
         </Grid>
       </Grid>
     </Box>
