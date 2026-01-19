@@ -81,6 +81,12 @@ export default function MedicaLebenReportPage() {
             <Typography variant="body2" color="text.secondary">
               Promedio global: {data.globalAverage?.toFixed?.(2) ?? data.globalAverage}
             </Typography>
+            {/* NUEVO: Factor de ajuste calculado en el backend */}
+            {typeof data.adjustmentFactor === 'number' && (
+              <Typography variant="body2" color="text.secondary">
+                Factor de ajuste: {data.adjustmentFactor.toFixed(3)}
+              </Typography>
+            )}
             {data.globalLevel && (
               <Chip
                 label={data.globalLevel}
