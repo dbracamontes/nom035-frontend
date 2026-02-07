@@ -80,6 +80,10 @@ export const downloadEmployeeDocFile = (employeeId, docId) =>
     responseType: 'blob',
   });
 
+// Document interpretation downloads
+export const downloadDocumentPdf = (jobId) =>
+  axios.get(`${API_BASE}/documents/${jobId}/downloadPdf`, { responseType: 'blob' });
+
 // NEW: logical delete (mark document as INACTIVE)
 export const deactivateEmployeeDoc = (employeeId, docId) =>
   axios.put(`${API_BASE}/employees/${employeeId}/documents/${docId}/deactivate`);
@@ -378,3 +382,23 @@ export const getMedicaLebenApplicationReport = (applicationId) => {
   console.log('API: Getting Medica Leben application report:', applicationId);
   return axios.get(`${API_BASE}/reports/medica-leben/application/${applicationId}`);
 };
+
+// Document AI (Interpretación de documentos)
+export const interpretDocument = (file, documentType) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (documentType) formData.append('documentType', documentType);
+  return axios.post(`${API_BASE}/documents/interpret`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+
+export const getDocumentJobStatus = (jobId) => axios.get(`${API_BASE}/documents/${jobId}/status`, {
+  headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+  params: { _t: Date.now() }
+});
+
+export const getDocumentPreview = (jobId) => axios.get(`${API_BASE}/documents/${jobId}/preview`);
+
+export const downloadDocumentWord = (jobId) =>
+  axios.get(`${API_BASE}/documents/${jobId}/download`, { responseType: 'blob' });

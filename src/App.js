@@ -11,6 +11,7 @@ import TableChartIcon from '@mui/icons-material/TableChart';
 import BusinessIcon from '@mui/icons-material/Business';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import DescriptionIcon from '@mui/icons-material/Description';
 import LandingPage from "./components/LandingPage";
 import EmployeeForm from "./components/EmployeeForm";
 import EmployeeList from "./components/EmployeeList";
@@ -29,6 +30,7 @@ import LanguageSelector from "./components/LanguageSelector";
 import LoginPage from "./components/LoginPage";
 import MedicaLebenCompaniesPage from "./components/MedicaLebenCompaniesPage";
 import MedicaLebenReportPage from './components/MedicaLebenReportPage';
+import DocumentInterpretationPage from "./components/DocumentInterpretationPage";
 import { useTranslation } from 'react-i18next';
 import { UserContext } from "./context/UserContext";
 import { Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
@@ -89,6 +91,13 @@ export default function App() {
       items: [
         { text: t("navigation.resultsDashboard"), icon: <AnalyticsIcon />, component: <SurveyResults />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
         { text: t("navigation.surveyResponses"), icon: <TableChartIcon />, component: <SurveyResponsesTable />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
+      ],
+    },
+    {
+      id: 'docgen',
+      label: t('navigation.section.docgen', 'Generar Documentos'),
+      items: [
+        { text: 'Interpretación de Documento', icon: <DescriptionIcon />, component: <DocumentInterpretationPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
       ],
     },
   ];
