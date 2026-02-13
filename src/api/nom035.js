@@ -402,3 +402,14 @@ export const getDocumentPreview = (jobId) => axios.get(`${API_BASE}/documents/${
 
 export const downloadDocumentWord = (jobId) =>
   axios.get(`${API_BASE}/documents/${jobId}/download`, { responseType: 'blob' });
+
+// Document generation (Crear Documento)
+export const getDocgenTemplates = () => axios.get(`${API_BASE}/docgen/templates`);
+export const getDocgenTemplateFields = (templateType) => axios.get(`${API_BASE}/docgen/templates/${templateType}/fields`);
+export const generateDocgenManual = (templateType, fields) =>
+  axios.post(`${API_BASE}/docgen/generate/manual`, { templateType, fields });
+export const getDocgenPreview = (jobId) => axios.get(`${API_BASE}/docgen/${jobId}/preview`);
+export const downloadDocgenWord = (jobId) =>
+  axios.get(`${API_BASE}/docgen/${jobId}/download/word`, { responseType: 'blob' });
+export const downloadDocgenPdf = (jobId) =>
+  axios.get(`${API_BASE}/docgen/${jobId}/download/pdf`, { responseType: 'blob' });
