@@ -223,7 +223,7 @@ export default function DocumentCreationPage() {
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="md">
         <DialogTitle>
-          {selectedTemplate ? `Genera semiautomático - ${selectedTemplate.name}` : "Genera semiautomático"}
+          {selectedTemplate ? selectedTemplate.name : "Genera semiautomático"}
         </DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
