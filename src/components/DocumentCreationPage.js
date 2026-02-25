@@ -162,7 +162,7 @@ export default function DocumentCreationPage() {
                   />
                 </Stack>
                 <Typography variant="body2" color="text.secondary">
-                  Tipo: {template.type}
+                  Tipo: {template.displayType || template.type}
                 </Typography>
               </CardContent>
               <CardActions sx={{ mt: "auto" }}>
