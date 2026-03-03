@@ -413,3 +413,25 @@ export const downloadDocgenWord = (jobId) =>
   axios.get(`${API_BASE}/docgen/${jobId}/download/word`, { responseType: 'blob' });
 export const downloadDocgenPdf = (jobId) =>
   axios.get(`${API_BASE}/docgen/${jobId}/download/pdf`, { responseType: 'blob' });
+
+// Contract generation (Genera Contrato)
+export const prepareContractFromDocuments = (files, documentType = 'ACTA', templateType = 'DOCUMENTO_04_1') => {
+  const formData = new FormData();
+  (files || []).forEach((file) => {
+    if (file) {
+      formData.append('files', file);
+    }
+  });
+  if (documentType) {
+    formData.append('documentType', documentType);
+  }
+  if (templateType) {
+    formData.append('templateType', templateType);
+  }
+  return axios.post(`${API_BASE}/contracts/prepare`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+
+export const generateContract = (templateType, fields) =>
+  axios.post(`${API_BASE}/contracts/generate`, { templateType, fields });

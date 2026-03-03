@@ -253,6 +253,7 @@ export default function DocumentInterpretationPage() {
           >
             <ToggleButton value="ACTA">Acta Constitutiva</ToggleButton>
             <ToggleButton value="ASAMBLEA">Asamblea</ToggleButton>
+            <ToggleButton value="CONSTANCIA_SITUACION_FISCAL">Constancia Situación Fiscal</ToggleButton>
           </ToggleButtonGroup>
           <Button
             variant="contained"

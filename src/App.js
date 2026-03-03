@@ -32,6 +32,7 @@ import MedicaLebenCompaniesPage from "./components/MedicaLebenCompaniesPage";
 import MedicaLebenReportPage from './components/MedicaLebenReportPage';
 import DocumentInterpretationPage from "./components/DocumentInterpretationPage";
 import DocumentCreationPage from "./components/DocumentCreationPage";
+import ContractGenerationPage from "./components/ContractGenerationPage";
 import { useTranslation } from 'react-i18next';
 import { UserContext } from "./context/UserContext";
 import { Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
@@ -100,6 +101,7 @@ export default function App() {
       items: [
         { text: 'Interpretación de Documento', icon: <DescriptionIcon />, component: <DocumentInterpretationPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
         { text: 'Crear Documento', icon: <DescriptionIcon />, component: <DocumentCreationPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
+        { text: 'Genera Contrato', icon: <DescriptionIcon />, component: <ContractGenerationPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
       ],
     },
   ];
