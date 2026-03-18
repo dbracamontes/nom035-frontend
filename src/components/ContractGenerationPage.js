@@ -1,6 +1,7 @@
 import React from "react";
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Card,
@@ -21,6 +22,7 @@ import {
   downloadDocgenPdf,
   downloadDocgenWord,
   generateContract,
+  getCompanies,
   getDocgenPreview,
   prepareContractFromDocuments,
 } from "../api/nom035";
@@ -28,6 +30,24 @@ import {
 const DEFAULT_TEMPLATE = "DOCUMENTO_04_1";
 
 export default function ContractGenerationPage() {
+  const MONTH_NAMES = React.useMemo(
+    () => [
+      "ENERO",
+      "FEBRERO",
+      "MARZO",
+      "ABRIL",
+      "MAYO",
+      "JUNIO",
+      "JULIO",
+      "AGOSTO",
+      "SEPTIEMBRE",
+      "OCTUBRE",
+      "NOVIEMBRE",
+      "DICIEMBRE",
+    ],
+    []
+  );
+
   const [docFiles, setDocFiles] = React.useState({
     ACTA: null,
     ASAMBLEA: null,
@@ -38,6 +58,7 @@ export default function ContractGenerationPage() {
   const [sourceJobIds, setSourceJobIds] = React.useState([]);
   const [fields, setFields] = React.useState([]);
   const [values, setValues] = React.useState({});
+  const [companies, setCompanies] = React.useState([]);
   const [contractJobId, setContractJobId] = React.useState(null);
   const [preview, setPreview] = React.useState("");
   const [combinedPreview, setCombinedPreview] = React.useState("");
@@ -52,6 +73,208 @@ export default function ContractGenerationPage() {
     ],
     []
   );
+
+  const dateGroups = React.useMemo(
+    () => ({
+      FECHA_CONTRATO: {
+        day: "DIA",
+        month: "MES",
+        year: "AÑO",
+      },
+      FECHA_VIGENCIA_BASE_LEGACY: {
+        day: "VID",
+        month: "VIM",
+        year: "VIA",
+      },
+      FECHA_TERMINO_VIGENCIA_LEGACY: {
+        day: "VTD",
+        month: "VTM",
+        year: "VTA",
+      },
+      FECHA_INICIO_VIGENCIA: {
+        day: "DIA_INICIO_VIGENCIA",
+        month: "MES_INICIO_VIGENCIA",
+        year: "AÑO_INICIO_VIGENCIA",
+      },
+      FECHA_TERMINO_VIGENCIA: {
+        day: "DIA_TERMINO_VIGENCIA",
+        month: "MES_TERMINO_VIGENCIA",
+        year: "AÑO_TERMINO_VIGENCIA",
+      },
+    }),
+    []
+  );
+
+  const getDateGroupByKey = React.useCallback(
+    (fieldKey) => {
+      const key = String(fieldKey || "").toUpperCase();
+      return (
+        Object.values(dateGroups).find(
+          (group) => key === group.day || key === group.month || key === group.year
+        ) || null
+      );
+    },
+    [dateGroups]
+  );
+
+  const getMonthIndex = React.useCallback(
+    (monthValue) => {
+      if (!monthValue) return null;
+      const normalized = String(monthValue).trim().toUpperCase();
+      const fromName = MONTH_NAMES.indexOf(normalized);
+      if (fromName >= 0) return fromName;
+      const numeric = Number.parseInt(normalized, 10);
+      if (!Number.isNaN(numeric) && numeric >= 1 && numeric <= 12) {
+        return numeric - 1;
+      }
+      return null;
+    },
+    [MONTH_NAMES]
+  );
+
+  const parseDateFromParts = React.useCallback(
+    (day, month, year) => {
+      const d = Number.parseInt(day, 10);
+      const y = Number.parseInt(year, 10);
+      const m = getMonthIndex(month);
+      if (Number.isNaN(d) || Number.isNaN(y) || m === null) return null;
+      const candidate = new Date(y, m, d);
+      if (
+        candidate.getFullYear() !== y ||
+        candidate.getMonth() !== m ||
+        candidate.getDate() !== d
+      ) {
+        return null;
+      }
+      return candidate;
+    },
+    [getMonthIndex]
+  );
+
+  const toInputDate = React.useCallback((dateValue) => {
+    if (!dateValue) return "";
+    const y = dateValue.getFullYear();
+    const m = String(dateValue.getMonth() + 1).padStart(2, "0");
+    const d = String(dateValue.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }, []);
+
+  const fromInputDate = React.useCallback((raw) => {
+    if (!raw) return null;
+    const [yearText, monthText, dayText] = raw.split("-");
+    if (!yearText || !monthText || !dayText) return null;
+    const y = Number.parseInt(yearText, 10);
+    const m = Number.parseInt(monthText, 10) - 1;
+    const d = Number.parseInt(dayText, 10);
+    if (Number.isNaN(y) || Number.isNaN(m) || Number.isNaN(d)) return null;
+    const candidate = new Date(y, m, d);
+    if (
+      candidate.getFullYear() !== y ||
+      candidate.getMonth() !== m ||
+      candidate.getDate() !== d
+    ) {
+      return null;
+    }
+    return candidate;
+  }, []);
+
+  const applyDateToGroup = React.useCallback(
+    (group, dateValue) => {
+      if (!group || !dateValue) return;
+      setValues((prev) => ({
+        ...prev,
+        [group.day]: String(dateValue.getDate()),
+        [group.month]: MONTH_NAMES[dateValue.getMonth()],
+        [group.year]: String(dateValue.getFullYear()),
+      }));
+    },
+    [MONTH_NAMES]
+  );
+
+  React.useEffect(() => {
+    const baseGroup = dateGroups.FECHA_VIGENCIA_BASE_LEGACY;
+    const targetGroup = dateGroups.FECHA_TERMINO_VIGENCIA_LEGACY;
+    const baseDate = parseDateFromParts(
+      values[baseGroup.day],
+      values[baseGroup.month],
+      values[baseGroup.year]
+    );
+    if (!baseDate) return;
+    const plus365 = new Date(baseDate);
+    plus365.setDate(plus365.getDate() + 365);
+    const targetDay = String(plus365.getDate());
+    const targetMonth = MONTH_NAMES[plus365.getMonth()];
+    const targetYear = String(plus365.getFullYear());
+
+    setValues((prev) => {
+      if (
+        prev[targetGroup.day] === targetDay &&
+        prev[targetGroup.month] === targetMonth &&
+        prev[targetGroup.year] === targetYear
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [targetGroup.day]: targetDay,
+        [targetGroup.month]: targetMonth,
+        [targetGroup.year]: targetYear,
+      };
+    });
+  }, [
+    values[dateGroups.FECHA_VIGENCIA_BASE_LEGACY.day],
+    values[dateGroups.FECHA_VIGENCIA_BASE_LEGACY.month],
+    values[dateGroups.FECHA_VIGENCIA_BASE_LEGACY.year],
+    MONTH_NAMES,
+    parseDateFromParts,
+    dateGroups,
+  ]);
+
+  React.useEffect(() => {
+    const inicioGroup = dateGroups.FECHA_INICIO_VIGENCIA;
+    const terminoGroup = dateGroups.FECHA_TERMINO_VIGENCIA;
+    const inicioDate = parseDateFromParts(
+      values[inicioGroup.day],
+      values[inicioGroup.month],
+      values[inicioGroup.year]
+    );
+    if (!inicioDate) return;
+
+    const plus365 = new Date(inicioDate);
+    plus365.setDate(plus365.getDate() + 365);
+    const targetDay = String(plus365.getDate());
+    const targetMonth = MONTH_NAMES[plus365.getMonth()];
+    const targetYear = String(plus365.getFullYear());
+
+    setValues((prev) => {
+      if (
+        prev[terminoGroup.day] === targetDay &&
+        prev[terminoGroup.month] === targetMonth &&
+        prev[terminoGroup.year] === targetYear
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [terminoGroup.day]: targetDay,
+        [terminoGroup.month]: targetMonth,
+        [terminoGroup.year]: targetYear,
+      };
+    });
+  }, [
+    values[dateGroups.FECHA_INICIO_VIGENCIA.day],
+    values[dateGroups.FECHA_INICIO_VIGENCIA.month],
+    values[dateGroups.FECHA_INICIO_VIGENCIA.year],
+    MONTH_NAMES,
+    parseDateFromParts,
+    dateGroups,
+  ]);
+
+  React.useEffect(() => {
+    getCompanies()
+      .then((resp) => setCompanies(resp.data || []))
+      .catch(() => setCompanies([]));
+  }, []);
 
   const withTaggedFilename = (file, tag) => {
     if (!file) return null;
@@ -240,16 +463,89 @@ export default function ContractGenerationPage() {
               <Alert severity="info">Primero prepara el contrato con 3 o más documentos.</Alert>
             ) : (
               <>
-                {fields.map((field) => (
-                  <TextField
-                    key={field.key}
-                    label={field.label || field.key}
-                    value={values[field.key] || ""}
-                    onChange={(e) => setValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                    required={Boolean(field.required)}
-                    fullWidth
-                  />
-                ))}
+                {fields.map((field) => {
+                  const key = String(field.key || "").toUpperCase();
+                  const isCompanySelector = ["EL_CLIENTE", "REPRESENTANTE_DE"].includes(key);
+                  const dateGroup = getDateGroupByKey(key);
+
+                  if (isCompanySelector) {
+                    return (
+                    <Autocomplete
+                      key={field.key}
+                      options={companies.map((company) => company.name).filter(Boolean)}
+                      value={values[field.key] || null}
+                      freeSolo
+                      onChange={(_, selectedValue) => {
+                        setValues((prev) => ({ ...prev, [field.key]: selectedValue || "" }));
+                      }}
+                      onInputChange={(_, inputValue, reason) => {
+                        if (reason === "input") {
+                          setValues((prev) => ({ ...prev, [field.key]: inputValue || "" }));
+                        }
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label={field.label || field.key}
+                          required={Boolean(field.required)}
+                          fullWidth
+                        />
+                      )}
+                    />
+                    );
+                  }
+
+                  if (dateGroup) {
+                    const parsedDate = parseDateFromParts(
+                      values[dateGroup.day],
+                      values[dateGroup.month],
+                      values[dateGroup.year]
+                    );
+
+                    if (key === dateGroup.day) {
+                      return (
+                        <TextField
+                          key={field.key}
+                          label={field.label || field.key}
+                          type="date"
+                          value={toInputDate(parsedDate)}
+                          onChange={(e) => {
+                            const selectedDate = fromInputDate(e.target.value);
+                            if (selectedDate) {
+                              applyDateToGroup(dateGroup, selectedDate);
+                            }
+                          }}
+                          required={Boolean(field.required)}
+                          fullWidth
+                          InputLabelProps={{ shrink: true }}
+                          helperText="Este selector llena DIA, MES y AÑO del grupo automáticamente."
+                        />
+                      );
+                    }
+
+                    return (
+                      <TextField
+                        key={field.key}
+                        label={field.label || field.key}
+                        value={values[field.key] || ""}
+                        required={Boolean(field.required)}
+                        fullWidth
+                        InputProps={{ readOnly: true }}
+                      />
+                    );
+                  }
+
+                  return (
+                    <TextField
+                      key={field.key}
+                      label={field.label || field.key}
+                      value={values[field.key] || ""}
+                      onChange={(e) => setValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                      required={Boolean(field.required)}
+                      fullWidth
+                    />
+                  );
+                })}
                 <Button variant="contained" onClick={handleGenerate} disabled={loading} sx={{ alignSelf: "flex-start" }}>
                   Generar contrato
                 </Button>
