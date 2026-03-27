@@ -53,6 +53,7 @@ export default function ContractGenerationPage() {
     ASAMBLEA: null,
     CONSTANCIA_SITUACION_FISCAL: null,
   });
+  const [templateType, setTemplateType] = React.useState(DEFAULT_TEMPLATE);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState(null);
   const [sourceJobIds, setSourceJobIds] = React.useState([]);
@@ -308,7 +309,7 @@ export default function ContractGenerationPage() {
         withTaggedFilename(docFiles.CONSTANCIA_SITUACION_FISCAL, "constancia_situacion_fiscal"),
       ].filter(Boolean);
 
-      const resp = await prepareContractFromDocuments(orderedFiles, "ACTA", DEFAULT_TEMPLATE);
+      const resp = await prepareContractFromDocuments(orderedFiles, "ACTA", templateType);
       const data = resp.data || {};
       setSourceJobIds(data.sourceJobIds || []);
       const loadedFields = data.fields || [];
@@ -327,7 +328,7 @@ export default function ContractGenerationPage() {
     setLoading(true);
     setError(null);
     try {
-      const resp = await generateContract(DEFAULT_TEMPLATE, values);
+      const resp = await generateContract(templateType, values);
       const createdJobId = resp.data?.jobId;
       setContractJobId(createdJobId);
       const previewResp = await getDocgenPreview(createdJobId);
@@ -393,6 +394,26 @@ export default function ContractGenerationPage() {
       <Card>
         <CardContent>
           <Stack spacing={2}>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+              <Typography variant="body2" color="text.secondary" sx={{ alignSelf: "center" }}>
+                Plantilla:
+              </Typography>
+              <Button
+                variant={templateType === "DOCUMENTO_04" ? "contained" : "outlined"}
+                onClick={() => setTemplateType("DOCUMENTO_04")}
+                disabled={loading}
+              >
+                Persona fisica (4.0)
+              </Button>
+              <Button
+                variant={templateType === "DOCUMENTO_04_1" ? "contained" : "outlined"}
+                onClick={() => setTemplateType("DOCUMENTO_04_1")}
+                disabled={loading}
+              >
+                Persona moral (4.1)
+              </Button>
+            </Stack>
+
             <Typography variant="subtitle1" fontWeight={600}>
               Paso 1: Adjunta los 3 documentos obligatorios
             </Typography>
@@ -456,7 +477,9 @@ export default function ContractGenerationPage() {
         <CardContent>
           <Stack spacing={2}>
             <Typography variant="subtitle1" fontWeight={600}>
-              Paso 2: Ajustar campos y generar contrato 4.1 (MORAL)
+              {templateType === "DOCUMENTO_04"
+                ? "Paso 2: Ajustar campos y generar contrato 4.0 (FISICA)"
+                : "Paso 2: Ajustar campos y generar contrato 4.1 (MORAL)"}
             </Typography>
 
             {fields.length === 0 ? (
