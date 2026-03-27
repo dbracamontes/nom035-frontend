@@ -438,38 +438,51 @@ export default function DocumentInterpretationPage() {
           </Button>
         </Stack>
 
-        <Typography variant="body2" color="text.secondary">
-          Selecciona exactamente los 3 documentos requeridos para interpretar y sugerir campos de contrato.
+        <Typography variant="subtitle1" fontWeight={600}>
+          Paso 1: Adjunta los 3 documentos obligatorios
         </Typography>
 
-        {requiredDocs.map((doc) => {
-          const file = docFiles[doc.key];
-          return (
-            <Stack key={doc.key} direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "flex-start", sm: "center" }}>
-              <Chip label={doc.label} />
-              <Button
-                variant="contained"
-                component="label"
-                startIcon={<CloudUploadIcon />}
-                disabled={loading}
+        <Stack spacing={1.5}>
+          {requiredDocs.map((doc) => {
+            const file = docFiles[doc.key];
+            return (
+              <Stack
+                key={doc.key}
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1}
+                alignItems={{ xs: "flex-start", sm: "center" }}
               >
-                Seleccionar archivo
-                <input
-                  hidden
-                  accept="application/pdf,.pdf,.docx,.txt,.jpg,.jpeg,.png,.xls,.xlsx"
-                  type="file"
-                  onChange={(e) => {
-                    const selected = e.target.files?.[0] || null;
-                    setDocFiles((prev) => ({ ...prev, [doc.key]: selected }));
-                  }}
+                <Typography sx={{ minWidth: 300, fontWeight: 600 }}>{doc.label}</Typography>
+                <Chip
+                  size="small"
+                  label={file ? "Adjuntado" : "Pendiente"}
+                  color={file ? "success" : "default"}
                 />
-              </Button>
-              <Typography variant="body2" color="text.secondary">
-                {file ? file.name : "Sin archivo"}
-              </Typography>
-            </Stack>
-          );
-        })}
+                <Button
+                  variant="contained"
+                  component="label"
+                  size="small"
+                  startIcon={<CloudUploadIcon />}
+                  disabled={loading || generatingContract}
+                >
+                  {file ? "Reemplazar" : "Adjuntar"}
+                  <input
+                    hidden
+                    accept="application/pdf,.pdf,.docx,.txt,.jpg,.jpeg,.png,.xls,.xlsx"
+                    type="file"
+                    onChange={(e) => {
+                      const selected = e.target.files?.[0] || null;
+                      setDocFiles((prev) => ({ ...prev, [doc.key]: selected }));
+                    }}
+                  />
+                </Button>
+                <Typography variant="body2" color="text.secondary">
+                  {file ? file.name : "Sin archivo"}
+                </Typography>
+              </Stack>
+            );
+          })}
+        </Stack>
 
         <Stack direction="row" spacing={1}>
           <Button variant="outlined" onClick={handleInterpretPackage} disabled={loading}>
