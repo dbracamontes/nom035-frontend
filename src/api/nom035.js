@@ -435,3 +435,6 @@ export const prepareContractFromDocuments = (files, documentType = 'ACTA', templ
 
 export const generateContract = (templateType, fields) =>
   axios.post(`${API_BASE}/contracts/generate`, { templateType, fields });
+
+export const getContractMovementLog = () =>
+  axios.get(`${API_BASE}/contracts/movements`);
