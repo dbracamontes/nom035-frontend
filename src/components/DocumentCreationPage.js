@@ -57,6 +57,10 @@ export default function DocumentCreationPage() {
   const [companies, setCompanies] = React.useState([]);
   const [jobId, setJobId] = React.useState(null);
   const [preview, setPreview] = React.useState("");
+  const vigenciaAutoFillLockRef = React.useRef({
+    legacyEndDateManuallyEdited: false,
+    currentEndDateManuallyEdited: false,
+  });
 
   const dateGroups = React.useMemo(
     () => ({
@@ -163,8 +167,16 @@ export default function DocumentCreationPage() {
   }, []);
 
   const applyDateToGroup = React.useCallback(
-    (group, dateValue) => {
+    (group, dateValue, options = {}) => {
       if (!group || !dateValue) return;
+      const isManualEdit = Boolean(options.manual);
+      if (isManualEdit && group.day === dateGroups.FECHA_TERMINO_VIGENCIA_LEGACY.day) {
+        vigenciaAutoFillLockRef.current.legacyEndDateManuallyEdited = true;
+      }
+      if (isManualEdit && group.day === dateGroups.FECHA_TERMINO_VIGENCIA.day) {
+        vigenciaAutoFillLockRef.current.currentEndDateManuallyEdited = true;
+      }
+
       setValues((prev) => ({
         ...prev,
         [group.day]: String(dateValue.getDate()),
@@ -172,7 +184,7 @@ export default function DocumentCreationPage() {
         [group.year]: String(dateValue.getFullYear()),
       }));
     },
-    [MONTH_NAMES]
+    [MONTH_NAMES, dateGroups]
   );
 
   React.useEffect(() => {
@@ -191,6 +203,16 @@ export default function DocumentCreationPage() {
     const targetYear = String(plus365.getFullYear());
 
     setValues((prev) => {
+      const hasAnyTargetValue = Boolean(
+        prev[targetGroup.day] || prev[targetGroup.month] || prev[targetGroup.year]
+      );
+      if (
+        vigenciaAutoFillLockRef.current.legacyEndDateManuallyEdited &&
+        hasAnyTargetValue
+      ) {
+        return prev;
+      }
+
       if (
         prev[targetGroup.day] === targetDay &&
         prev[targetGroup.month] === targetMonth &&
@@ -231,6 +253,16 @@ export default function DocumentCreationPage() {
     const targetYear = String(plus365.getFullYear());
 
     setValues((prev) => {
+      const hasAnyTargetValue = Boolean(
+        prev[terminoGroup.day] || prev[terminoGroup.month] || prev[terminoGroup.year]
+      );
+      if (
+        vigenciaAutoFillLockRef.current.currentEndDateManuallyEdited &&
+        hasAnyTargetValue
+      ) {
+        return prev;
+      }
+
       if (
         prev[terminoGroup.day] === targetDay &&
         prev[terminoGroup.month] === targetMonth &&
@@ -281,6 +313,10 @@ export default function DocumentCreationPage() {
     setSelectedTemplate(template);
     setDialogOpen(true);
     setValues({});
+    vigenciaAutoFillLockRef.current = {
+      legacyEndDateManuallyEdited: false,
+      currentEndDateManuallyEdited: false,
+    };
     setError(null);
 
     const templateFields = template.fields || [];
@@ -499,7 +535,7 @@ export default function DocumentCreationPage() {
                       onChange={(e) => {
                         const selectedDate = fromInputDate(e.target.value);
                         if (selectedDate) {
-                          applyDateToGroup(dateGroup, selectedDate);
+                          applyDateToGroup(dateGroup, selectedDate, { manual: true });
                         }
                       }}
                       required={Boolean(field.required)}
