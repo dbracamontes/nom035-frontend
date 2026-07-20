@@ -139,6 +139,13 @@ export const deleteMedicaLebenDoc = (companyId, field) =>
 export const deleteMedicaLebenPhoto = (companyId, photoId) =>
   axios.delete(`${API_BASE}/companies/${companyId}/medica-leben/photos/${photoId}`);
 
+// Sistema Consultoria draft persistence
+export const getConsultoriaDraftByCompany = (companyId) =>
+  axios.get(`${API_BASE}/consultoria-drafts/company/${companyId}`);
+
+export const upsertConsultoriaDraftByCompany = (companyId, payload) =>
+  axios.put(`${API_BASE}/consultoria-drafts/company/${companyId}`, { payload });
+
 // Survey endpoints
 export const getSurveys = () => axios.get(`${API_BASE}/surveys`);
 export const getSurveyById = id => axios.get(`${API_BASE}/surveys/${id}`);

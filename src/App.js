@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from "react";
-import { Box, CssBaseline, Drawer, Toolbar, AppBar, Typography, List, ListItemIcon, ListItemText, ThemeProvider, IconButton, Button, Avatar, Stack, ListSubheader, Collapse, ListItemButton } from "@mui/material";
+import { Box, CssBaseline, Drawer, Toolbar, AppBar, Typography, List, ListItemIcon, ListItemText, ThemeProvider, Button, Avatar, Stack, ListSubheader, Collapse, ListItemButton } from "@mui/material";
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import theme from "./theme";
@@ -12,12 +12,8 @@ import BusinessIcon from '@mui/icons-material/Business';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import DescriptionIcon from '@mui/icons-material/Description';
-import LandingPage from "./components/LandingPage";
-import EmployeeForm from "./components/EmployeeForm";
-import EmployeeList from "./components/EmployeeList";
 import SurveyForm from "./components/SurveyForm";
 import SurveyList from "./components/SurveyList";
-import SurveyAnswer from "./components/SurveyAnswer";
 import EmployeeSurveyAnswer from "./components/EmployeeSurveyAnswer";
 import Dashboard from "./components/Dashboard";
 import SurveyResults from "./components/SurveyResults";
@@ -30,13 +26,14 @@ import LanguageSelector from "./components/LanguageSelector";
 import LoginPage from "./components/LoginPage";
 import MedicaLebenCompaniesPage from "./components/MedicaLebenCompaniesPage";
 import MedicaLebenReportPage from './components/MedicaLebenReportPage';
+import MedicaLebenConsultoriaPage from "./components/MedicaLebenConsultoriaPage";
 import DocumentInterpretationPage from "./components/DocumentInterpretationPage";
 import DocumentCreationPage from "./components/DocumentCreationPage";
 import ContractGenerationPage from "./components/ContractGenerationPage";
 import ContractMovementLogPage from "./components/ContractMovementLogPage";
 import { useTranslation } from 'react-i18next';
 import { UserContext } from "./context/UserContext";
-import { Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
+import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 
 
 const drawerWidth = 220;
@@ -136,6 +133,12 @@ export default function App() {
       id: 'ml-companies',
       label: 'Gestión de Empresas Médica LEBEN',
       component: <MedicaLebenCompaniesPage resetTrigger={mlReset} />, // pasar trigger
+      roles: ['ROLE_ADMIN', 'ROLE_GENERADOR', 'ROLE_COTIZADOR'],
+    },
+    {
+      id: 'ml-consultoria',
+      label: 'Sistema Consultoría',
+      component: <MedicaLebenConsultoriaPage />,
       roles: ['ROLE_ADMIN', 'ROLE_GENERADOR', 'ROLE_COTIZADOR'],
     },
   ];
