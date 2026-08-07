@@ -93,6 +93,21 @@
       "position": "Puesto",
       "email": "Email",
       "company": "Empresa",
+      "dateOfBirth": "Fecha de nacimiento",
+      "genderLabel": "Sexo",
+      "genderSelect": "Selecciona sexo",
+      "genderM": "Masculino",
+      "genderF": "Femenino",
+      "genderOther": "Otro",
+      "maritalStatusLabel": "Estado civil",
+      "maritalStatusSelect": "Selecciona estado civil",
+      "maritalStatusSingle": "Soltero",
+      "maritalStatusMarried": "Casado",
+      "maritalStatusDivorced": "Divorciado",
+      "maritalStatusWidowed": "Viudo",
+      "education": "Estudios realizados",
+      "companyCategory": "Categoría en la empresa",
+      "seniorityYears": "Antigüedad en el puesto (años)",
       "validation": {
         "nameEmailCompanyRequired": "Nombre, Email y Empresa son requeridos."
       }
@@ -103,7 +118,8 @@
       "allCompanies": "Todas las Empresas",
       "companyLabel": "Empresa",
       "editEmployee": "Editar empleado",
-      "noCompany": "N/A"
+      "noCompany": "N/A",
+      "years": "años"
     },
     "page": {
       "addEmployee": "Agregar Empleado",
