@@ -30,7 +30,6 @@ import {
   uploadEmployeeDocFile,
   deleteEmployeeDocFile,
   getDocumentTypes,
-  deactivateEmployeeDoc,
   downloadEmployeeDocFile,
 } from "../api/nom035";
 import { UserContext } from "../context/UserContext";
@@ -38,7 +37,20 @@ import { useTranslation } from 'react-i18next';
 
 const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyId }, ref) => {
   const { t } = useTranslation();
-  const [form, setForm] = useState({ name: "", department: "", position: "", email: "", curp: "", companyId: "" });
+  const [form, setForm] = useState({
+    name: "",
+    department: "",
+    position: "",
+    email: "",
+    curp: "",
+    companyId: "",
+    dateOfBirth: "",
+    maritalStatus: "",
+    gender: "",
+    education: "",
+    companyCategory: "",
+    seniorityYears: ""
+  });
   const [companies, setCompanies] = useState([]);
   const [documentTypes, setDocumentTypes] = useState([]);
   const { user } = useContext(UserContext);
@@ -119,7 +131,13 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
         position: employee.position || "",
         email: employee.email || "",
         curp: employee.curp || "",
-        companyId: (employee.companyId != null ? employee.companyId : (employee.company?.id || companies[0]?.id || ""))
+        companyId: (employee.companyId != null ? employee.companyId : (employee.company?.id || companies[0]?.id || "")),
+        dateOfBirth: employee.dateOfBirth || "",
+        maritalStatus: employee.maritalStatus || "",
+        gender: employee.gender || "",
+        education: employee.education || "",
+        companyCategory: employee.companyCategory || "",
+        seniorityYears: employee.seniorityYears ?? ""
       });
       // clear local created employee when editing an existing one
       setLocalEmployee(null);
@@ -131,7 +149,13 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
         position: localEmployee.position || f.position,
         email: localEmployee.email || f.email,
         curp: localEmployee.curp || f.curp,
-        companyId: (localEmployee.companyId != null ? localEmployee.companyId : (localEmployee.company?.id || f.companyId))
+        companyId: (localEmployee.companyId != null ? localEmployee.companyId : (localEmployee.company?.id || f.companyId)),
+        dateOfBirth: localEmployee.dateOfBirth || f.dateOfBirth,
+        maritalStatus: localEmployee.maritalStatus || f.maritalStatus,
+        gender: localEmployee.gender || f.gender,
+        education: localEmployee.education || f.education,
+        companyCategory: localEmployee.companyCategory || f.companyCategory,
+        seniorityYears: localEmployee.seniorityYears ?? f.seniorityYears
       }));
     } else {
       setForm(f => ({
@@ -140,7 +164,13 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
         position: "",
         email: "",
         curp: "",
-        companyId: f.companyId || initialCompanyId || companies[0]?.id || ""
+        companyId: f.companyId || initialCompanyId || companies[0]?.id || "",
+        dateOfBirth: "",
+        maritalStatus: "",
+        gender: "",
+        education: "",
+        companyCategory: "",
+        seniorityYears: ""
       }));
     }
   }, [employee, companies, initialCompanyId, localEmployee]);
@@ -155,7 +185,12 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
       return;
     }
     const { companyId, ...rest } = form;
-    const payload = { ...rest, company: { id: Number(companyId) } };
+    const payload = {
+      ...rest,
+      dateOfBirth: rest.dateOfBirth || null,
+      seniorityYears: rest.seniorityYears !== "" ? Number(rest.seniorityYears) : null,
+      company: { id: Number(companyId) }
+    };
     try {
       if (isEdit && employee && employee.id) {
         await updateEmployee(employee.id, payload);
@@ -172,7 +207,13 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
             position: created.position || form.position,
             email: created.email || form.email,
             curp: created.curp || form.curp,
-            companyId: (created.companyId != null ? created.companyId : (created.company?.id || form.companyId))
+            companyId: (created.companyId != null ? created.companyId : (created.company?.id || form.companyId)),
+            dateOfBirth: created.dateOfBirth || form.dateOfBirth,
+            maritalStatus: created.maritalStatus || form.maritalStatus,
+            gender: created.gender || form.gender,
+            education: created.education || form.education,
+            companyCategory: created.companyCategory || form.companyCategory,
+            seniorityYears: created.seniorityYears ?? form.seniorityYears
           });
           setDocSuccess("Empleado creado. Ahora puedes subir los documentos.");
           // fetch documents skeleton/values for the newly created employee
@@ -195,7 +236,20 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
   };
 
   const resetForm = () => {
-    setForm({ name: "", department: "", position: "", email: "", curp: "", companyId: (initialCompanyId || companies[0]?.id || "") });
+    setForm({
+      name: "",
+      department: "",
+      position: "",
+      email: "",
+      curp: "",
+      companyId: (initialCompanyId || companies[0]?.id || ""),
+      dateOfBirth: "",
+      maritalStatus: "",
+      gender: "",
+      education: "",
+      companyCategory: "",
+      seniorityYears: ""
+    });
     setDocs([]);
     setDocFiles({});
     setDocError("");
@@ -418,8 +472,25 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
           <Grid item xs={12} sm={6}><TextField label={t("employee.form.name")} name="name" value={form.name} onChange={handleChange} required fullWidth size="small" sx={inputSx} /></Grid>
           <Grid item xs={12} sm={6}><TextField label={t("employee.form.department")} name="department" value={form.department} onChange={handleChange} required fullWidth size="small" sx={inputSx} /></Grid>
           <Grid item xs={12} sm={6}><TextField label={t("employee.form.position")} name="position" value={form.position} onChange={handleChange} fullWidth size="small" sx={inputSx} /></Grid>
+          <Grid item xs={12} sm={6}><TextField type="date" label={t("employee.form.dateOfBirth")} name="dateOfBirth" value={form.dateOfBirth} onChange={handleChange} InputLabelProps={{ shrink: true }} fullWidth size="small" sx={inputSx} /></Grid>
+          <Grid item xs={12} sm={6}><TextField select label={t("employee.form.genderLabel")} name="gender" value={form.gender} onChange={handleChange} fullWidth size="small" sx={inputSx}>
+              <MenuItem value="">{t("employee.form.genderSelect", "Selecciona sexo")}</MenuItem>
+              <MenuItem value="M">{t("employee.form.genderM")}</MenuItem>
+              <MenuItem value="F">{t("employee.form.genderF")}</MenuItem>
+              <MenuItem value="Otro">{t("employee.form.genderOther")}</MenuItem>
+            </TextField></Grid>
           <Grid item xs={12} sm={6}><TextField label={t("employee.form.email")} name="email" value={form.email} onChange={handleChange} required fullWidth size="small" sx={inputSx} /></Grid>
+          <Grid item xs={12} sm={6}><TextField select label={t("employee.form.maritalStatusLabel")} name="maritalStatus" value={form.maritalStatus} onChange={handleChange} fullWidth size="small" sx={inputSx}>
+              <MenuItem value="">{t("employee.form.maritalStatusSelect")}</MenuItem>
+              <MenuItem value="Soltero">{t("employee.form.maritalStatusSingle")}</MenuItem>
+              <MenuItem value="Casado">{t("employee.form.maritalStatusMarried")}</MenuItem>
+              <MenuItem value="Divorciado">{t("employee.form.maritalStatusDivorced")}</MenuItem>
+              <MenuItem value="Viudo">{t("employee.form.maritalStatusWidowed")}</MenuItem>
+            </TextField></Grid>
           <Grid item xs={12} sm={6}><TextField label={t("employee.form.curp", "CURP")} name="curp" value={form.curp} onChange={handleChange} fullWidth size="small" sx={inputSx} /></Grid>
+          <Grid item xs={12} sm={6}><TextField label={t("employee.form.education")} name="education" value={form.education} onChange={handleChange} fullWidth size="small" sx={inputSx} /></Grid>
+          <Grid item xs={12} sm={6}><TextField label={t("employee.form.companyCategory")} name="companyCategory" value={form.companyCategory} onChange={handleChange} fullWidth size="small" sx={inputSx} /></Grid>
+          <Grid item xs={12} sm={6}><TextField type="number" inputProps={{ min: 0, step: 1 }} label={t("employee.form.seniorityYears")} name="seniorityYears" value={form.seniorityYears} onChange={handleChange} fullWidth size="small" sx={inputSx} /></Grid>
           <Grid item xs={12} sm={6}>
             {hasRole('ROLE_COMPANY') ? (
               <TextField label={t("employee.form.company")} value={companies.find(c => String(c.id) === String(form.companyId))?.name || ''} disabled fullWidth size="small" sx={inputSx} />

@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useRef, useCallback, useContext } from "react";
+import React, { useEffect, useState, useCallback, useContext } from "react";
 import { getEmployees, getEmployeesByCompany, getCompanies, deleteEmployee } from "../api/nom035";
-import { Paper, Typography, List, ListItem, ListItemText, IconButton, MenuItem, TextField, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Button, Snackbar, Alert } from "@mui/material";
+import { Paper, Typography, List, ListItem, ListItemText, IconButton, MenuItem, TextField, Stack, Dialog, DialogTitle, DialogActions, Button, Snackbar, Alert } from "@mui/material";
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import { useTranslation } from 'react-i18next';
@@ -196,7 +196,7 @@ export default function EmployeeList({ refreshFlag, selectedCompany: selectedCom
           >
             <ListItemText
               primary={e.name}
-              secondary={`${t("employee.list.companyLabel")}: ${e.companyName || t("employee.list.noCompany")} | ${e.department} | ${e.position} | ${e.email}`}
+              secondary={`${t("employee.list.companyLabel")}: ${e.companyName || t("employee.list.noCompany")} | ${e.department || ''} | ${e.position || ''} | ${e.companyCategory || ''} | ${e.seniorityYears != null ? `${e.seniorityYears} ${t("employee.list.years")}` : ''} | ${e.email || ''}`}
             />
           </ListItem>
         ))}
