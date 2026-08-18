@@ -31,6 +31,7 @@ import DocumentInterpretationPage from "./components/DocumentInterpretationPage"
 import DocumentCreationPage from "./components/DocumentCreationPage";
 import ContractGenerationPage from "./components/ContractGenerationPage";
 import ContractMovementLogPage from "./components/ContractMovementLogPage";
+import DocumentsPage from "./components/DocumentsPage";
 import { useTranslation } from 'react-i18next';
 import { UserContext } from "./context/UserContext";
 import { Routes, Route, useLocation, Navigate } from "react-router-dom";
@@ -91,6 +92,13 @@ export default function App() {
       items: [
         { text: t("navigation.resultsDashboard"), icon: <AnalyticsIcon />, component: <SurveyResults />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
         { text: t("navigation.surveyResponses"), icon: <TableChartIcon />, component: <SurveyResponsesTable />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
+      ],
+    },
+    {
+      id: 'documents',
+      label: 'Documentos',
+      items: [
+        { text: 'Centro de Documentos', icon: <DescriptionIcon />, component: <DocumentsPage />, roles: ['ROLE_ADMIN'] },
       ],
     },
     {

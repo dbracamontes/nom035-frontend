@@ -92,6 +92,18 @@ export const deactivateEmployeeDoc = (employeeId, docId) =>
 export const getDocumentTypes = () =>
   axios.get(`${API_BASE}/document-types`);
 
+// Document center module
+export const getDocumentCenterDocuments = () =>
+  axios.get(`${API_BASE}/documents-center`).catch((error) => {
+    if (error?.response?.status === 404) {
+      return { data: [] };
+    }
+    throw error;
+  });
+
+export const downloadDocumentCenterFile = (documentId) =>
+  axios.get(`${API_BASE}/documents-center/${documentId}/download`, { responseType: 'blob' });
+
 // Company endpoints
 export const getCompanies = () => axios.get(`${API_BASE}/companies`);
 export const getCompanyById = id => axios.get(`${API_BASE}/companies/${id}`);
