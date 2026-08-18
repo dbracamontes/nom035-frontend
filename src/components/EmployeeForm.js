@@ -61,6 +61,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
   // State for documents section
   const [docs, setDocs] = useState([]);
   const [docFiles, setDocFiles] = useState({});
+  const [uploadingDocIds, setUploadingDocIds] = useState({});
   const [docLoading, setDocLoading] = useState(false);
   const [docError, setDocError] = useState("");
   const [docSuccess, setDocSuccess] = useState("");
@@ -68,6 +69,14 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
   const hasRole = (roleName) => {
     if (!user || !user.roles) return false;
     return user.roles.some(role => role.authority === roleName);
+  };
+
+  const normalizeCompanyId = (value, availableCompanies = companies) => {
+    if (value === null || value === undefined || value === '') {
+      return '';
+    }
+    const stringValue = String(value);
+    return Array.isArray(availableCompanies) && availableCompanies.some(company => String(company.id) === stringValue) ? stringValue : '';
   };
 
   // effectiveEmployee is either the employee passed in (edit) or the locally created one
@@ -100,15 +109,20 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
   // Load companies and ensure sensible companyId default (prefers employee -> initialCompanyId -> user.company -> first company)
   useEffect(() => {
     getCompanies().then(res => {
-      setCompanies(res.data);
+      const nextCompanies = Array.isArray(res.data) ? res.data : [];
+      setCompanies(nextCompanies);
       setForm(prev => {
-        const current = prev.companyId;
+        const current = normalizeCompanyId(prev.companyId);
         const employeeCompanyId = employee ? (employee.companyId ?? employee.company?.id) : undefined;
         const userCompanyId = (user && hasRole('ROLE_COMPANY')) ? (user.companyId || (user.company && user.company.id)) : undefined;
-        const fallback = res.data && res.data.length ? res.data[0].id : "";
-        const resolved = current || employeeCompanyId || initialCompanyId || userCompanyId || fallback || "";
+        const fallback = nextCompanies.length ? nextCompanies[0].id : "";
+        const resolvedCandidate = current || employeeCompanyId || initialCompanyId || userCompanyId || fallback || "";
+        const resolved = normalizeCompanyId(resolvedCandidate, nextCompanies);
         return { ...prev, companyId: resolved };
       });
+    }).catch(() => {
+      setCompanies([]);
+      setForm(prev => ({ ...prev, companyId: '' }));
     });
   }, [user, employee, initialCompanyId]);
 
@@ -175,7 +189,10 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
     }
   }, [employee, companies, initialCompanyId, localEmployee]);
 
-  const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = e => {
+    const nextValue = e.target.name === 'companyId' ? String(e.target.value) : e.target.value;
+    setForm({ ...form, [e.target.name]: nextValue });
+  };
 
   const submitForm = async () => {
     const companyIdStr = String(form.companyId || "");
@@ -262,17 +279,40 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
     resetForm
   }));
 
-  const handleDocFileChange = (docId) => (e) => {
-    const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
-    setDocFiles((prev) => ({ ...prev, [docId]: file }));
+  const ensureDocRecord = async (docType) => {
+    if (!effectiveEmployee || !effectiveEmployee.id) {
+      throw new Error("No hay empleado activo para asociar el documento.");
+    }
+
+    const existingDoc = docs.find((d) => d.typeId === docType.id || d.name === docType.name);
+    if (existingDoc) {
+      return existingDoc;
+    }
+
+    const payload = {
+      employeeId: effectiveEmployee.id,
+      name: docType.name,
+      typeId: docType.id,
+    };
+    const response = await createEmployeeDoc(payload);
+    const createdDoc = response && response.data ? response.data : null;
+
+    if (!createdDoc || !createdDoc.id) {
+      throw new Error("No se pudo crear el registro del documento.");
+    }
+
+    setDocs((prev) => {
+      const alreadyExists = prev.some((d) => d.id === createdDoc.id || (d.typeId === docType.id && d.name === docType.name));
+      return alreadyExists ? prev : [...prev, createdDoc];
+    });
+
+    return createdDoc;
   };
 
-  // nuevo: manejar subida inmediata cuando no existe registro de documento
-  const handleDocImmediateUpload = (fixedDoc) => async (e) => {
+  const handleDocFileChange = (docType) => (e) => {
     const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
-    if (!file || !effectiveEmployee || !effectiveEmployee.id) return;
+    if (!file) return;
 
-    // Validación simple en frontend opcional (5 MB)
     const maxBytes = 5 * 1024 * 1024;
     if (file.size > maxBytes) {
       setDocError("El archivo es demasiado grande. El tamaño máximo permitido es 5 MB.");
@@ -280,44 +320,10 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
       return;
     }
 
-    setDocLoading(true);
     setDocError("");
     setDocSuccess("");
-
-    try {
-      let doc = docs.find((d) => d.name === fixedDoc.name);
-
-      if (!doc) {
-        const payload = {
-          employeeId: effectiveEmployee.id,
-          name: fixedDoc.name,
-          typeId: fixedDoc.id,
-        };
-        const res = await createEmployeeDoc(payload);
-        doc = res && res.data ? res.data : null;
-        if (!doc || !doc.id) {
-          throw new Error("No se pudo crear el registro de documento");
-        }
-        setDocs((prev) => [...prev, doc]);
-      }
-
-      await uploadEmployeeDocFile(effectiveEmployee.id, doc.id, file);
-
-      setDocSuccess("Documento subido correctamente.");
-      setDocFiles({});
-      await fetchAndPrepareDocs(effectiveEmployee.id);
-    } catch (error) {
-      console.error("Error subiendo documento", error);
-      if (error?.response?.status === 413 ||
-          (typeof error?.response?.data === 'string' && error.response.data.includes('Maximum upload size exceeded'))) {
-        setDocError("El archivo es demasiado grande. El tamaño máximo permitido es 5 MB.");
-      } else {
-        setDocError("Error al subir el documento.");
-      }
-    } finally {
-      setDocLoading(false);
-      e.target.value = "";
-    }
+    setDocFiles((prev) => ({ ...prev, [docType.id]: file }));
+    e.target.value = "";
   };
 
   const handleSaveDocs = async () => {
@@ -326,20 +332,33 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
     setDocError("");
     setDocSuccess("");
     try {
-      const uploadPromises = Object.entries(docFiles).map(([docId, file]) => {
-        if (file) {
-          const maxBytes = 5 * 1024 * 1024;
-          if (file.size > maxBytes) {
-            throw Object.assign(new Error("file-too-large"), { code: "FILE_TOO_LARGE", docId });
-          }
-          return uploadEmployeeDocFile(effectiveEmployee.id, docId, file);
+      const pendingFiles = Object.entries(docFiles).filter(([, file]) => !!file);
+
+      for (const [typeKey, file] of pendingFiles) {
+        const maxBytes = 5 * 1024 * 1024;
+        if (file.size > maxBytes) {
+          throw Object.assign(new Error("file-too-large"), { code: "FILE_TOO_LARGE", docId: typeKey });
         }
-        return Promise.resolve();
-      });
-      await Promise.all(uploadPromises);
+
+        const docType = documentTypes.find((type) => String(type.id) === String(typeKey));
+        const existingDoc = docs.find((d) => String(d.typeId) === String(typeKey) || String(d.id) === String(typeKey));
+        const docRecord = docType ? (existingDoc || await ensureDocRecord(docType)) : existingDoc;
+
+        if (!docRecord || !docRecord.id) {
+          throw new Error("No se pudo localizar o crear el documento para subir el archivo.");
+        }
+
+        setUploadingDocIds((prev) => ({ ...prev, [docRecord.id]: true }));
+        try {
+          await uploadEmployeeDocFile(effectiveEmployee.id, docRecord.id, file);
+        } finally {
+          setUploadingDocIds((prev) => ({ ...prev, [docRecord.id]: false }));
+        }
+      }
+
       setDocFiles({});
       setDocSuccess("Documentos guardados correctamente.");
-      fetchAndPrepareDocs(effectiveEmployee.id);
+      await fetchAndPrepareDocs(effectiveEmployee.id);
     } catch (e) {
       console.error("Error saving employee docs", e);
       if (e?.code === "FILE_TOO_LARGE") {
@@ -392,13 +411,33 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
     }
   };
 
+  const normalizeEmployeeDocStatus = (status) => {
+    const value = String(status || '').trim();
+    if (!value) return 'Pendiente';
+    if (['APPROVED', 'Aprobado', 'approved', 'ACTIVE', 'Activo', 'active'].includes(value)) return 'Aprobado';
+    if (['REJECTED', 'Rechazado', 'rejected', 'INACTIVE', 'Inactivo', 'inactive'].includes(value)) return 'Rechazado';
+    if (['PENDING', 'Pendiente', 'pending', 'PENDIENTE'].includes(value)) return 'Pendiente';
+    return 'Pendiente';
+  };
+
+  const employeeDocsOverallStatus = (() => {
+    if (!docs || docs.length === 0) return 'Pendiente';
+    const statuses = docs.map((doc) => normalizeEmployeeDocStatus(doc?.status));
+    if (statuses.some((status) => status === 'Rechazado')) return 'Rechazado';
+    if (statuses.some((status) => status === 'Aprobado')) return 'Aprobado';
+    return 'Pendiente';
+  })();
+
   const renderDocItem = (docType) => {
     const doc = docs.find(d => d.typeId === docType.id || d.name === docType.name);
     const docId = doc?.id;
-    const fileToUpload = docId ? docFiles[docId] : null;
-    const hasExistingFile = doc?.hasFile;
+    const fileToUpload = docFiles[docType.id] || (docId ? docFiles[docId] : null);
+    const hasExistingFile = !!doc?.hasFile;
+    const isUploading = !!(docId && uploadingDocIds[docId]);
     const fileName = fileToUpload?.name || doc?.fileName || "Sin archivo";
-    const isAvailable = !!doc;
+    const statusValue = isUploading ? 'Pendiente' : normalizeEmployeeDocStatus(doc?.status);
+    const statusLabel = isUploading ? 'Subiendo' : statusValue;
+    const statusColor = isUploading ? 'warning' : (statusValue === 'Aprobado' ? 'success' : (statusValue === 'Rechazado' ? 'error' : 'warning'));
 
     return (
       <ListItem
@@ -414,13 +453,13 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
       >
         <ListItemText
           primary={docType.name}
-          secondary={isAvailable ? fileName : "Registro no disponible"}
+          secondary={fileToUpload ? fileName : (doc ? fileName : "Registro no disponible")}
           sx={{ mr: 2 }}
         />
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Chip
-            label={!isAvailable ? "No disponible" : (hasExistingFile ? "Cargado" : (fileToUpload ? "Listo para subir" : "Pendiente"))}
-            color={!isAvailable ? "default" : (hasExistingFile ? "success" : (fileToUpload ? "primary" : "default"))}
+            label={statusLabel}
+            color={statusColor}
             size="small"
           />
           {hasExistingFile && (
@@ -434,7 +473,6 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
               </IconButton>
             </Tooltip>
           )}
-          {/* hide Elegir when there is already a file */}
           {!hasExistingFile && (
             <Button
               variant="outlined"
@@ -442,15 +480,15 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
               component="label"
               startIcon={<UploadFileIcon />}
             >
-              Elegir
+              {fileToUpload ? "Listo para subir" : "Elegir"}
               <input
                 type="file"
                 hidden
-                onChange={isAvailable ? handleDocFileChange(docId) : handleDocImmediateUpload(docType)}
+                onChange={handleDocFileChange(docType)}
               />
             </Button>
           )}
-          {isAvailable && hasExistingFile && (
+          {docId && hasExistingFile && (
             <Tooltip title="Eliminar archivo">
               <IconButton size="small" color="error" onClick={() => handleDeleteDocFile(docId)}>
                 <DeleteIcon fontSize="small" />
@@ -495,8 +533,9 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
             {hasRole('ROLE_COMPANY') ? (
               <TextField label={t("employee.form.company")} value={companies.find(c => String(c.id) === String(form.companyId))?.name || ''} disabled fullWidth size="small" sx={inputSx} />
             ) : (
-              <TextField select label={t("employee.form.company")} name="companyId" value={form.companyId} onChange={handleChange} required fullWidth size="small" sx={inputSx}>
-                {companies.map(company => (<MenuItem key={company.id} value={company.id}>{company.name}</MenuItem>))}
+              <TextField select label={t("employee.form.company")} name="companyId" value={normalizeCompanyId(form.companyId, companies)} onChange={handleChange} required fullWidth size="small" sx={inputSx}>
+                <MenuItem value="">{t("employee.form.companySelect", "Selecciona una empresa")}</MenuItem>
+                {companies.map(company => (<MenuItem key={company.id} value={String(company.id)}>{company.name}</MenuItem>))}
               </TextField>
             )}
           </Grid>
@@ -526,7 +565,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
           <Typography variant="h6" sx={{ mb: 2 }}>Documentos del empleado</Typography>
           {docError && <Alert severity="error" sx={{ mb: 2 }}>{docError}</Alert>}
           {docSuccess && <Alert severity="success" sx={{ mb: 2 }}>{docSuccess}</Alert>}
-          
+
           {docLoading ? (
             <Typography>Cargando documentos...</Typography>
           ) : (

@@ -9,7 +9,7 @@ import { Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 
-const API_BASE = "http://localhost:8080/api";
+const API_BASE = `${process.env.REACT_APP_API_URL || 'http://localhost:8080'}/api`;
 
 export default function CompanyList({ onEdit, onRefresh, refreshTrigger, enableMedicaLebenHighlight = false }) {
   const { t } = useTranslation();
