@@ -197,7 +197,7 @@ export default function App() {
                     textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
                   }}
                 >
-                  Plataforma de Encuestas Normativas
+                  Dashboard de Operación
                 </Typography>
                 {user && (
                   <Stack direction="row" spacing={2} alignItems="center">
