@@ -11,8 +11,9 @@ axios.interceptors.request.use(
   (config) => {
     const method = (config.method || '').toLowerCase();
     const existingContentType = config.headers && config.headers['Content-Type'];
+    const isFormDataRequest = typeof FormData !== 'undefined' && config.data instanceof FormData;
 
-    if ((method === 'post' || method === 'put') && !existingContentType) {
+    if ((method === 'post' || method === 'put') && !isFormDataRequest && !existingContentType) {
       config.headers['Content-Type'] = 'application/json';
     }
     return config;
@@ -116,17 +117,31 @@ export const getMedicaLebenDocs = (companyId) =>
   axios.get(`${API_BASE}/companies/${companyId}/medica-leben/docs`);
 
 export const uploadMedicaLebenDocs = (companyId, files) => {
+  const normalizeFieldName = (key) =>
+    String(key)
+      .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+      .replace(/-/g, '_')
+      .toLowerCase();
+
   const formData = new FormData();
   Object.entries(files).forEach(([key, file]) => {
-    if (file) {
+    if (!file || file.size === 0) {
+      return;
+    }
+
+    const normalizedKey = normalizeFieldName(key);
+    formData.append(normalizedKey, file);
+
+    if (key !== normalizedKey) {
       formData.append(key, file);
     }
   });
+
   return axios.post(
-    `${API_BASE}/companies/${companyId}/medica-leben/docs`,
-    formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } }
-  );
+  `${API_BASE}/companies/${companyId}/medica-leben/docs`,
+  formData,
+  { headers: { 'Content-Type': 'multipart/form-data' } }
+);
 };
 
 export const getMedicaLebenPhotos = (companyId) =>
@@ -141,8 +156,7 @@ export const uploadMedicaLebenPhoto = (companyId, photo, description, sortOrder)
   }
   return axios.post(
     `${API_BASE}/companies/${companyId}/medica-leben/photos`,
-    formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } }
+    formData
   );
 };
 export const deleteMedicaLebenDoc = (companyId, field) =>

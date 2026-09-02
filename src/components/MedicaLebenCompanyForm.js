@@ -11,13 +11,16 @@ import {
   List,
   ListItem,
   ListItemText,
-  IconButton
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from "@mui/material";
 import {
   Save as SaveIcon,
   Cancel as CancelIcon,
   UploadFile as UploadFileIcon,
-  Image as ImageIcon,
   Delete as DeleteIcon
 } from "@mui/icons-material";
 import {
@@ -113,8 +116,30 @@ const downloadFileWithAxios = async (url, suggestedName, companyId = null, resou
 export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany }) {
   const [docs, setDocs] = useState(null);
   const [photos, setPhotos] = useState([]);
+  const [photoPreviewUrls, setPhotoPreviewUrls] = useState({});
+  const normalizeDocFieldName = (field) =>
+    String(field)
+      .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+      .replace(/-/g, '_')
+      .toLowerCase();
+
+  const getSelectedDocFile = (field) => {
+    const normalizedField = normalizeDocFieldName(field);
+    return docFiles[field] ?? docFiles[normalizedField] ?? null;
+  };
+
+  const setSelectedDocFile = (field, file) => {
+    const normalizedField = normalizeDocFieldName(field);
+    setDocFiles((prev) => ({
+      ...prev,
+      [field]: file,
+      [normalizedField]: file,
+    }));
+  };
+
   const [docFiles, setDocFiles] = useState({
     acta_constitutiva: null,
+    asamblea: null,
     constancia_situacion_fiscal: null,
     poder_notarial: null,
     identificacion_representante: null,
@@ -122,8 +147,7 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
     estado_cuenta_bancaria: null,
     comprobante_ema_eba: null,
   });
-  const [photoFile, setPhotoFile] = useState(null);
-  const [photoDescription, setPhotoDescription] = useState("");
+  const [photoSelections, setPhotoSelections] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   // nuevo: lista de documentos que fallaron por tamaño
@@ -133,6 +157,7 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
   const [companyTaxId, setCompanyTaxId] = useState(company?.taxId || "");
   const [companyFolioMercantil, setCompanyFolioMercantil] = useState(company?.folioMercantil || "");
   const [companyValidationError, setCompanyValidationError] = useState("");
+  const [previewDialog, setPreviewDialog] = useState({ open: false, title: '', url: '', type: 'image' });
 
   useEffect(() => {
     if (!company) return;
@@ -152,6 +177,37 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
   }, [company]);
 
   useEffect(() => {
+    const objectUrls = [];
+    let isCurrent = true;
+
+    const loadPhotoPreviews = async () => {
+      const previews = await Promise.all(photos.map(async (photo) => {
+        const url = buildMediaUrl(photo.url, 'photos');
+        if (!url) return null;
+        try {
+          const response = await axios.get(url, { responseType: 'blob' });
+          const objectUrl = URL.createObjectURL(response.data);
+          objectUrls.push(objectUrl);
+          return [photo.id, objectUrl];
+        } catch (error) {
+          console.error('Error loading protected photo preview', error);
+          return null;
+        }
+      }));
+
+      if (isCurrent) {
+        setPhotoPreviewUrls(Object.fromEntries(previews.filter(Boolean)));
+      }
+    };
+
+    loadPhotoPreviews();
+    return () => {
+      isCurrent = false;
+      objectUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [company?.id, photos]);
+
+  useEffect(() => {
     setCompanyName(company?.name || "");
     setCompanyTaxId(company?.taxId || "");
     setCompanyFolioMercantil(company?.folioMercantil || "");
@@ -160,13 +216,14 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
   const handleDocFileChange = (field) => (e) => {
     const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
     if (!file) {
-      setDocFiles((prev) => ({ ...prev, [field]: null }));
+      setSelectedDocFile(field, null);
       return;
     }
     const maxBytes = 5 * 1024 * 1024; // 5 MB
     if (file.size > maxBytes) {
       const friendlyNameMap = {
         acta_constitutiva: "Acta constitutiva",
+        asamblea: "Asamblea",
         constancia_situacion_fiscal: "Constancia de situación fiscal",
         poder_notarial: "Poder notarial otorgado",
         identificacion_representante: "Identificación representante legal",
@@ -174,13 +231,13 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
         estado_cuenta_bancaria: "Estado de cuenta bancaria",
         comprobante_ema_eba: "Comprobante EMA/EBA último periodo",
       };
-      const label = friendlyNameMap[field] || field;
+      const label = friendlyNameMap[normalizeDocFieldName(field)] || field;
       setError(`El archivo para "${label}" es demasiado grande. Tamaño máximo: 5 MB.`);
       setFailedDocs((prev) => Array.from(new Set([...prev, label])));
       e.target.value = "";
       return;
     }
-    setDocFiles((prev) => ({ ...prev, [field]: file }));
+    setSelectedDocFile(field, file);
   };
 
   const ensureCompanyExists = async () => {
@@ -201,58 +258,53 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
     return resp.data;
   };
 
-  const handleSaveDocs = async () => {
+  const handleSaveSingleDoc = async (field) => {
     try {
+      const singleFile = getSelectedDocFile(field);
+      if (!singleFile) {
+        setError("Selecciona un documento antes de guardar.");
+        return;
+      }
+
       setLoading(true);
       setError("");
       setSuccess("");
       setFailedDocs([]);
 
       const ensuredCompany = await ensureCompanyExists();
-
-      // Validación previa en frontend para detectar cuáles campos exceden 5MB
       const maxBytes = 5 * 1024 * 1024;
-      const oversizeFields = Object.entries(docFiles)
-        .filter(([_, file]) => file && file.size > maxBytes)
-        .map(([field]) => field);
-
-      if (oversizeFields.length > 0) {
-        const friendlyNameMap = {
-          acta_constitutiva: "Acta constitutiva",
-          constancia_situacion_fiscal: "Constancia de situación fiscal",
-          poder_notarial: "Poder notarial otorgado",
-          identificacion_representante: "Identificación representante legal",
-          comprobante_domicilio: "Comprobante de domicilio",
-          estado_cuenta_bancaria: "Estado de cuenta bancaria",
-          comprobante_ema_eba: "Comprobante EMA/EBA último periodo",
-        };
-        const names = oversizeFields.map((f) => friendlyNameMap[f] || f);
-        setFailedDocs(names);
-        setError(
-          `Uno o más documentos superan el tamaño máximo permitido de 5 MB: ${names.join(", ")}.`
-        );
+      if (singleFile.size > maxBytes) {
+        setError(`El archivo seleccionado excede el tamaño máximo permitido de 5 MB.`);
         setLoading(false);
         return;
       }
 
-      const resp = await uploadMedicaLebenDocs(ensuredCompany.id, docFiles);
+      const normalizedField = normalizeDocFieldName(field);
+      const resp = await uploadMedicaLebenDocs(ensuredCompany.id, {
+        [field]: singleFile,
+        [normalizedField]: singleFile,
+      });
       setDocs(resp.data);
-      setSuccess("Documentos guardados correctamente");
+      setSelectedDocFile(field, null);
+      setSuccess("Documento guardado correctamente");
     } catch (e) {
       if (e.message === "Company validation error") {
         return;
       }
       console.error(e);
-      // Intentar detectar error de tamaño máximo en la respuesta del backend
       const resp = e?.response;
       const isMaxSizeError =
         resp?.status === 413 ||
         (typeof resp?.data === "string" && resp.data.includes("Maximum upload size exceeded"));
+      const validationMessage =
+        typeof resp?.data === "string"
+          ? resp.data
+          : (resp?.data?.error || resp?.data?.message || "");
+
       if (isMaxSizeError) {
-        // No sabemos qué campo exacto falló del lado del backend, pero avisamos del límite global
-        setError(
-          "La carga de documentos excede el tamaño máximo permitido de 5 MB. Intenta subir archivos más pequeños."
-        );
+        setError("La carga del documento excede el tamaño máximo permitido de 5 MB.");
+      } else if (validationMessage) {
+        setError(validationMessage.replace(/^Error de validación:\s*/i, ""));
       } else {
         setError("Error al guardar documentos Médica LEBEN");
       }
@@ -261,19 +313,60 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
     }
   };
 
-  const handleAddPhoto = async () => {
+  const photoRequirements = [
+    {
+      id: 'area_actividad',
+      title: 'I.- Fotos del área en donde se encuentran realizando las actividades los trabajadores.',
+      description: 'Fotos del área en donde se encuentran realizando las actividades los trabajadores.'
+    },
+    {
+      id: 'salidas_emergencia',
+      title: 'II.- Fotos de las salidas de emergencia.',
+      description: 'Fotos de las salidas de emergencia.'
+    },
+    {
+      id: 'area_comida',
+      title: 'III.- Fotos del área de comida.',
+      description: 'Fotos del área de comida.'
+    },
+    {
+      id: 'instalaciones_empresa_entrada',
+      title: 'IV.- Fotos de las instalaciones de la empresa (entrada).',
+      description: 'Fotos de las instalaciones de la empresa (entrada).'
+    },
+    {
+      id: 'instalaciones_empresa_salida',
+      title: 'IV.- Fotos de las instalaciones de la empresa (salida).',
+      description: 'Fotos de las instalaciones de la empresa (salida).'
+    },
+    {
+      id: 'instalaciones_empresa_escaleras',
+      title: 'IV.- Fotos de las instalaciones de la empresa (escaleras).',
+      description: 'Fotos de las instalaciones de la empresa (escaleras).'
+    },
+    {
+      id: 'equipo_seguridad',
+      title: 'V.- Foto de los equipos de seguridad con que cuentan.',
+      description: 'Foto de los equipos de seguridad con que cuentan.'
+    }
+  ];
+
+  const handleAddPhoto = async (photoRequirement) => {
     try {
-      if (!photoFile) return;
+      const selectedFile = photoSelections[photoRequirement.id];
+      if (!selectedFile) return;
       setLoading(true);
       setError("");
       setSuccess("");
       const ensuredCompany = await ensureCompanyExists();
       const sortOrder = photos.length;
-      const resp = await uploadMedicaLebenPhoto(ensuredCompany.id, photoFile, photoDescription, sortOrder);
-      setPhotos((prev) => [...prev, resp.data]);
-      setPhotoFile(null);
-      setPhotoDescription("");
-      setSuccess("Foto agregada correctamente");
+      const resp = await uploadMedicaLebenPhoto(ensuredCompany.id, selectedFile, photoRequirement.description, sortOrder);
+      setPhotos((prev) => {
+        const filtered = prev.filter((p) => p.description !== photoRequirement.description);
+        return [...filtered, resp.data];
+      });
+      setPhotoSelections((prev) => ({ ...prev, [photoRequirement.id]: null }));
+      setSuccess(`Foto guardada correctamente: ${photoRequirement.title}`);
     } catch (e) {
       if (e.message === "Company validation error") {
         return;
@@ -363,15 +456,44 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
     }
   };
 
+  const openPreviewDialog = (title, url, type = 'image') => {
+    if (!url) return;
+    setPreviewDialog({ open: true, title, url, type });
+  };
+
+  const buildMediaUrl = (resourcePath, resourceType) => {
+    if (!company?.id || !resourcePath) return null;
+    const encoded = encodeURIComponent(resourcePath);
+    return `${API_ROOT}/api/medica-leben/companies/${company.id}/${resourceType}/${encoded}`;
+  };
+
+  const normalizeCompanyDocStatus = (status) => {
+    const value = String(status || '').trim();
+    if (!value) return 'Pendiente';
+    if (['APPROVED', 'Aprobado', 'approved', 'ACTIVE', 'Activo', 'active'].includes(value)) return 'Aprobado';
+    if (['REJECTED', 'Rechazado', 'rejected', 'INACTIVE', 'Inactivo', 'inactive'].includes(value)) return 'Rechazado';
+    return 'Pendiente';
+  };
+
+  const getDocFieldStatus = (field) => {
+    const snakeToCamel = (value) => value.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
+    const camelKey = `${snakeToCamel(field)}Status`;
+    return docs?.[camelKey] ?? docs?.status ?? 'PENDING';
+  };
+
+  const actionButtonSx = { minWidth: 0, px: 1.25, py: 0.75, fontSize: '0.75rem' };
+
   const renderDocStatus = (label, field) => {
-    const hasValue = docs && docs[field];
+    const hasValue = !!(docs && docs[field]);
     const url = hasValue ? String(docs[field]) : null;
-    const filename = hasValue ? String(docs[field]).split("/").pop() : "Sin archivo";
+    const selectedFile = getSelectedDocFile(field);
+    const filename = hasValue ? String(docs[field]).split("/").pop() : (selectedFile ? selectedFile.name : "Sin archivo");
+    const fieldStatus = normalizeCompanyDocStatus(getDocFieldStatus(field));
+    const statusLabel = selectedFile ? 'Pendiente' : fieldStatus;
+    const statusColor = fieldStatus === 'Aprobado' ? 'success' : (fieldStatus === 'Rechazado' ? 'error' : 'warning');
 
     const handleDocDoubleClick = async () => {
       if (!url) return;
-      // Forzar descarga vía axios para que incluya Authorization y evitar redirección a login
-      // Pass company id so downloader will try the /api/medica-leben/companies/:id/docs/:file endpoint first
       await downloadFileWithAxios(url, filename === "Sin archivo" ? undefined : filename, company?.id, 'doc');
     };
 
@@ -384,30 +506,199 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 1.5,
+          py: 1.5,
+          borderBottom: '1px solid #f1f5f9'
         }}
       >
         <ListItemText
           primary={label}
-          secondary={filename}
+          secondary={hasValue || selectedFile ? filename : "Sin archivo"}
           sx={{ mr: 2 }}
         />
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
           <Chip
-            label={hasValue ? "Cargado" : "Pendiente"}
-            color={hasValue ? "success" : "default"}
+            label={statusLabel}
+            color={statusColor}
             size="small"
           />
-          {hasValue && (
-            <IconButton
-              size="small"
-              color="error"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDeleteDoc(field);
+          {!hasValue ? (
+            <>
+              <Button
+                variant="outlined"
+                size="small"
+                component="label"
+                startIcon={<UploadFileIcon />}
+                sx={actionButtonSx}
+              >
+                {selectedFile ? "Listo para subir" : "Elegir"}
+                <input
+                  type="file"
+                  hidden
+                  onChange={handleDocFileChange(field)}
+                />
+              </Button>
+              {selectedFile && (
+                <Button
+                  variant="contained"
+                  size="small"
+                  startIcon={<SaveIcon />}
+                  onClick={() => handleSaveSingleDoc(field)}
+                  disabled={loading}
+                  sx={actionButtonSx}
+                >
+                  Guardar
+                </Button>
+              )}
+            </>
+          ) : (
+            <>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={async () => {
+                  if (!url) return;
+                  await downloadFileWithAxios(url, filename, company?.id, 'doc');
+                }}
+                sx={actionButtonSx}
+              >
+                Descargar
+              </Button>
+              <IconButton
+                size="small"
+                color="error"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteDoc(field);
+                }}
+                sx={{ p: 0.75 }}
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </>
+          )}
+        </Box>
+      </ListItem>
+    );
+  };
+
+  const renderPhotoStatus = (photoRequirement) => {
+    const uploadedPhoto = photos.find((photo) => photo.description === photoRequirement.description);
+    const selectedFile = photoSelections[photoRequirement.id];
+    const previewUrl = selectedFile ? URL.createObjectURL(selectedFile) : photoPreviewUrls[uploadedPhoto?.id];
+    const photoStatus = uploadedPhoto ? normalizeCompanyDocStatus(uploadedPhoto.status) : 'Pendiente';
+    const statusLabel = uploadedPhoto ? photoStatus : (selectedFile ? 'Listo para subir' : 'Pendiente');
+    const statusColor = uploadedPhoto
+      ? (photoStatus === 'Aprobado' ? 'success' : (photoStatus === 'Rechazado' ? 'error' : 'warning'))
+      : 'warning';
+
+    return (
+      <ListItem
+        key={photoRequirement.id}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 1.5,
+          py: 1.5,
+          borderBottom: '1px solid #f1f5f9'
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+          {previewUrl ? (
+            <Box
+              component="img"
+              src={previewUrl}
+              alt={photoRequirement.title}
+              sx={{
+                width: 52,
+                height: 52,
+                objectFit: 'cover',
+                borderRadius: 1,
+                border: '1px solid #e2e8f0',
+                backgroundColor: '#f8fafc'
+              }}
+            />
+          ) : (
+            <Box
+              sx={{
+                width: 52,
+                height: 52,
+                borderRadius: 1,
+                border: '1px dashed #cbd5e1',
+                backgroundColor: '#f8fafc',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#64748b',
+                fontSize: 12,
+                fontWeight: 600
               }}
             >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
+              IMG
+            </Box>
+          )}
+          <ListItemText
+            primary={photoRequirement.title}
+            secondary={uploadedPhoto ? (uploadedPhoto.url || 'Foto cargada') : (selectedFile ? selectedFile.name : 'Sin foto')}
+            sx={{ mr: 2 }}
+          />
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Chip label={statusLabel} color={statusColor} size="small" />
+          {!uploadedPhoto ? (
+            <>
+              <Button
+                variant="outlined"
+                size="small"
+                component="label"
+                startIcon={<UploadFileIcon />}
+                sx={actionButtonSx}
+              >
+                {selectedFile ? 'Listo' : 'Elegir'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(e) => {
+                    const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+                    setPhotoSelections((prev) => ({ ...prev, [photoRequirement.id]: file }));
+                  }}
+                />
+              </Button>
+              {selectedFile && (
+                <Button
+                  variant="contained"
+                  size="small"
+                  startIcon={<SaveIcon />}
+                  onClick={() => handleAddPhoto(photoRequirement)}
+                  disabled={loading}
+                  sx={actionButtonSx}
+                >
+                  Guardar
+                </Button>
+              )}
+            </>
+          ) : (
+            <>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => openPreviewDialog(photoRequirement.title, photoPreviewUrls[uploadedPhoto.id], 'image')}
+                sx={actionButtonSx}
+              >
+                Vista previa
+              </Button>
+              <IconButton
+                size="small"
+                color="error"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeletePhoto(uploadedPhoto.id);
+                }}
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </>
           )}
         </Box>
       </ListItem>
@@ -416,17 +707,13 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
 
   return (
     <Paper sx={{ p: 3, boxShadow: 2 }}>
-      <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>
-        Documentación Médica LEBEN
-      </Typography>
-
       {/* Datos de la empresa (editable tanto para nueva como existente) */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="h6" sx={{ mb: 2 }}>
           Datos de la empresa
         </Typography>
         <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
               required
@@ -438,7 +725,7 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
               size="small"
             />
           </Grid>
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <TextField
               fullWidth
               required
@@ -450,7 +737,7 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
               inputProps={{ maxLength: 20 }}
             />
           </Grid>
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <TextField
               fullWidth
               required
@@ -492,12 +779,13 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
       )}
 
       <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12 }}>
           <Typography variant="subtitle1" sx={{ mb: 1 }}>
             Documentos requeridos
           </Typography>
           <List dense>
             {renderDocStatus("Acta constitutiva", "actaConstitutiva")}
+            {renderDocStatus("Asamblea", "asamblea")}
             {renderDocStatus("Constancia de situación fiscal", "constanciaSituacionFiscal")}
             {renderDocStatus("Poder notarial otorgado", "poderNotarial")}
             {renderDocStatus("Identificación oficial del representante legal", "identificacionRepresentante")}
@@ -507,141 +795,50 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
           </List>
         </Grid>
 
-        <Grid item xs={12} md={6}>
-          <Typography variant="subtitle1" sx={{ mb: 1 }}>
-            Cargar / actualizar documentos
-          </Typography>
-          <Grid container spacing={2}>
-            {Object.entries({
-              acta_constitutiva: "Acta constitutiva",
-              constancia_situacion_fiscal: "Constancia de situación fiscal",
-              poder_notarial: "Poder notarial otorgado",
-              identificacion_representante: "Identificación representante legal",
-              comprobante_domicilio: "Comprobante de domicilio",
-              estado_cuenta_bancaria: "Estado de cuenta bancaria",
-              comprobante_ema_eba: "Comprobante EMA/EBA último periodo",
-            }).map(([field, label]) => (
-              <Grid item xs={12} key={field}>
-                <Button
-                  variant="outlined"
-                  component="label"
-                  startIcon={<UploadFileIcon />}
-                  fullWidth
-                  disabled={loading}
-                >
-                  {docFiles[field]?.name || label}
-                  <input
-                    type="file"
-                    hidden
-                    onChange={handleDocFileChange(field)}
-                  />
-                </Button>
-              </Grid>
-            ))}
-          </Grid>
-          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-            <Button
-              variant="contained"
-              startIcon={<SaveIcon />}
-              onClick={handleSaveDocs}
-              disabled={loading}
-            >
-              Guardar documentos
-            </Button>
-          </Box>
-        </Grid>
-
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Box sx={{ mt: 4 }}>
             <Typography variant="h6" sx={{ mb: 2 }}>
               Fotos del área de trabajo
             </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Descripción de la foto"
-                  value={photoDescription}
-                  onChange={(e) => setPhotoDescription(e.target.value)}
-                  size="small"
-                  sx={{ mb: 2 }}
-                />
-                <Button
-                  variant="outlined"
-                  component="label"
-                  startIcon={<ImageIcon />}
-                  disabled={loading}
-                  sx={{ mb: 2 }}
-                >
-                  {photoFile?.name || "Seleccionar foto"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    hidden
-                    onChange={(e) => {
-                      const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
-                      setPhotoFile(file);
-                    }}
-                  />
-                </Button>
-                <Box>
-                  <Button
-                    variant="contained"
-                    startIcon={<SaveIcon />}
-                    onClick={handleAddPhoto}
-                    disabled={loading || !photoFile}
-                  >
-                    Agregar foto
-                  </Button>
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                {photos.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
-                    No hay fotos registradas.
-                  </Typography>
-                ) : (
-                  <List dense>
-                    {photos.map((p) => {
-                      const photoUrl = p.url ? String(p.url) : null;
-                      const photoFilename = photoUrl ? photoUrl.split("/").pop() : "";
-
-                      const handlePhotoDoubleClick = async () => {
-                        if (!photoUrl) return;
-                        // Pass company id so downloader will try /api/medica-leben/companies/:id/photos/:file
-                        await downloadFileWithAxios(photoUrl, photoFilename || undefined, company?.id, 'photo');
-                      };
-
-                      return (
-                        <ListItem
-                          key={p.id}
-                          onDoubleClick={handlePhotoDoubleClick}
-                          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: photoUrl ? "pointer" : "default" }}
-                        >
-                          <ListItemText
-                            primary={p.description || `Foto #${(p.sortOrder ?? 0) + 1}`}
-                            secondary={photoFilename}
-                          />
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeletePhoto(p.id);
-                            }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </ListItem>
-                      );
-                    })}
-                  </List>
-                )}
-              </Grid>
-            </Grid>
+            <List dense>
+              {photoRequirements.map((photoRequirement) => renderPhotoStatus(photoRequirement))}
+            </List>
           </Box>
         </Grid>
       </Grid>
+
+      <Dialog
+        open={previewDialog.open}
+        onClose={() => setPreviewDialog({ open: false, title: '', url: '', type: 'image' })}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>{previewDialog.title || 'Vista previa'}</DialogTitle>
+        <DialogContent>
+          {previewDialog.url ? (
+            previewDialog.type === 'image' ? (
+              <Box
+                component="img"
+                src={previewDialog.url}
+                alt={previewDialog.title}
+                sx={{ display: 'block', width: '100%', maxHeight: 560, objectFit: 'contain', borderRadius: 2, bgcolor: '#f8fafc' }}
+              />
+            ) : (
+              <Box
+                component="iframe"
+                src={previewDialog.url}
+                title={previewDialog.title}
+                sx={{ width: '100%', minHeight: 560, border: 0, borderRadius: 2 }}
+              />
+            )
+          ) : (
+            <Typography variant="body1">No hay vista previa disponible.</Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPreviewDialog({ open: false, title: '', url: '', type: 'image' })}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
 
       <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
         <Button
