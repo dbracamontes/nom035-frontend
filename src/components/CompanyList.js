@@ -11,7 +11,7 @@ import axios from 'axios';
 
 const API_BASE = `${process.env.REACT_APP_API_URL || 'http://localhost:8080'}/api`;
 
-export default function CompanyList({ onEdit, onRefresh, refreshTrigger, enableMedicaLebenHighlight = false }) {
+export default function CompanyList({ onEdit, onOpenCompanyDocs, onRefresh, refreshTrigger, enableMedicaLebenHighlight = false }) {
   const { t } = useTranslation();
   const [companies, setCompanies] = useState([]);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, company: null });
@@ -131,13 +131,13 @@ export default function CompanyList({ onEdit, onRefresh, refreshTrigger, enableM
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                   Cargando empresas...
                 </TableCell>
               </TableRow>
             ) : filteredCompanies.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                   <Typography variant="body2" color="text.secondary">
                     {companies.length === 0
                       ? 'No hay empresas registradas. Crea una nueva empresa para comenzar.'

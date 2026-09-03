@@ -52,7 +52,7 @@ export default function DocumentsPage() {
   const [selectedDoc, setSelectedDoc] = React.useState(null);
   const [previewBlobUrl, setPreviewBlobUrl] = React.useState('');
   const [previewLoading, setPreviewLoading] = React.useState(false);
-  const [approvedDocs, setApprovedDocs] = React.useState({});
+  const [decisionOverrides, setDecisionOverrides] = React.useState({});
 
   React.useEffect(() => {
     let isMounted = true;
@@ -89,14 +89,17 @@ export default function DocumentsPage() {
   const normalizeDocStatus = (status) => {
     const value = String(status || '').trim();
     if (!value) return 'Pendiente';
-    if (['Aprobado', 'approved', 'DONE', 'COMPLETED'].includes(value)) return 'Aprobado';
-    if (['Rechazado', 'rejected', 'FAILED'].includes(value)) return 'Rechazado';
+    if (['Aprobado', 'approved', 'APPROVED', 'DONE', 'COMPLETED', 'APROBADO'].includes(value)) return 'Aprobado';
+    if (['Rechazado', 'rejected', 'REJECTED', 'FAILED', 'RECHAZADO'].includes(value)) return 'Rechazado';
+    if (['Pendiente', 'PENDIENTE', 'pending', 'PENDING'].includes(value)) return 'Pendiente';
     if (['En revisión', 'in_review', 'OCR_RUNNING', 'OCR_COMPLETED', 'INTERPRETING', 'INTERPRETED', 'GENERATING_WORD'].includes(value)) return 'En revisión';
     return 'Pendiente';
   };
 
   const resolveDocStatus = (doc) => {
-    if (approvedDocs[doc.id]) return 'Aprobado';
+    if (!doc?.id) return normalizeDocStatus(doc?.status);
+    const override = decisionOverrides[doc.id];
+    if (override) return override;
     return normalizeDocStatus(doc.status);
   };
 
@@ -113,9 +116,9 @@ export default function DocumentsPage() {
 
   const summary = {
     total: documents.length,
-    approved: documents.filter((doc) => doc?.requiresApproval && resolveDocStatus(doc) === 'Aprobado').length,
-    pending: documents.filter((doc) => doc?.requiresApproval && ['En revisión', 'Pendiente'].includes(resolveDocStatus(doc))).length,
-    rejected: documents.filter((doc) => doc?.requiresApproval && resolveDocStatus(doc) === 'Rechazado').length,
+    approved: documents.filter((doc) => resolveDocStatus(doc) === 'Aprobado').length,
+    pending: documents.filter((doc) => ['En revisión', 'Pendiente'].includes(resolveDocStatus(doc))).length,
+    rejected: documents.filter((doc) => resolveDocStatus(doc) === 'Rechazado').length,
   };
 
   const quickActions = [
@@ -231,19 +234,16 @@ export default function DocumentsPage() {
     if (!doc?.id) return;
 
     try {
-      const ownerDoc = doc.source === 'EMPLOYEE_DOC' && doc.employeeId ? doc : null;
-      const employeeId = ownerDoc?.employeeId || null;
-      const url = employeeId ? `/api/documents-center/${doc.id}/decision?decision=${encodeURIComponent(decision)}&message=${encodeURIComponent(decision === 'APPROVED' ? 'Documento aprobado correctamente.' : 'Documento rechazado. Debes volver a cargar la información correcta.')}` : null;
+      const url = `/api/documents-center/${doc.id}/decision?decision=${encodeURIComponent(decision)}&message=${encodeURIComponent(decision === 'APPROVED' ? 'Documento aprobado correctamente.' : 'Documento rechazado. Debes volver a cargar la información correcta.')}`;
 
-      if (url) {
-        await axios.put(`${process.env.REACT_APP_API_URL || ''}${url}`, {}, {
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
+      await axios.put(`${process.env.REACT_APP_API_URL || ''}${url}`, {}, {
+        headers: { 'Content-Type': 'application/json' }
+      });
 
-      if (decision === 'APPROVED') {
-        setApprovedDocs((prev) => ({ ...prev, [doc.id]: true }));
-      }
+      setDecisionOverrides((prev) => ({
+        ...prev,
+        [doc.id]: decision === 'APPROVED' ? 'Aprobado' : 'Rechazado',
+      }));
 
       setDocuments((prev) => prev.map((item) => item.id === doc.id
         ? { ...item, status: decision === 'APPROVED' ? 'Aprobado' : 'Rechazado', requiresApproval: false }
@@ -372,54 +372,43 @@ export default function DocumentsPage() {
           ) : (
             filteredDocuments.map((doc) => (
               <Card key={doc.id} sx={{ borderRadius: 3, boxShadow: '0 12px 32px rgba(15, 23, 42, 0.06)' }}>
-              <CardContent sx={{ p: 3 }}>
-                <Grid container spacing={2} alignItems="center">
-                  <Grid size={{ xs: 12, md: 1 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: 52, height: 52, borderRadius: 2, bgcolor: 'rgba(6, 182, 212, 0.12)', color: 'primary.main' }}>
-                      <ArticleIcon />
-                    </Box>
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 5 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 700 }}>{doc.title}</Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                      {doc.relatedTo} · {doc.module}
-                    </Typography>
-                    <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap', gap: 1 }}>
-                      {doc.tags.map((tag) => (
-                        <Chip key={tag} label={tag} size="small" variant="outlined" />
-                      ))}
+                <CardContent sx={{ p: 3 }}>
+                  <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }}>
+                    <Stack direction="row" spacing={2} alignItems="center" sx={{ flex: 1 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: 48, height: 48, borderRadius: 2, bgcolor: 'rgba(6, 182, 212, 0.12)', color: 'primary.main' }}>
+                        <ArticleIcon />
+                      </Box>
+
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700 }}>{doc.title}</Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                          {doc.relatedTo} · {doc.module}
+                        </Typography>
+                        {doc.tags.length > 0 && (
+                          <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap', gap: 1 }}>
+                            {doc.tags.map((tag) => (
+                              <Chip key={tag} label={tag} size="small" variant="outlined" />
+                            ))}
+                          </Stack>
+                        )}
+                      </Box>
                     </Stack>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-                    <Typography variant="caption" color="text.secondary">División</Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 600 }}>{doc.division}</Typography>
-                    <Typography variant="caption" color="text.secondary">Tipo</Typography>
-                    <Typography variant="body2">{doc.fileType}</Typography>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-                    <Typography variant="caption" color="text.secondary">Responsable</Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 600 }}>{doc.owner}</Typography>
-                    <Typography variant="caption" color="text.secondary">Fecha</Typography>
-                    <Typography variant="body2">{doc.uploadedAt}</Typography>
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 2 }}>
-                    <Stack spacing={1} alignItems={{ xs: 'flex-start', md: 'flex-end' }}>
+
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ xs: 'flex-start', sm: 'center' }}>
                       <Chip
                         icon={statusConfig[resolveDocStatus(doc)]?.icon || <FilterListIcon />}
                         label={resolveDocStatus(doc)}
                         color={statusConfig[resolveDocStatus(doc)]?.color || 'default'}
                         variant="filled"
                       />
+
                       <Stack direction="row" spacing={1}>
-                        <IconButton aria-label="Vista previa" onClick={() => setSelectedDoc({ ...doc, status: resolveDocStatus(doc) })} color="primary">
-                          <VisibilityIcon />
-                        </IconButton>
-                        <IconButton aria-label="Descargar" onClick={() => openDocument(doc.downloadUrl)} color="secondary">
-                          <DownloadIcon />
-                        </IconButton>
-                        <IconButton aria-label="Abrir vista previa modal" onClick={() => setSelectedDoc({ ...doc, status: resolveDocStatus(doc), previewUrl: doc.previewUrl || doc.downloadUrl })} color="inherit">
-                          <OpenInNewIcon />
-                        </IconButton>
+                        <Button size="small" variant="outlined" color="primary" onClick={() => setSelectedDoc({ ...doc, status: resolveDocStatus(doc), previewUrl: doc.previewUrl || doc.downloadUrl })}>
+                          Vista previa
+                        </Button>
+                        <Button size="small" variant="outlined" color="secondary" onClick={() => openDocument(doc.downloadUrl)}>
+                          Descargar
+                        </Button>
                         {canApproveDoc(doc) && (
                           <>
                             <Button size="small" variant="contained" color="success" onClick={() => handleApproveDocument(doc, 'APPROVED')}>
@@ -432,17 +421,21 @@ export default function DocumentsPage() {
                         )}
                       </Stack>
                     </Stack>
-                  </Grid>
-                </Grid>
-                <Divider sx={{ my: 2 }} />
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center" justifyContent="space-between">
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <ShieldIcon fontSize="small" color="action" />
-                    <Typography variant="body2" color="text.secondary">Seguridad: {doc.security}</Typography>
                   </Stack>
-                  <Typography variant="caption" color="text.secondary">Tamaño: {doc.size}</Typography>
-                </Stack>
-              </CardContent>
+
+                  <Divider sx={{ my: 2 }} />
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center" justifyContent="space-between">
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <ShieldIcon fontSize="small" color="action" />
+                      <Typography variant="body2" color="text.secondary">Seguridad: {doc.security}</Typography>
+                    </Stack>
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <Typography variant="caption" color="text.secondary">Responsable: {doc.owner}</Typography>
+                      <Typography variant="caption" color="text.secondary">Fecha: {doc.uploadedAt}</Typography>
+                      <Typography variant="caption" color="text.secondary">Tamaño: {doc.size}</Typography>
+                    </Stack>
+                  </Stack>
+                </CardContent>
               </Card>
             ))
           )}

@@ -9,7 +9,7 @@ import axios from 'axios';
 
 const API_BASE = `${process.env.REACT_APP_API_URL || 'http://localhost:8080'}/api`;
 
-export default function CompanyForm({ company, onSave, onCancel }) {
+export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: '',
@@ -202,7 +202,7 @@ export default function CompanyForm({ company, onSave, onCancel }) {
           )}
         </Grid>
 
-        <Box sx={{ mt: 4, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+        <Box sx={{ mt: 4, display: 'flex', gap: 2, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
           <Button
             variant="outlined"
             startIcon={<CancelIcon />}

@@ -2,15 +2,18 @@ import React, { useState } from "react";
 import { 
   Box, Button, Container, Typography, Fade, Slide
 } from "@mui/material";
-import { Add as AddIcon, Business as BusinessIcon } from "@mui/icons-material";
+import { Add as AddIcon, Business as BusinessIcon, ArrowBack as ArrowBackIcon } from "@mui/icons-material";
 import { useTranslation } from 'react-i18next';
 import CompanyList from "./CompanyList";
 import CompanyForm from "./CompanyForm";
+import MedicaLebenCompanyForm from "./MedicaLebenCompanyForm";
 
 export default function CompaniesPage() {
   const { t } = useTranslation();
   const [showForm, setShowForm] = useState(false);
+  const [showDocsForm, setShowDocsForm] = useState(false);
   const [editingCompany, setEditingCompany] = useState(null);
+  const [selectedCompanyForDocs, setSelectedCompanyForDocs] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const handleCreate = () => {
@@ -19,8 +22,10 @@ export default function CompaniesPage() {
   };
 
   const handleEdit = (company) => {
+    setSelectedCompanyForDocs(company);
+    setShowDocsForm(true);
+    setShowForm(false);
     setEditingCompany(company);
-    setShowForm(true);
   };
 
   const handleSave = () => {
@@ -32,6 +37,18 @@ export default function CompaniesPage() {
   const handleCancel = () => {
     setShowForm(false);
     setEditingCompany(null);
+  };
+
+  const handleOpenCompanyDocs = (company) => {
+    setSelectedCompanyForDocs(company);
+    setShowDocsForm(true);
+    setShowForm(false);
+  };
+
+  const handleCloseCompanyDocs = () => {
+    setShowDocsForm(false);
+    setSelectedCompanyForDocs(null);
+    setRefreshTrigger((prev) => prev + 1);
   };
 
   return (
@@ -78,16 +95,37 @@ export default function CompaniesPage() {
               company={editingCompany}
               onSave={handleSave}
               onCancel={handleCancel}
+              onOpenDocs={handleOpenCompanyDocs}
+            />
+          </Box>
+        </Slide>
+      )}
+
+      {showDocsForm && selectedCompanyForDocs && (
+        <Slide direction="down" in={showDocsForm} mountOnEnter unmountOnExit>
+          <Box sx={{ mb: 4 }}>
+            <Button
+              startIcon={<ArrowBackIcon />}
+              onClick={handleCloseCompanyDocs}
+              sx={{ mb: 2 }}
+            >
+              Volver a la lista
+            </Button>
+            <MedicaLebenCompanyForm
+              company={selectedCompanyForDocs}
+              onClose={handleCloseCompanyDocs}
+              isNewCompany={false}
             />
           </Box>
         </Slide>
       )}
 
       {/* List Section */}
-      <Fade in={!showForm} timeout={500}>
+      <Fade in={!showForm && !showDocsForm} timeout={500}>
         <Box>
           <CompanyList
             onEdit={handleEdit}
+            onOpenCompanyDocs={handleOpenCompanyDocs}
             onRefresh={() => setRefreshTrigger(prev => prev + 1)}
             refreshTrigger={refreshTrigger}
           />
