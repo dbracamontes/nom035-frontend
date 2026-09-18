@@ -447,6 +447,9 @@ export const downloadDocgenWord = (jobId) =>
 export const downloadDocgenPdf = (jobId) =>
   axios.get(`${API_BASE}/docgen/${jobId}/download/pdf`, { responseType: 'blob' });
 
+export const generateMedicaLebenMaterialidad = (companyId) =>
+  axios.post(`${API_BASE}/materialidad/medica-leben/companies/${companyId}/generate`);
+
 // Contract generation (Genera Contrato)
 export const prepareContractFromDocuments = (files, documentType = 'ACTA', templateType = 'DOCUMENTO_04_1') => {
   const formData = new FormData();

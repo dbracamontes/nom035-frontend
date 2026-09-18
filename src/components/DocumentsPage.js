@@ -234,7 +234,7 @@ export default function DocumentsPage() {
     if (!doc?.id) return;
 
     try {
-      const url = `/api/documents-center/${doc.id}/decision?decision=${encodeURIComponent(decision)}&message=${encodeURIComponent(decision === 'APPROVED' ? 'Documento aprobado correctamente.' : 'Documento rechazado. Debes volver a cargar la información correcta.')}`;
+      const url = `/api/documents-center/${doc.id}/decision?decision=${encodeURIComponent(decision)}&source=${encodeURIComponent(doc.source || '')}&message=${encodeURIComponent(decision === 'APPROVED' ? 'Documento aprobado correctamente.' : 'Documento rechazado. Debes volver a cargar la información correcta.')}`;
 
       await axios.put(`${process.env.REACT_APP_API_URL || ''}${url}`, {}, {
         headers: { 'Content-Type': 'application/json' }
@@ -264,10 +264,6 @@ export default function DocumentsPage() {
             Consulta, valida, revisa y descarga todos los documentos de la operación y las divisiones activas.
           </Typography>
         </Box>
-        <Stack direction="row" spacing={1}>
-          <Button variant="contained" startIcon={<ArticleIcon />}>Nuevo documento</Button>
-          <Button variant="outlined" startIcon={<DownloadIcon />}>Descargar lote</Button>
-        </Stack>
       </Stack>
 
       <Grid container spacing={2}>

@@ -32,6 +32,7 @@ import DocumentCreationPage from "./components/DocumentCreationPage";
 import ContractGenerationPage from "./components/ContractGenerationPage";
 import ContractMovementLogPage from "./components/ContractMovementLogPage";
 import DocumentsPage from "./components/DocumentsPage";
+import MaterialidadPage from "./components/MaterialidadPage";
 import { useTranslation } from 'react-i18next';
 import { UserContext } from "./context/UserContext";
 import { Routes, Route, useLocation, Navigate } from "react-router-dom";
@@ -99,6 +100,7 @@ export default function App() {
       label: 'Documentos',
       items: [
         { text: 'Centro de Documentos', icon: <DescriptionIcon />, component: <DocumentsPage />, roles: ['ROLE_ADMIN'] },
+        { text: 'Materialidad', icon: <DescriptionIcon />, component: <MaterialidadPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
       ],
     },
     {
