@@ -14,7 +14,12 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
   const [formData, setFormData] = useState({
     name: '',
     taxId: '',
-    folioMercantil: ''
+    folioMercantil: '',
+    cliente: '',
+    razonSocial: '',
+    representante: '',
+    domicilio: '',
+    sindicato: ''
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -25,13 +30,23 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
       setFormData({
         name: company.name || '',
         taxId: company.taxId || '',
-        folioMercantil: company.folioMercantil || ''
+        folioMercantil: company.folioMercantil || '',
+        cliente: company.cliente || '',
+        razonSocial: company.razonSocial || '',
+        representante: company.representante || '',
+        domicilio: company.domicilio || '',
+        sindicato: company.sindicato || ''
       });
     } else {
       setFormData({
         name: '',
         taxId: '',
-        folioMercantil: ''
+        folioMercantil: '',
+        cliente: '',
+        razonSocial: '',
+        representante: '',
+        domicilio: '',
+        sindicato: ''
       });
     }
     setErrors({});
@@ -77,7 +92,12 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
       const dataToSend = {
         name: formData.name.trim(),
         taxId: formData.taxId.trim(),
-        folioMercantil: formData.folioMercantil.trim()
+        folioMercantil: formData.folioMercantil.trim(),
+        cliente: formData.cliente.trim(),
+        razonSocial: formData.razonSocial.trim(),
+        representante: formData.representante.trim(),
+        domicilio: formData.domicilio.trim(),
+        sindicato: formData.sindicato.trim()
       };
 
       if (company && company.id) {
@@ -185,6 +205,76 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
               disabled={loading}
               inputProps={{ maxLength: 50 }}
               placeholder="Ej: FM-12345"
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Cliente"
+              value={formData.cliente}
+              onChange={handleChange('cliente')}
+              error={!!errors.cliente}
+              helperText={errors.cliente || 'Cliente asociado a la empresa'}
+              variant="outlined"
+              disabled={loading}
+              inputProps={{ maxLength: 150 }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Razón Social"
+              value={formData.razonSocial}
+              onChange={handleChange('razonSocial')}
+              error={!!errors.razonSocial}
+              helperText={errors.razonSocial || 'Razón social de la empresa'}
+              variant="outlined"
+              disabled={loading}
+              inputProps={{ maxLength: 150 }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Representante de la empresa"
+              value={formData.representante}
+              onChange={handleChange('representante')}
+              error={!!errors.representante}
+              helperText={errors.representante || 'Nombre del representante legal o contacto'}
+              variant="outlined"
+              disabled={loading}
+              inputProps={{ maxLength: 150 }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Sindicato"
+              value={formData.sindicato}
+              onChange={handleChange('sindicato')}
+              error={!!errors.sindicato}
+              helperText={errors.sindicato || 'Sindicato de la empresa (si aplica)'}
+              variant="outlined"
+              disabled={loading}
+              inputProps={{ maxLength: 150 }}
+            />
+          </Grid>
+
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Domicilio"
+              value={formData.domicilio}
+              onChange={handleChange('domicilio')}
+              error={!!errors.domicilio}
+              helperText={errors.domicilio || 'Domicilio fiscal o comercial de la empresa'}
+              variant="outlined"
+              disabled={loading}
+              inputProps={{ maxLength: 255 }}
             />
           </Grid>
 

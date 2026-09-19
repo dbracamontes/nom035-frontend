@@ -156,6 +156,11 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
   const [companyName, setCompanyName] = useState(company?.name || "");
   const [companyTaxId, setCompanyTaxId] = useState(company?.taxId || "");
   const [companyFolioMercantil, setCompanyFolioMercantil] = useState(company?.folioMercantil || "");
+  const [companyCliente, setCompanyCliente] = useState(company?.cliente || "");
+  const [companyRazonSocial, setCompanyRazonSocial] = useState(company?.razonSocial || "");
+  const [companyRepresentante, setCompanyRepresentante] = useState(company?.representante || "");
+  const [companyDomicilio, setCompanyDomicilio] = useState(company?.domicilio || "");
+  const [companySindicato, setCompanySindicato] = useState(company?.sindicato || "");
   const [companyValidationError, setCompanyValidationError] = useState("");
   const [previewDialog, setPreviewDialog] = useState({ open: false, title: '', url: '', type: 'image' });
 
@@ -211,6 +216,11 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
     setCompanyName(company?.name || "");
     setCompanyTaxId(company?.taxId || "");
     setCompanyFolioMercantil(company?.folioMercantil || "");
+    setCompanyCliente(company?.cliente || "");
+    setCompanyRazonSocial(company?.razonSocial || "");
+    setCompanyRepresentante(company?.representante || "");
+    setCompanyDomicilio(company?.domicilio || "");
+    setCompanySindicato(company?.sindicato || "");
   }, [company]);
 
   const handleDocFileChange = (field) => (e) => {
@@ -253,6 +263,11 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
       name: companyName.trim(),
       taxId: companyTaxId.trim() || null,
       folioMercantil: companyFolioMercantil.trim() || null,
+      cliente: companyCliente.trim() || null,
+      razonSocial: companyRazonSocial.trim() || null,
+      representante: companyRepresentante.trim() || null,
+      domicilio: companyDomicilio.trim() || null,
+      sindicato: companySindicato.trim() || null,
     };
     const resp = await axios.post(`${API_BASE}/companies`, payload);
     return resp.data;
@@ -408,6 +423,11 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
         name: companyName.trim(),
         taxId: companyTaxId.trim(),
         folioMercantil: companyFolioMercantil.trim(),
+        cliente: companyCliente.trim() || null,
+        razonSocial: companyRazonSocial.trim() || null,
+        representante: companyRepresentante.trim() || null,
+        domicilio: companyDomicilio.trim() || null,
+        sindicato: companySindicato.trim() || null,
       };
 
       await updateCompany(company.id, payload);
@@ -747,6 +767,61 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
               size="small"
               helperText="Folio mercantil de la empresa"
               inputProps={{ maxLength: 50 }}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <TextField
+              fullWidth
+              label="Cliente"
+              value={companyCliente}
+              onChange={(e) => setCompanyCliente(e.target.value)}
+              size="small"
+              helperText="Cliente asociado a la empresa"
+              inputProps={{ maxLength: 150 }}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <TextField
+              fullWidth
+              label="Razón Social"
+              value={companyRazonSocial}
+              onChange={(e) => setCompanyRazonSocial(e.target.value)}
+              size="small"
+              helperText="Razón social de la empresa"
+              inputProps={{ maxLength: 150 }}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <TextField
+              fullWidth
+              label="Representante de la empresa"
+              value={companyRepresentante}
+              onChange={(e) => setCompanyRepresentante(e.target.value)}
+              size="small"
+              helperText="Nombre del representante legal o contacto"
+              inputProps={{ maxLength: 150 }}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <TextField
+              fullWidth
+              label="Sindicato"
+              value={companySindicato}
+              onChange={(e) => setCompanySindicato(e.target.value)}
+              size="small"
+              helperText="Sindicato de la empresa (si aplica)"
+              inputProps={{ maxLength: 150 }}
+            />
+          </Grid>
+          <Grid size={{ xs: 12 }}>
+            <TextField
+              fullWidth
+              label="Domicilio"
+              value={companyDomicilio}
+              onChange={(e) => setCompanyDomicilio(e.target.value)}
+              size="small"
+              helperText="Domicilio fiscal o comercial de la empresa"
+              inputProps={{ maxLength: 255 }}
             />
           </Grid>
         </Grid>
