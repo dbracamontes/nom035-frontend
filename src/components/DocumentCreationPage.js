@@ -55,6 +55,8 @@ export default function DocumentCreationPage() {
   const [fields, setFields] = React.useState([]);
   const [values, setValues] = React.useState({});
   const [companies, setCompanies] = React.useState([]);
+  const [selectedCompany, setSelectedCompany] = React.useState(null);
+  const [creationDate, setCreationDate] = React.useState(null);
   const [jobId, setJobId] = React.useState(null);
   const [preview, setPreview] = React.useState("");
   const vigenciaAutoFillLockRef = React.useRef({
@@ -166,6 +168,11 @@ export default function DocumentCreationPage() {
     return candidate;
   }, []);
 
+  const formatDateForDocument = React.useCallback(
+    (dateValue) => `${dateValue.getDate()} DE ${MONTH_NAMES[dateValue.getMonth()]} DE ${dateValue.getFullYear()}`,
+    [MONTH_NAMES]
+  );
+
   const applyDateToGroup = React.useCallback(
     (group, dateValue, options = {}) => {
       if (!group || !dateValue) return;
@@ -177,14 +184,18 @@ export default function DocumentCreationPage() {
         vigenciaAutoFillLockRef.current.currentEndDateManuallyEdited = true;
       }
 
-      setValues((prev) => ({
-        ...prev,
+      const dateParts = {
         [group.day]: String(dateValue.getDate()),
         [group.month]: MONTH_NAMES[dateValue.getMonth()],
         [group.year]: String(dateValue.getFullYear()),
-      }));
+      };
+      if (group.day === dateGroups.FECHA_CONTRATO.day) {
+        dateParts.FECHA_CONTRATO = formatDateForDocument(dateValue);
+      }
+
+      setValues((prev) => ({ ...prev, ...dateParts }));
     },
-    [MONTH_NAMES, dateGroups]
+    [MONTH_NAMES, dateGroups, formatDateForDocument]
   );
 
   React.useEffect(() => {
@@ -312,7 +323,47 @@ export default function DocumentCreationPage() {
   const handleOpenSemi = async (template) => {
     setSelectedTemplate(template);
     setDialogOpen(true);
-    setValues({});
+    setCreationDate(null);
+    const initialValues = {
+      SINDICATO: selectedCompany?.sindicato || "",
+      LA_PATRONAL: selectedCompany?.name || "",
+      PROPUESTA_PARA_LA_EMPRESA: selectedCompany?.name || "",
+      FUENTE_DE_TRABAJO_DENOMINADA: selectedCompany?.name || "",
+      REPRESENTADA_POR: selectedCompany?.representante || "",
+      ADMINISTRADOR_UNICO: selectedCompany?.representante || "",
+      PERSONA_ACREDITADA: selectedCompany?.name || "",
+      EL_PATRON: selectedCompany?.name || "",
+      ADMINISTRADOR_DEL_PATRON: selectedCompany?.representante || "",
+      APODERADO_LEGAL: selectedCompany?.representante || "",
+      SEDE: selectedCompany?.ciudad || "",
+      CONSEDE_EN: selectedCompany?.ciudad || "",
+      TELEFONO: selectedCompany?.telefono || "",
+      CORREO_ELECTRONICO: selectedCompany?.correoElectronico || "",
+    };
+    if (template.type === "CLAUSULA_CONTRATO_PATRON_NOM2U") {
+      initialValues.EL_PRESTADOR_DE_SERVICIOS = "Medica Leben";
+      initialValues.EL_CLIENTE = selectedCompany?.name || "";
+    }
+    if (template.type === "DOCUMENTO_03") {
+      initialValues.NOMBRE_EMPRESA = selectedCompany?.name || "";
+      initialValues["NOMBRE EMPRESA"] = selectedCompany?.name || "";
+      initialValues.ESTIMADO = selectedCompany?.representante || "";
+    }
+    if (template.type === "DOCUMENTO_02") {
+      const today = new Date();
+      const day = String(today.getDate());
+      const month = MONTH_NAMES[today.getMonth()];
+      const year = String(today.getFullYear());
+      const dateGroup = dateGroups.FECHA_CONTRATO;
+      const formattedDate = formatDateForDocument(today);
+      setCreationDate(today);
+      initialValues[dateGroup.day] = day;
+      initialValues[dateGroup.month] = month;
+      initialValues[dateGroup.year] = year;
+      initialValues.CREADA_LA_FECHA = formattedDate;
+      initialValues.FECHA_CONTRATO = formattedDate;
+    }
+    setValues(initialValues);
     vigenciaAutoFillLockRef.current = {
       legacyEndDateManuallyEdited: false,
       currentEndDateManuallyEdited: false,
@@ -402,6 +453,49 @@ export default function DocumentCreationPage() {
         Crear Documento
       </Typography>
 
+      <Box sx={{ display: "flex", justifyContent: "center" }}>
+        <Autocomplete
+          options={companies}
+          value={selectedCompany}
+          getOptionLabel={(company) => company?.name || ""}
+          isOptionEqualToValue={(option, value) => option.id === value.id}
+          onChange={(_, company) => {
+            setSelectedCompany(company);
+            setValues((prev) => ({
+              ...prev,
+              SINDICATO: company?.sindicato || "",
+              LA_PATRONAL: company?.name || "",
+              PROPUESTA_PARA_LA_EMPRESA: company?.name || "",
+              FUENTE_DE_TRABAJO_DENOMINADA: company?.name || "",
+              REPRESENTADA_POR: company?.representante || "",
+              ADMINISTRADOR_UNICO: company?.representante || "",
+              PERSONA_ACREDITADA: company?.name || "",
+              EL_PATRON: company?.name || "",
+              ADMINISTRADOR_DEL_PATRON: company?.representante || "",
+              APODERADO_LEGAL: company?.representante || "",
+              SEDE: company?.ciudad || "",
+              CONSEDE_EN: company?.ciudad || "",
+              TELEFONO: company?.telefono || "",
+              CORREO_ELECTRONICO: company?.correoElectronico || "",
+              ...(selectedTemplate?.type === "CLAUSULA_CONTRATO_PATRON_NOM2U"
+                ? { EL_CLIENTE: company?.name || "" }
+                : {}),
+              ...(selectedTemplate?.type === "DOCUMENTO_03"
+                ? {
+                    NOMBRE_EMPRESA: company?.name || "",
+                    "NOMBRE EMPRESA": company?.name || "",
+                    ESTIMADO: company?.representante || "",
+                  }
+                : {}),
+            }));
+          }}
+          renderInput={(params) => (
+            <TextField {...params} label="Empresa" fullWidth />
+          )}
+          sx={{ width: "100%", maxWidth: 900 }}
+        />
+      </Box>
+
       {loading && <LinearProgress />}
       {error && <Alert severity="error">{String(error)}</Alert>}
 
@@ -486,8 +580,86 @@ export default function DocumentCreationPage() {
         </DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
+            {selectedTemplate?.type === "DOCUMENTO_02" && (
+              <>
+                <TextField
+                  label="Fecha de creación"
+                  type="date"
+                  value={toInputDate(creationDate)}
+                  onChange={(e) => {
+                    const selectedDate = fromInputDate(e.target.value);
+                    if (selectedDate) {
+                      setCreationDate(selectedDate);
+                      setValues((prev) => ({
+                        ...prev,
+                        CREADA_LA_FECHA: formatDateForDocument(selectedDate),
+                      }));
+                    }
+                  }}
+                  required
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                />
+                <TextField
+                  label="Fecha del contrato"
+                  type="date"
+                  value={toInputDate(
+                    parseDateFromParts(
+                      values[dateGroups.FECHA_CONTRATO.day],
+                      values[dateGroups.FECHA_CONTRATO.month],
+                      values[dateGroups.FECHA_CONTRATO.year]
+                    )
+                  )}
+                  onChange={(e) => {
+                    const selectedDate = fromInputDate(e.target.value);
+                    if (selectedDate) {
+                      applyDateToGroup(dateGroups.FECHA_CONTRATO, selectedDate, { manual: true });
+                    }
+                  }}
+                  required
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                />
+              </>
+            )}
             {fields.map((field) => {
               const key = String(field.key || "").toUpperCase();
+              if (
+                selectedTemplate?.type === "DOCUMENTO_02" &&
+                ["DIA", "MES", "AÑO", "CREADA_LA_FECHA", "FECHA_CONTRATO"].includes(key)
+              ) {
+                return null;
+              }
+              if (
+                selectedTemplate?.type === "CLAUSULA_CONTRATO_PATRON_NOM2U" &&
+                ["EL_CLIENTE", "EL_PRESTADOR_DE_SERVICIOS"].includes(key)
+              ) {
+                return (
+                  <TextField
+                    key={field.key}
+                    label={field.label || field.key}
+                    value={values[field.key] || ""}
+                    required={Boolean(field.required)}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                  />
+                );
+              }
+              if (
+                selectedTemplate?.type === "DOCUMENTO_03" &&
+                ["NOMBRE_EMPRESA", "NOMBRE EMPRESA", "ESTIMADO"].includes(key)
+              ) {
+                return (
+                  <TextField
+                    key={field.key}
+                    label={field.label || field.key}
+                    value={values[field.key] || ""}
+                    required={Boolean(field.required)}
+                    fullWidth
+                    InputProps={{ readOnly: true }}
+                  />
+                );
+              }
               const isCompanySelector = ["EL_CLIENTE", "REPRESENTANTE_DE"].includes(key);
               const dateGroup = getDateGroupByKey(key);
 
