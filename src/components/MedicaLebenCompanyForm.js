@@ -160,6 +160,10 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
   const [companyRazonSocial, setCompanyRazonSocial] = useState(company?.razonSocial || "");
   const [companyRepresentante, setCompanyRepresentante] = useState(company?.representante || "");
   const [companyDomicilio, setCompanyDomicilio] = useState(company?.domicilio || "");
+  const [companyCiudad, setCompanyCiudad] = useState(company?.ciudad || "");
+  const [companyCodigoPostal, setCompanyCodigoPostal] = useState(company?.codigoPostal || "");
+  const [companyTelefono, setCompanyTelefono] = useState(company?.telefono || "");
+  const [companyCorreoElectronico, setCompanyCorreoElectronico] = useState(company?.correoElectronico || "");
   const [companySindicato, setCompanySindicato] = useState(company?.sindicato || "");
   const [companyValidationError, setCompanyValidationError] = useState("");
   const [previewDialog, setPreviewDialog] = useState({ open: false, title: '', url: '', type: 'image' });
@@ -220,6 +224,10 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
     setCompanyRazonSocial(company?.razonSocial || "");
     setCompanyRepresentante(company?.representante || "");
     setCompanyDomicilio(company?.domicilio || "");
+    setCompanyCiudad(company?.ciudad || "");
+    setCompanyCodigoPostal(company?.codigoPostal || "");
+    setCompanyTelefono(company?.telefono || "");
+    setCompanyCorreoElectronico(company?.correoElectronico || "");
     setCompanySindicato(company?.sindicato || "");
   }, [company]);
 
@@ -267,6 +275,10 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
       razonSocial: companyRazonSocial.trim() || null,
       representante: companyRepresentante.trim() || null,
       domicilio: companyDomicilio.trim() || null,
+      ciudad: companyCiudad.trim() || null,
+      codigoPostal: companyCodigoPostal.trim() || null,
+      telefono: companyTelefono.trim() || null,
+      correoElectronico: companyCorreoElectronico.trim() || null,
       sindicato: companySindicato.trim() || null,
     };
     const resp = await axios.post(`${API_BASE}/companies`, payload);
@@ -427,6 +439,10 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
         razonSocial: companyRazonSocial.trim() || null,
         representante: companyRepresentante.trim() || null,
         domicilio: companyDomicilio.trim() || null,
+        ciudad: companyCiudad.trim() || null,
+        codigoPostal: companyCodigoPostal.trim() || null,
+        telefono: companyTelefono.trim() || null,
+        correoElectronico: companyCorreoElectronico.trim() || null,
         sindicato: companySindicato.trim() || null,
       };
 
@@ -822,6 +838,48 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
               size="small"
               helperText="Domicilio fiscal o comercial de la empresa"
               inputProps={{ maxLength: 255 }}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <TextField
+              fullWidth
+              label="Ciudad"
+              value={companyCiudad}
+              onChange={(e) => setCompanyCiudad(e.target.value)}
+              size="small"
+              inputProps={{ maxLength: 100 }}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <TextField
+              fullWidth
+              label="Código Postal"
+              value={companyCodigoPostal}
+              onChange={(e) => setCompanyCodigoPostal(e.target.value)}
+              size="small"
+              inputProps={{ maxLength: 20 }}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <TextField
+              fullWidth
+              label="Teléfono"
+              type="tel"
+              value={companyTelefono}
+              onChange={(e) => setCompanyTelefono(e.target.value)}
+              size="small"
+              inputProps={{ maxLength: 30 }}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <TextField
+              fullWidth
+              label="Correo Electrónico"
+              type="email"
+              value={companyCorreoElectronico}
+              onChange={(e) => setCompanyCorreoElectronico(e.target.value)}
+              size="small"
+              inputProps={{ maxLength: 254 }}
             />
           </Grid>
         </Grid>

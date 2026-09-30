@@ -19,6 +19,10 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
     razonSocial: '',
     representante: '',
     domicilio: '',
+    ciudad: '',
+    codigoPostal: '',
+    telefono: '',
+    correoElectronico: '',
     sindicato: ''
   });
   const [errors, setErrors] = useState({});
@@ -35,6 +39,10 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
         razonSocial: company.razonSocial || '',
         representante: company.representante || '',
         domicilio: company.domicilio || '',
+        ciudad: company.ciudad || '',
+        codigoPostal: company.codigoPostal || '',
+        telefono: company.telefono || '',
+        correoElectronico: company.correoElectronico || '',
         sindicato: company.sindicato || ''
       });
     } else {
@@ -46,6 +54,10 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
         razonSocial: '',
         representante: '',
         domicilio: '',
+        ciudad: '',
+        codigoPostal: '',
+        telefono: '',
+        correoElectronico: '',
         sindicato: ''
       });
     }
@@ -97,6 +109,10 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
         razonSocial: formData.razonSocial.trim(),
         representante: formData.representante.trim(),
         domicilio: formData.domicilio.trim(),
+        ciudad: formData.ciudad.trim(),
+        codigoPostal: formData.codigoPostal.trim(),
+        telefono: formData.telefono.trim(),
+        correoElectronico: formData.correoElectronico.trim(),
         sindicato: formData.sindicato.trim()
       };
 
@@ -275,6 +291,52 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
               variant="outlined"
               disabled={loading}
               inputProps={{ maxLength: 255 }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Ciudad"
+              value={formData.ciudad}
+              onChange={handleChange('ciudad')}
+              disabled={loading}
+              inputProps={{ maxLength: 100 }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Código Postal"
+              value={formData.codigoPostal}
+              onChange={handleChange('codigoPostal')}
+              disabled={loading}
+              inputProps={{ maxLength: 20 }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Teléfono"
+              type="tel"
+              value={formData.telefono}
+              onChange={handleChange('telefono')}
+              disabled={loading}
+              inputProps={{ maxLength: 30 }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Correo Electrónico"
+              type="email"
+              value={formData.correoElectronico}
+              onChange={handleChange('correoElectronico')}
+              disabled={loading}
+              inputProps={{ maxLength: 254 }}
             />
           </Grid>
 
