@@ -38,7 +38,9 @@ import KeyIcon from "@mui/icons-material/Key";
 import LockResetIcon from "@mui/icons-material/LockReset";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import PasswordIcon from "@mui/icons-material/Password";
+import DeleteIcon from "@mui/icons-material/Delete";
 import {
+  deleteUser,
   generateTemporaryPassword,
   getRolesCatalog,
   getUsersWithRoles,
@@ -105,6 +107,7 @@ export default function UserRoleManagement() {
   const [passwordDialog, setPasswordDialog] = useState({ open: false, user: null, password: "" });
   const [resetDialog, setResetDialog] = useState({ open: false, token: "", expiresAt: null });
   const [manualPasswordDialog, setManualPasswordDialog] = useState({ open: false, user: null, value: "", confirm: "" });
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, row: null });
   const [searchTerm, setSearchTerm] = useState("");
 
   const hasData = useMemo(() => rows.length > 0, [rows]);
@@ -356,6 +359,51 @@ export default function UserRoleManagement() {
     }
   };
 
+  const handleDeleteUser = async () => {
+    const row = deleteDialog.row;
+    if (!row) {
+      return;
+    }
+
+    setRows((prev) =>
+      prev.map((current) =>
+        current.data.id === row.data.id ? { ...current, busy: true } : current
+      )
+    );
+    setDeleteDialog((prev) => ({
+      ...prev,
+      row: { ...prev.row, busy: true }
+    }));
+    try {
+      await deleteUser(row.data.id);
+      setDeleteDialog({ open: false, row: null });
+      setSnackbar({
+        open: true,
+        message: t(
+          row.employeeId ? "users.feedback.deletedWithEmployee" : "users.feedback.deleted"
+        ),
+        severity: "success"
+      });
+      await loadData();
+    } catch (err) {
+      console.error("Error deleting user", err);
+      setSnackbar({
+        open: true,
+        message: t("users.errors.delete"),
+        severity: "error"
+      });
+      setRows((prev) =>
+        prev.map((current) =>
+          current.data.id === row.data.id ? { ...current, busy: false } : current
+        )
+      );
+      setDeleteDialog((prev) => ({
+        ...prev,
+        row: { ...prev.row, busy: false }
+      }));
+    }
+  };
+
   const handleCopy = async (value) => {
     try {
       await navigator.clipboard.writeText(value);
@@ -538,6 +586,18 @@ export default function UserRoleManagement() {
                           </IconButton>
                         </span>
                       </Tooltip>
+                      <Tooltip title={t("users.actions.delete")}>
+                        <span>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => setDeleteDialog({ open: true, row })}
+                            disabled={row.busy}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
                       <Tooltip title={t("users.actions.save")}
                         >
                         <span>
@@ -563,6 +623,42 @@ export default function UserRoleManagement() {
           </Table>
         </TableContainer>
       )}
+
+      <Dialog
+        open={deleteDialog.open}
+        onClose={() => {
+          if (!deleteDialog.row?.busy) {
+            setDeleteDialog({ open: false, row: null });
+          }
+        }}
+      >
+        <DialogTitle>{t("users.dialogs.deleteTitle")}</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t(deleteDialog.row?.employeeId
+              ? "users.dialogs.deleteBodyWithEmployee"
+              : "users.dialogs.deleteBody", {
+              username: deleteDialog.row?.displayName || deleteDialog.row?.data.username || ""
+            })}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setDeleteDialog({ open: false, row: null })}
+            disabled={Boolean(deleteDialog.row?.busy)}
+          >
+            {t("common.cancel")}
+          </Button>
+          <Button
+            onClick={handleDeleteUser}
+            color="error"
+            variant="contained"
+            disabled={Boolean(deleteDialog.row?.busy)}
+          >
+            {deleteDialog.row?.busy ? <CircularProgress size={18} /> : t("common.confirm")}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={passwordDialog.open}
