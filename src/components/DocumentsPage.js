@@ -96,9 +96,12 @@ export default function DocumentsPage() {
     return 'Pendiente';
   };
 
+  // The backend exposes a globally unique `uid`; ids alone collide across sources.
+  const docKey = (doc) => doc?.uid || `${doc?.source || 'DOC'}-${doc?.id}`;
+
   const resolveDocStatus = (doc) => {
     if (!doc?.id) return normalizeDocStatus(doc?.status);
-    const override = decisionOverrides[doc.id];
+    const override = decisionOverrides[docKey(doc)];
     if (override) return override;
     return normalizeDocStatus(doc.status);
   };
@@ -133,6 +136,14 @@ export default function DocumentsPage() {
     return auth ? { Authorization: `Basic ${auth}` } : {};
   };
 
+  // Release focus from the trigger before the modal sets aria-hidden on #root.
+  const openPreview = (doc) => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    setSelectedDoc(doc);
+  };
+
   const openDocument = async (url, options = {}) => {
     if (!url) return;
 
@@ -141,7 +152,7 @@ export default function DocumentsPage() {
     const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
 
     if (inline) {
-      setSelectedDoc({ title, previewUrl: url, status: 'Pendiente' });
+      openPreview({ title, previewUrl: url, status: 'Pendiente' });
       return;
     }
 
@@ -242,14 +253,14 @@ export default function DocumentsPage() {
 
       setDecisionOverrides((prev) => ({
         ...prev,
-        [doc.id]: decision === 'APPROVED' ? 'Aprobado' : 'Rechazado',
+        [docKey(doc)]: decision === 'APPROVED' ? 'Aprobado' : 'Rechazado',
       }));
 
-      setDocuments((prev) => prev.map((item) => item.id === doc.id
+      setDocuments((prev) => prev.map((item) => docKey(item) === docKey(doc)
         ? { ...item, status: decision === 'APPROVED' ? 'Aprobado' : 'Rechazado', requiresApproval: false }
         : item));
 
-      setSelectedDoc((current) => (current && current.id === doc.id ? { ...current, status: decision === 'APPROVED' ? 'Aprobado' : 'Rechazado' } : current));
+      setSelectedDoc((current) => (current && docKey(current) === docKey(doc) ? { ...current, status: decision === 'APPROVED' ? 'Aprobado' : 'Rechazado' } : current));
     } catch (error) {
       console.error('Error updating document decision', error);
     }
@@ -367,7 +378,7 @@ export default function DocumentsPage() {
             <Alert severity="info">No se encontraron documentos con los filtros aplicados.</Alert>
           ) : (
             filteredDocuments.map((doc) => (
-              <Card key={doc.id} sx={{ borderRadius: 3, boxShadow: '0 12px 32px rgba(15, 23, 42, 0.06)' }}>
+              <Card key={docKey(doc)} sx={{ borderRadius: 3, boxShadow: '0 12px 32px rgba(15, 23, 42, 0.06)' }}>
                 <CardContent sx={{ p: 3 }}>
                   <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }}>
                     <Stack direction="row" spacing={2} alignItems="center" sx={{ flex: 1 }}>
@@ -399,7 +410,7 @@ export default function DocumentsPage() {
                       />
 
                       <Stack direction="row" spacing={1}>
-                        <Button size="small" variant="outlined" color="primary" onClick={() => setSelectedDoc({ ...doc, status: resolveDocStatus(doc), previewUrl: doc.previewUrl || doc.downloadUrl })}>
+                        <Button size="small" variant="outlined" color="primary" onClick={() => openPreview({ ...doc, status: resolveDocStatus(doc), previewUrl: doc.previewUrl || doc.downloadUrl })}>
                           Vista previa
                         </Button>
                         <Button size="small" variant="outlined" color="secondary" onClick={() => openDocument(doc.downloadUrl)}>

@@ -173,6 +173,7 @@
   },
   "common": {
     "cancel": "Cancelar",
+    "confirm": "Confirmar",
     "save": "Guardar",
     "edit": "Editar",
     "delete": "Eliminar",
@@ -185,6 +186,7 @@
       "manualPassword": "Asignar contraseña manual",
       "generatePassword": "Generar contraseña temporal",
       "requestReset": "Solicitar recuperación",
+      "delete": "Eliminar usuario",
       "save": "Guardar cambios",
       "copy": "Copiar"
     },
@@ -209,11 +211,14 @@
       "passwordGenerated": "Contraseña temporal generada",
       "resetLink": "Se generó un enlace de recuperación",
       "manualPasswordSet": "Contraseña actualizada correctamente",
+      "deleted": "Usuario eliminado exitosamente",
+      "deletedWithEmployee": "Usuario y empleado asociado eliminados exitosamente",
       "copied": "Copiado al portapapeles"
     },
     "errors": {
       "load": "No se pudieron cargar los usuarios o roles",
       "update": "No fue posible guardar los cambios. Intenta más tarde.",
+      "delete": "No se pudo eliminar el usuario",
       "generatePassword": "No se pudo generar la contraseña",
       "emailRequired": "El usuario no tiene correo registrado",
       "requestReset": "No se pudo generar el enlace de recuperación",
@@ -229,6 +234,9 @@
       "resetTitle": "Enlace de recuperación",
       "resetBody": "Comparte el siguiente token con el usuario para completar la recuperación de contraseña desde la pantalla de restablecimiento.",
       "manualPasswordTitle": "Asignar contraseña a {{username}}",
+      "deleteTitle": "¿Eliminar usuario?",
+      "deleteBody": "¿Estás seguro de que deseas eliminar a {{username}}? Esta acción no se puede deshacer.",
+      "deleteBodyWithEmployee": "¿Estás seguro de que deseas eliminar a {{username}} y su registro de empleado asociado? Esta acción no se puede deshacer.",
       "manualPasswordBody": "Ingresa una contraseña temporal personalizada y compártela con el usuario.",
       "manualPasswordLabel": "Contraseña",
       "manualPasswordConfirm": "Confirmar contraseña",
