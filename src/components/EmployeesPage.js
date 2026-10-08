@@ -66,13 +66,15 @@ export default function EmployeesPage() {
         <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
           <PeopleIcon sx={{ fontSize: 40, color: "#2563eb" }} />
           <Typography variant="h4" sx={{ fontWeight: 600, color: "#1e293b" }}>
-            {t("employee.page.title", "Gestión de Empleados")}
+            {t("employeesUi.page.title", "Gestión de Empleados")}
           </Typography>
         </Box>
         <Typography variant="body1" color="text.secondary">
           {mode === 'list'
-            ? t("employee.page.subtitle.list", "Crea nuevos empleados o selecciona uno existente para editar sus datos y documentos.")
-            : t("employee.page.subtitle.form", selectedEmployee ? "Editando datos del empleado." : "Creando un nuevo empleado.")
+            ? t("employeesUi.page.subtitle.list", "Crea nuevos empleados o selecciona uno existente para editar sus datos y documentos.")
+            : (selectedEmployee
+                ? t("employeesUi.page.subtitle.formEdit", "Editando datos del empleado.")
+                : t("employeesUi.page.subtitle.formCreate", "Creando un nuevo empleado."))
           }
         </Typography>
       </Box>
@@ -87,7 +89,7 @@ export default function EmployeesPage() {
               size="large"
               sx={{ mb: 3, backgroundColor: "#2563eb", "&:hover": { backgroundColor: "#1d4ed8" } }}
             >
-              {t("employee.page.addEmployee", "Nuevo empleado")}
+              {t("employeesUi.page.addEmployee", "Nuevo empleado")}
             </Button>
             <EmployeeList
               refreshFlag={refreshFlag}

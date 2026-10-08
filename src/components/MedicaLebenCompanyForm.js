@@ -33,18 +33,18 @@ import {
   deleteMedicaLebenPhoto
 } from "../api/nom035";
 import axios from "axios";
-
+import { useTranslation } from "react-i18next";
 // Use the same env-configured API root as the rest of the frontend (falls back to localhost:8080)
 const API_ROOT = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 const API_BASE = `${API_ROOT}/api`;
 
 // Utilidad para descargar un archivo respetando el header Authorization global de axios
 // Attempts API download endpoints used by the backend first (so downloads use /api/medica-leben/companies/:id/...)
-const downloadFileWithAxios = async (url, suggestedName, companyId = null, resourceType = null) => {
+const downloadFileWithAxios = async (url, suggestedName, companyId = null, resourceType = null, t = (_k, d) => d) => {
   const toTrimmed = (u) => (u ? String(u).trim() : null);
   const trimmed = toTrimmed(url);
   if (!trimmed) {
-    alert("No hay URL válida para descargar el archivo.");
+    alert(t('medicaLeben.form.downloadErrors.noUrl', 'No hay URL válida para descargar el archivo.'));
     return;
   }
 
@@ -107,13 +107,14 @@ const downloadFileWithAxios = async (url, suggestedName, companyId = null, resou
 
   console.error('Error descargando archivo, intentadas URLs:', unique, lastErr);
   if (lastErr && lastErr.response && (lastErr.response.status === 401 || lastErr.response.status === 403)) {
-    alert('Acceso denegado al descargar el archivo (401/403). Verifica tu sesión.');
+    alert(t('medicaLeben.form.downloadErrors.accessDenied', 'Acceso denegado al descargar el archivo (401/403). Verifica tu sesión.'));
   } else {
-    alert('No se pudo descargar el archivo. Verifica la ruta y tu sesión.');
+    alert(t('medicaLeben.form.downloadErrors.failed', 'No se pudo descargar el archivo. Verifica la ruta y tu sesión.'));
   }
 };
 
 export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany }) {
+  const { t } = useTranslation();
   const [docs, setDocs] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState({});
@@ -240,17 +241,17 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
     const maxBytes = 5 * 1024 * 1024; // 5 MB
     if (file.size > maxBytes) {
       const friendlyNameMap = {
-        acta_constitutiva: "Acta constitutiva",
-        asamblea: "Asamblea",
-        constancia_situacion_fiscal: "Constancia de situación fiscal",
-        poder_notarial: "Poder notarial otorgado",
-        identificacion_representante: "Identificación representante legal",
-        comprobante_domicilio: "Comprobante de domicilio",
-        estado_cuenta_bancaria: "Estado de cuenta bancaria",
-        comprobante_ema_eba: "Comprobante EMA/EBA último periodo",
+        acta_constitutiva: t('medicaLeben.form.docs.actaConstitutiva', 'Acta constitutiva'),
+        asamblea: t('medicaLeben.form.docs.asamblea', 'Asamblea'),
+        constancia_situacion_fiscal: t('medicaLeben.form.docs.constanciaSituacionFiscal', 'Constancia de situación fiscal'),
+        poder_notarial: t('medicaLeben.form.docs.poderNotarial', 'Poder notarial otorgado'),
+        identificacion_representante: t('medicaLeben.form.docs.identificacionRepresentanteShort', 'Identificación representante legal'),
+        comprobante_domicilio: t('medicaLeben.form.docs.comprobanteDomicilio', 'Comprobante de domicilio'),
+        estado_cuenta_bancaria: t('medicaLeben.form.docs.estadoCuentaBancaria', 'Estado de cuenta bancaria'),
+        comprobante_ema_eba: t('medicaLeben.form.docs.comprobanteEmaEba', 'Comprobante EMA/EBA último periodo'),
       };
       const label = friendlyNameMap[normalizeDocFieldName(field)] || field;
-      setError(`El archivo para "${label}" es demasiado grande. Tamaño máximo: 5 MB.`);
+      setError(t('medicaLeben.form.errors.fileTooLarge', 'El archivo para "{{label}}" es demasiado grande. Tamaño máximo: 5 MB.', { label }));
       setFailedDocs((prev) => Array.from(new Set([...prev, label])));
       e.target.value = "";
       return;
@@ -263,7 +264,7 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
       return company;
     }
     if (!companyName || companyName.trim() === "") {
-      setCompanyValidationError("El nombre de la empresa es obligatorio");
+      setCompanyValidationError(t('medicaLeben.form.errors.companyNameRequired', 'El nombre de la empresa es obligatorio'));
       throw new Error("Company validation error");
     }
     setCompanyValidationError("");
@@ -289,7 +290,7 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
     try {
       const singleFile = getSelectedDocFile(field);
       if (!singleFile) {
-        setError("Selecciona un documento antes de guardar.");
+        setError(t('medicaLeben.form.errors.selectDocFirst', 'Selecciona un documento antes de guardar.'));
         return;
       }
 
@@ -301,7 +302,7 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
       const ensuredCompany = await ensureCompanyExists();
       const maxBytes = 5 * 1024 * 1024;
       if (singleFile.size > maxBytes) {
-        setError(`El archivo seleccionado excede el tamaño máximo permitido de 5 MB.`);
+        setError(t('medicaLeben.form.errors.fileExceedsMax', 'El archivo seleccionado excede el tamaño máximo permitido de 5 MB.'));
         setLoading(false);
         return;
       }
@@ -313,7 +314,7 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
       });
       setDocs(resp.data);
       setSelectedDocFile(field, null);
-      setSuccess("Documento guardado correctamente");
+      setSuccess(t('medicaLeben.form.success.docSaved', 'Documento guardado correctamente'));
     } catch (e) {
       if (e.message === "Company validation error") {
         return;
@@ -329,11 +330,11 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
           : (resp?.data?.error || resp?.data?.message || "");
 
       if (isMaxSizeError) {
-        setError("La carga del documento excede el tamaño máximo permitido de 5 MB.");
+        setError(t('medicaLeben.form.errors.uploadExceedsMax', 'La carga del documento excede el tamaño máximo permitido de 5 MB.'));
       } else if (validationMessage) {
         setError(validationMessage.replace(/^Error de validación:\s*/i, ""));
       } else {
-        setError("Error al guardar documentos Médica LEBEN");
+        setError(t('medicaLeben.form.errors.saveDocs', 'Error al guardar documentos Médica LEBEN'));
       }
     } finally {
       setLoading(false);
@@ -343,37 +344,37 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
   const photoRequirements = [
     {
       id: 'area_actividad',
-      title: 'I.- Fotos del área en donde se encuentran realizando las actividades los trabajadores.',
+      title: t('medicaLeben.form.photos.areaActividad', 'I.- Fotos del área en donde se encuentran realizando las actividades los trabajadores.'),
       description: 'Fotos del área en donde se encuentran realizando las actividades los trabajadores.'
     },
     {
       id: 'salidas_emergencia',
-      title: 'II.- Fotos de las salidas de emergencia.',
+      title: t('medicaLeben.form.photos.salidasEmergencia', 'II.- Fotos de las salidas de emergencia.'),
       description: 'Fotos de las salidas de emergencia.'
     },
     {
       id: 'area_comida',
-      title: 'III.- Fotos del área de comida.',
+      title: t('medicaLeben.form.photos.areaComida', 'III.- Fotos del área de comida.'),
       description: 'Fotos del área de comida.'
     },
     {
       id: 'instalaciones_empresa_entrada',
-      title: 'IV.- Fotos de las instalaciones de la empresa (entrada).',
+      title: t('medicaLeben.form.photos.entrada', 'IV.- Fotos de las instalaciones de la empresa (entrada).'),
       description: 'Fotos de las instalaciones de la empresa (entrada).'
     },
     {
       id: 'instalaciones_empresa_salida',
-      title: 'IV.- Fotos de las instalaciones de la empresa (salida).',
+      title: t('medicaLeben.form.photos.salida', 'IV.- Fotos de las instalaciones de la empresa (salida).'),
       description: 'Fotos de las instalaciones de la empresa (salida).'
     },
     {
       id: 'instalaciones_empresa_escaleras',
-      title: 'IV.- Fotos de las instalaciones de la empresa (escaleras).',
+      title: t('medicaLeben.form.photos.escaleras', 'IV.- Fotos de las instalaciones de la empresa (escaleras).'),
       description: 'Fotos de las instalaciones de la empresa (escaleras).'
     },
     {
       id: 'equipo_seguridad',
-      title: 'V.- Foto de los equipos de seguridad con que cuentan.',
+      title: t('medicaLeben.form.photos.equipoSeguridad', 'V.- Foto de los equipos de seguridad con que cuentan.'),
       description: 'Foto de los equipos de seguridad con que cuentan.'
     }
   ];
@@ -393,13 +394,13 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
         return [...filtered, resp.data];
       });
       setPhotoSelections((prev) => ({ ...prev, [photoRequirement.id]: null }));
-      setSuccess(`Foto guardada correctamente: ${photoRequirement.title}`);
+      setSuccess(t('medicaLeben.form.success.photoSaved', 'Foto guardada correctamente: {{title}}', { title: photoRequirement.title }));
     } catch (e) {
       if (e.message === "Company validation error") {
         return;
       }
       console.error(e);
-      setError("Error al subir la foto del área de trabajo");
+      setError(t('medicaLeben.form.errors.uploadPhoto', 'Error al subir la foto del área de trabajo'));
     } finally {
       setLoading(false);
     }
@@ -413,15 +414,15 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
       
       // Validar campos obligatorios
       if (!companyName.trim()) {
-        setCompanyValidationError("El nombre de la empresa es obligatorio");
+        setCompanyValidationError(t('medicaLeben.form.errors.companyNameRequired', 'El nombre de la empresa es obligatorio'));
         return;
       }
       if (!companyTaxId.trim()) {
-        setError("El RFC / Tax ID es obligatorio");
+        setError(t('medicaLeben.form.errors.taxIdRequired', 'El RFC / Tax ID es obligatorio'));
         return;
       }
       if (!companyFolioMercantil.trim()) {
-        setError("El Folio Mercantil es obligatorio");
+        setError(t('medicaLeben.form.errors.folioRequired', 'El Folio Mercantil es obligatorio'));
         return;
       }
       
@@ -447,10 +448,10 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
       };
 
       await updateCompany(company.id, payload);
-      setSuccess("Datos de la empresa guardados correctamente");
+      setSuccess(t('medicaLeben.form.success.companySaved', 'Datos de la empresa guardados correctamente'));
     } catch (e) {
       console.error("Error al guardar datos de la empresa", e);
-      setError("Error al guardar los datos de la empresa");
+      setError(t('medicaLeben.form.errors.saveCompany', 'Error al guardar los datos de la empresa'));
     } finally {
       setLoading(false);
     }
@@ -458,17 +459,17 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
 
   const handleDeleteDoc = async (field) => {
     if (!company || !company.id) return;
-    if (!window.confirm("\u00bfEliminar este documento?")) return;
+    if (!window.confirm(t('medicaLeben.form.confirm.deleteDoc', '\u00bfEliminar este documento?'))) return;
     try {
       setLoading(true);
       setError("");
       setSuccess("");
       const resp = await deleteMedicaLebenDoc(company.id, field);
       setDocs(resp.data);
-      setSuccess("Documento eliminado correctamente");
+      setSuccess(t('medicaLeben.form.success.docDeleted', 'Documento eliminado correctamente'));
     } catch (e) {
       console.error("Error al eliminar documento", e);
-      setError("Error al eliminar el documento");
+      setError(t('medicaLeben.form.errors.deleteDoc', 'Error al eliminar el documento'));
     } finally {
       setLoading(false);
     }
@@ -476,17 +477,17 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
 
   const handleDeletePhoto = async (photoId) => {
     if (!company || !company.id) return;
-    if (!window.confirm("\u00bfEliminar esta foto?")) return;
+    if (!window.confirm(t('medicaLeben.form.confirm.deletePhoto', '\u00bfEliminar esta foto?'))) return;
     try {
       setLoading(true);
       setError("");
       setSuccess("");
       await deleteMedicaLebenPhoto(company.id, photoId);
       setPhotos((prev) => prev.filter((p) => p.id !== photoId));
-      setSuccess("Foto eliminada correctamente");
+      setSuccess(t('medicaLeben.form.success.photoDeleted', 'Foto eliminada correctamente'));
     } catch (e) {
       console.error("Error al eliminar foto", e);
-      setError("Error al eliminar la foto");
+      setError(t('medicaLeben.form.errors.deletePhoto', 'Error al eliminar la foto'));
     } finally {
       setLoading(false);
     }
@@ -519,18 +520,27 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
 
   const actionButtonSx = { minWidth: 0, px: 1.25, py: 0.75, fontSize: '0.75rem' };
 
+  // Los estados internos se mantienen en español; solo se traduce al renderizar
+  const statusText = (status) => ({
+    'Pendiente': t('medicaLeben.form.status.pending', 'Pendiente'),
+    'Aprobado': t('medicaLeben.form.status.approved', 'Aprobado'),
+    'Rechazado': t('medicaLeben.form.status.rejected', 'Rechazado'),
+    'Listo para subir': t('medicaLeben.form.status.readyToUpload', 'Listo para subir'),
+  }[status] || status);
+
   const renderDocStatus = (label, field) => {
     const hasValue = !!(docs && docs[field]);
     const url = hasValue ? String(docs[field]) : null;
     const selectedFile = getSelectedDocFile(field);
-    const filename = hasValue ? String(docs[field]).split("/").pop() : (selectedFile ? selectedFile.name : "Sin archivo");
+    const noFileLabel = t('medicaLeben.form.noFile', 'Sin archivo');
+    const filename = hasValue ? String(docs[field]).split("/").pop() : (selectedFile ? selectedFile.name : noFileLabel);
     const fieldStatus = normalizeCompanyDocStatus(getDocFieldStatus(field));
     const statusLabel = selectedFile ? 'Pendiente' : fieldStatus;
     const statusColor = fieldStatus === 'Aprobado' ? 'success' : (fieldStatus === 'Rechazado' ? 'error' : 'warning');
 
     const handleDocDoubleClick = async () => {
       if (!url) return;
-      await downloadFileWithAxios(url, filename === "Sin archivo" ? undefined : filename, company?.id, 'doc');
+      await downloadFileWithAxios(url, filename === noFileLabel ? undefined : filename, company?.id, 'doc', t);
     };
 
     return (
@@ -548,12 +558,12 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
       >
         <ListItemText
           primary={label}
-          secondary={hasValue || selectedFile ? filename : "Sin archivo"}
+          secondary={hasValue || selectedFile ? filename : noFileLabel}
           sx={{ mr: 2 }}
         />
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
           <Chip
-            label={statusLabel}
+            label={statusText(statusLabel)}
             color={statusColor}
             size="small"
           />
@@ -566,7 +576,7 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
                 startIcon={<UploadFileIcon />}
                 sx={actionButtonSx}
               >
-                {selectedFile ? "Listo para subir" : "Elegir"}
+                {selectedFile ? t('medicaLeben.form.readyToUpload', 'Listo para subir') : t('medicaLeben.form.choose', 'Elegir')}
                 <input
                   type="file"
                   hidden
@@ -582,7 +592,7 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
                   disabled={loading}
                   sx={actionButtonSx}
                 >
-                  Guardar
+                  {t('medicaLeben.form.save', 'Guardar')}
                 </Button>
               )}
             </>
@@ -593,15 +603,16 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
                 size="small"
                 onClick={async () => {
                   if (!url) return;
-                  await downloadFileWithAxios(url, filename, company?.id, 'doc');
+                  await downloadFileWithAxios(url, filename, company?.id, 'doc', t);
                 }}
                 sx={actionButtonSx}
               >
-                Descargar
+                {t('medicaLeben.form.download', 'Descargar')}
               </Button>
               <IconButton
                 size="small"
                 color="error"
+                aria-label={t('medicaLeben.form.deleteDocAria', 'Eliminar documento')}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleDeleteDoc(field);
@@ -675,12 +686,12 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
           )}
           <ListItemText
             primary={photoRequirement.title}
-            secondary={uploadedPhoto ? (uploadedPhoto.url || 'Foto cargada') : (selectedFile ? selectedFile.name : 'Sin foto')}
+            secondary={uploadedPhoto ? (uploadedPhoto.url || t('medicaLeben.form.photoUploaded', 'Foto cargada')) : (selectedFile ? selectedFile.name : t('medicaLeben.form.noPhoto', 'Sin foto'))}
             sx={{ mr: 2 }}
           />
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Chip label={statusLabel} color={statusColor} size="small" />
+          <Chip label={statusText(statusLabel)} color={statusColor} size="small" />
           {!uploadedPhoto ? (
             <>
               <Button
@@ -690,7 +701,7 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
                 startIcon={<UploadFileIcon />}
                 sx={actionButtonSx}
               >
-                {selectedFile ? 'Listo' : 'Elegir'}
+                {selectedFile ? t('medicaLeben.form.ready', 'Listo') : t('medicaLeben.form.choose', 'Elegir')}
                 <input
                   type="file"
                   accept="image/*"
@@ -710,7 +721,7 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
                   disabled={loading}
                   sx={actionButtonSx}
                 >
-                  Guardar
+                  {t('medicaLeben.form.save', 'Guardar')}
                 </Button>
               )}
             </>
@@ -722,11 +733,12 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
                 onClick={() => openPreviewDialog(photoRequirement.title, photoPreviewUrls[uploadedPhoto.id], 'image')}
                 sx={actionButtonSx}
               >
-                Vista previa
+                {t('medicaLeben.form.preview', 'Vista previa')}
               </Button>
               <IconButton
                 size="small"
                 color="error"
+                aria-label={t('medicaLeben.form.deletePhotoAria', 'Eliminar foto')}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleDeletePhoto(uploadedPhoto.id);
@@ -746,18 +758,18 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
       {/* Datos de la empresa (editable tanto para nueva como existente) */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="h6" sx={{ mb: 2 }}>
-          Datos de la empresa
+          {t('medicaLeben.form.companyData', 'Datos de la empresa')}
         </Typography>
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
               required
-              label="Nombre de la empresa"
+              label={t('medicaLeben.form.fields.name', 'Nombre de la empresa')}
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
               error={!!companyValidationError}
-              helperText={companyValidationError || "Nombre legal o comercial de la empresa"}
+              helperText={companyValidationError || t('medicaLeben.form.fields.nameHelp', 'Nombre legal o comercial de la empresa')}
               size="small"
             />
           </Grid>
@@ -769,7 +781,7 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
               value={companyTaxId}
               onChange={(e) => setCompanyTaxId(e.target.value)}
               size="small"
-              helperText="RFC de la empresa"
+              helperText={t('medicaLeben.form.fields.taxIdHelp', 'RFC de la empresa')}
               inputProps={{ maxLength: 20 }}
             />
           </Grid>
@@ -777,73 +789,73 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
             <TextField
               fullWidth
               required
-              label="Folio mercantil"
+              label={t('medicaLeben.form.fields.folio', 'Folio mercantil')}
               value={companyFolioMercantil}
               onChange={(e) => setCompanyFolioMercantil(e.target.value)}
               size="small"
-              helperText="Folio mercantil de la empresa"
+              helperText={t('medicaLeben.form.fields.folioHelp', 'Folio mercantil de la empresa')}
               inputProps={{ maxLength: 50 }}
             />
           </Grid>
           <Grid size={{ xs: 12, md: 3 }}>
             <TextField
               fullWidth
-              label="Cliente"
+              label={t('medicaLeben.form.fields.cliente', 'Cliente')}
               value={companyCliente}
               onChange={(e) => setCompanyCliente(e.target.value)}
               size="small"
-              helperText="Cliente asociado a la empresa"
+              helperText={t('medicaLeben.form.fields.clienteHelp', 'Cliente asociado a la empresa')}
               inputProps={{ maxLength: 150 }}
             />
           </Grid>
           <Grid size={{ xs: 12, md: 3 }}>
             <TextField
               fullWidth
-              label="Razón Social"
+              label={t('medicaLeben.form.fields.razonSocial', 'Razón Social')}
               value={companyRazonSocial}
               onChange={(e) => setCompanyRazonSocial(e.target.value)}
               size="small"
-              helperText="Razón social de la empresa"
+              helperText={t('medicaLeben.form.fields.razonSocialHelp', 'Razón social de la empresa')}
               inputProps={{ maxLength: 150 }}
             />
           </Grid>
           <Grid size={{ xs: 12, md: 3 }}>
             <TextField
               fullWidth
-              label="Representante de la empresa"
+              label={t('medicaLeben.form.fields.representante', 'Representante de la empresa')}
               value={companyRepresentante}
               onChange={(e) => setCompanyRepresentante(e.target.value)}
               size="small"
-              helperText="Nombre del representante legal o contacto"
+              helperText={t('medicaLeben.form.fields.representanteHelp', 'Nombre del representante legal o contacto')}
               inputProps={{ maxLength: 150 }}
             />
           </Grid>
           <Grid size={{ xs: 12, md: 3 }}>
             <TextField
               fullWidth
-              label="Sindicato"
+              label={t('medicaLeben.form.fields.sindicato', 'Sindicato')}
               value={companySindicato}
               onChange={(e) => setCompanySindicato(e.target.value)}
               size="small"
-              helperText="Sindicato de la empresa (si aplica)"
+              helperText={t('medicaLeben.form.fields.sindicatoHelp', 'Sindicato de la empresa (si aplica)')}
               inputProps={{ maxLength: 150 }}
             />
           </Grid>
           <Grid size={{ xs: 12 }}>
             <TextField
               fullWidth
-              label="Domicilio"
+              label={t('medicaLeben.form.fields.domicilio', 'Domicilio')}
               value={companyDomicilio}
               onChange={(e) => setCompanyDomicilio(e.target.value)}
               size="small"
-              helperText="Domicilio fiscal o comercial de la empresa"
+              helperText={t('medicaLeben.form.fields.domicilioHelp', 'Domicilio fiscal o comercial de la empresa')}
               inputProps={{ maxLength: 255 }}
             />
           </Grid>
           <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
-              label="Ciudad"
+              label={t('medicaLeben.form.fields.ciudad', 'Ciudad')}
               value={companyCiudad}
               onChange={(e) => setCompanyCiudad(e.target.value)}
               size="small"
@@ -853,7 +865,7 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
           <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
-              label="Código Postal"
+              label={t('medicaLeben.form.fields.codigoPostal', 'Código Postal')}
               value={companyCodigoPostal}
               onChange={(e) => setCompanyCodigoPostal(e.target.value)}
               size="small"
@@ -863,7 +875,7 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
           <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
-              label="Teléfono"
+              label={t('medicaLeben.form.fields.telefono', 'Teléfono')}
               type="tel"
               value={companyTelefono}
               onChange={(e) => setCompanyTelefono(e.target.value)}
@@ -874,7 +886,7 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
           <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               fullWidth
-              label="Correo Electrónico"
+              label={t('medicaLeben.form.fields.email', 'Correo Electrónico')}
               type="email"
               value={companyCorreoElectronico}
               onChange={(e) => setCompanyCorreoElectronico(e.target.value)}
@@ -891,7 +903,7 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
             onClick={handleSaveCompanyInfo}
             disabled={loading || !company || !company.id}
           >
-            Guardar datos de empresa
+            {t('medicaLeben.form.saveCompany', 'Guardar datos de empresa')}
           </Button>
         </Box>
       </Box>
@@ -902,7 +914,7 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
           {failedDocs.length > 0 && (
             <>
               <br />
-              <strong>Documentos afectados:</strong> {failedDocs.join(", ")}
+              <strong>{t('medicaLeben.form.affectedDocs', 'Documentos afectados:')}</strong> {failedDocs.join(", ")}
             </>
           )}
         </Alert>
@@ -914,24 +926,24 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12 }}>
           <Typography variant="subtitle1" sx={{ mb: 1 }}>
-            Documentos requeridos
+            {t('medicaLeben.form.requiredDocs', 'Documentos requeridos')}
           </Typography>
           <List dense>
-            {renderDocStatus("Acta constitutiva", "actaConstitutiva")}
-            {renderDocStatus("Asamblea", "asamblea")}
-            {renderDocStatus("Constancia de situación fiscal", "constanciaSituacionFiscal")}
-            {renderDocStatus("Poder notarial otorgado", "poderNotarial")}
-            {renderDocStatus("Identificación oficial del representante legal", "identificacionRepresentante")}
-            {renderDocStatus("Comprobante de domicilio", "comprobanteDomicilio")}
-            {renderDocStatus("Estado de cuenta bancaria", "estadoCuentaBancaria")}
-            {renderDocStatus("Comprobante EMA/EBA último periodo", "comprobanteEmaEba")}
+            {renderDocStatus(t('medicaLeben.form.docs.actaConstitutiva', 'Acta constitutiva'), "actaConstitutiva")}
+            {renderDocStatus(t('medicaLeben.form.docs.asamblea', 'Asamblea'), "asamblea")}
+            {renderDocStatus(t('medicaLeben.form.docs.constanciaSituacionFiscal', 'Constancia de situación fiscal'), "constanciaSituacionFiscal")}
+            {renderDocStatus(t('medicaLeben.form.docs.poderNotarial', 'Poder notarial otorgado'), "poderNotarial")}
+            {renderDocStatus(t('medicaLeben.form.docs.identificacionRepresentante', 'Identificación oficial del representante legal'), "identificacionRepresentante")}
+            {renderDocStatus(t('medicaLeben.form.docs.comprobanteDomicilio', 'Comprobante de domicilio'), "comprobanteDomicilio")}
+            {renderDocStatus(t('medicaLeben.form.docs.estadoCuentaBancaria', 'Estado de cuenta bancaria'), "estadoCuentaBancaria")}
+            {renderDocStatus(t('medicaLeben.form.docs.comprobanteEmaEba', 'Comprobante EMA/EBA último periodo'), "comprobanteEmaEba")}
           </List>
         </Grid>
 
         <Grid size={{ xs: 12 }}>
           <Box sx={{ mt: 4 }}>
             <Typography variant="h6" sx={{ mb: 2 }}>
-              Fotos del área de trabajo
+              {t('medicaLeben.form.workAreaPhotos', 'Fotos del área de trabajo')}
             </Typography>
             <List dense>
               {photoRequirements.map((photoRequirement) => renderPhotoStatus(photoRequirement))}
@@ -946,7 +958,7 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>{previewDialog.title || 'Vista previa'}</DialogTitle>
+        <DialogTitle>{previewDialog.title || t('medicaLeben.form.preview', 'Vista previa')}</DialogTitle>
         <DialogContent>
           {previewDialog.url ? (
             previewDialog.type === 'image' ? (
@@ -965,11 +977,11 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
               />
             )
           ) : (
-            <Typography variant="body1">No hay vista previa disponible.</Typography>
+            <Typography variant="body1">{t('medicaLeben.form.noPreview', 'No hay vista previa disponible.')}</Typography>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setPreviewDialog({ open: false, title: '', url: '', type: 'image' })}>Cerrar</Button>
+          <Button onClick={() => setPreviewDialog({ open: false, title: '', url: '', type: 'image' })}>{t('medicaLeben.form.close', 'Cerrar')}</Button>
         </DialogActions>
       </Dialog>
 
@@ -981,7 +993,7 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
           onClick={onClose}
           disabled={loading}
         >
-          Cerrar
+          {t('medicaLeben.form.close', 'Cerrar')}
         </Button>
       </Box>
     </Paper>

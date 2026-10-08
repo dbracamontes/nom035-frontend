@@ -62,7 +62,7 @@ export default function CompaniesPage() {
           </Typography>
         </Box>
         <Typography variant="body1" color="text.secondary">
-          Administra las empresas registradas en el sistema. Cada empresa puede tener múltiples empleados y encuestas asignadas.
+          {t('companiesUi.page.description', 'Administra las empresas registradas en el sistema. Cada empresa puede tener múltiples empleados y encuestas asignadas.')}
         </Typography>
       </Box>
 
@@ -81,7 +81,7 @@ export default function CompaniesPage() {
                 px: 4
               }}
             >
-              Nueva Empresa
+              {t('companiesUi.page.newCompany', 'Nueva Empresa')}
             </Button>
           </Box>
         </Fade>
@@ -109,7 +109,7 @@ export default function CompaniesPage() {
               onClick={handleCloseCompanyDocs}
               sx={{ mb: 2 }}
             >
-              Volver a la lista
+              {t('companiesUi.page.backToList', 'Volver a la lista')}
             </Button>
             <MedicaLebenCompanyForm
               company={selectedCompanyForDocs}

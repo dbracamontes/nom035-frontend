@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Typography, Paper, CircularProgress, Alert, Grid, Chip, List, ListItem, ListItemText, Divider, Button } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { getMedicaLebenApplicationReport } from '../api/nom035';
 
 export default function MedicaLebenReportPage() {
+  const { t } = useTranslation();
   const { applicationId } = useParams();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
@@ -18,10 +20,12 @@ export default function MedicaLebenReportPage() {
       .then(res => setData(res.data))
       .catch(err => {
         console.error('Error loading MedicaLeben report', err);
-        const msg = err.response?.data || err.message || 'Error al cargar el reporte';
-        setError(typeof msg === 'string' ? msg : 'Error al cargar el reporte');
+        const fallbackMsg = t('medicaLeben.report.loadError', 'Error al cargar el reporte');
+        const msg = err.response?.data || err.message || fallbackMsg;
+        setError(typeof msg === 'string' ? msg : fallbackMsg);
       })
       .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [applicationId]);
 
   if (loading) {
@@ -36,7 +40,7 @@ export default function MedicaLebenReportPage() {
     return (
       <Box sx={{ p: 3 }}>
         <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
-        <Button variant="outlined" onClick={() => navigate(-1)}>Volver</Button>
+        <Button variant="outlined" onClick={() => navigate(-1)}>{t('medicaLeben.report.back', 'Volver')}</Button>
       </Box>
     );
   }
@@ -56,35 +60,35 @@ export default function MedicaLebenReportPage() {
   return (
     <Box sx={{ p: 3 }}>
       <Button variant="text" onClick={() => navigate(-1)} sx={{ mb: 2 }}>
-        ◀ Volver
+        ◀ {t('medicaLeben.report.back', 'Volver')}
       </Button>
 
       <Typography variant="h5" gutterBottom>
-        Reporte individual Médica Leben
+        {t('medicaLeben.report.title', 'Reporte individual Médica Leben')}
       </Typography>
 
       <Typography variant="subtitle1" gutterBottom>
-        Empresa: <strong>{data.companyName}</strong>
+        {t('medicaLeben.report.company', 'Empresa:')} <strong>{data.companyName}</strong>
       </Typography>
       <Typography variant="subtitle1" gutterBottom>
-        Empleado: <strong>{data.employeeName}</strong>
+        {t('medicaLeben.report.employee', 'Empleado:')} <strong>{data.employeeName}</strong>
       </Typography>
 
       <Grid container spacing={2} sx={{ mt: 1, mb: 2 }}>
         <Grid item xs={12} md={4}>
           <Paper sx={{ p: 2 }}>
-            <Typography variant="subtitle2" gutterBottom>Puntaje global</Typography>
+            <Typography variant="subtitle2" gutterBottom>{t('medicaLeben.report.globalScore', 'Puntaje global')}</Typography>
             <Typography variant="h4">{data.globalScore} / {data.globalMaxPossible}</Typography>
             <Typography variant="body2" color="text.secondary">
-              Mínimo posible: {data.globalMinPossible} · Máximo posible: {data.globalMaxPossible}
+              {t('medicaLeben.report.minMaxPossible', 'Mínimo posible: {{min}} · Máximo posible: {{max}}', { min: data.globalMinPossible, max: data.globalMaxPossible })}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Promedio global: {data.globalAverage?.toFixed?.(2) ?? data.globalAverage}
+              {t('medicaLeben.report.globalAverage', 'Promedio global: {{value}}', { value: data.globalAverage?.toFixed?.(2) ?? data.globalAverage })}
             </Typography>
             {/* NUEVO: Factor de ajuste calculado en el backend */}
             {typeof data.adjustmentFactor === 'number' && (
               <Typography variant="body2" color="text.secondary">
-                Factor de ajuste: {data.adjustmentFactor.toFixed(3)}
+                {t('medicaLeben.report.adjustmentFactor', 'Factor de ajuste: {{value}}', { value: data.adjustmentFactor.toFixed(3) })}
               </Typography>
             )}
             {data.globalLevel && (
@@ -96,29 +100,28 @@ export default function MedicaLebenReportPage() {
               />
             )}
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Respuestas: {data.totalResponses}{data.totalQuestions != null && <> / {data.totalQuestions}</>}
+              {t('medicaLeben.report.responses', 'Respuestas:')} {data.totalResponses}{data.totalQuestions != null && <> / {data.totalQuestions}</>}
             </Typography>
           </Paper>
         </Grid>
 
         <Grid item xs={12} md={4}>
           <Paper sx={{ p: 2 }}>
-            <Typography variant="subtitle2" gutterBottom>Eventos críticos</Typography>
+            <Typography variant="subtitle2" gutterBottom>{t('medicaLeben.report.criticalEvents', 'Eventos críticos')}</Typography>
             <Typography variant="h4">{data.criticalEventsCount}</Typography>
             <Typography variant="body2" color="text.secondary">
               {data.hasHighRiskEvents
-                ? 'Se detectan eventos de alto riesgo'
-                : 'Sin eventos de alto riesgo registrados'}
+                ? t('medicaLeben.report.highRiskDetected', 'Se detectan eventos de alto riesgo')
+                : t('medicaLeben.report.noHighRisk', 'Sin eventos de alto riesgo registrados')}
             </Typography>
           </Paper>
         </Grid>
 
         <Grid item xs={12} md={4}>
           <Paper sx={{ p: 2 }}>
-            <Typography variant="subtitle2" gutterBottom>Notas generales</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Este reporte resume la información clínica y de riesgo detectada en el
-              cuestionario Médica Leben para este empleado.
+            <Typography variant="subtitle2"             gutterBottom>{t('medicaLeben.report.generalNotes', 'Notas generales')}</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {t('medicaLeben.report.generalNotesText', 'Este reporte resume la información clínica y de riesgo detectada en el cuestionario Médica Leben para este empleado.')}
             </Typography>
           </Paper>
         </Grid>
@@ -127,7 +130,7 @@ export default function MedicaLebenReportPage() {
       <Grid container spacing={2}>
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 2, mb: 2 }}>
-            <Typography variant="h6" gutterBottom>Categorías</Typography>
+            <Typography variant="h6" gutterBottom>{t('medicaLeben.report.categories', 'Categorías')}</Typography>
             {Array.isArray(data.categories) && data.categories.length > 0 ? (
               <List dense>
                 {data.categories.map((c, idx) => (
@@ -149,10 +152,10 @@ export default function MedicaLebenReportPage() {
                         secondary={
                           <>
                             <Typography variant="body2" color="text.secondary">
-                              Puntaje: {c.score} / {c.maxPossible} (mín {c.minPossible} · máx {c.maxPossible})
+                              {t('medicaLeben.report.categoryScore', 'Puntaje: {{score}} / {{max}} (mín {{min}} · máx {{max}})', { score: c.score, max: c.maxPossible, min: c.minPossible })}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                              Promedio: {c.average?.toFixed?.(2) ?? c.average} · Respuestas: {c.count} / {c.totalQuestionsInCategory ?? 'N/A'}
+                              {t('medicaLeben.report.categoryAverage', 'Promedio: {{average}} · Respuestas: {{count}} / {{total}}', { average: c.average?.toFixed?.(2) ?? c.average, count: c.count, total: c.totalQuestionsInCategory ?? 'N/A' })}
                             </Typography>
                           </>
                         }
@@ -163,32 +166,32 @@ export default function MedicaLebenReportPage() {
                 ))}
               </List>
             ) : (
-              <Typography variant="body2" color="text.secondary">Sin datos de categorías.</Typography>
+              <Typography variant="body2" color="text.secondary">{t('medicaLeben.report.noCategories', 'Sin datos de categorías.')}</Typography>
             )}
           </Paper>
 
           <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>Síntomas</Typography>
+            <Typography variant="h6" gutterBottom>{t('medicaLeben.report.symptoms', 'Síntomas')}</Typography>
             {data.symptomCounts && Object.keys(data.symptomCounts).length > 0 ? (
               <List dense>
                 {Object.entries(data.symptomCounts).map(([symptom, count]) => (
                   <ListItem key={symptom}>
                     <ListItemText
                       primary={symptom}
-                      secondary={`Apariciones: ${count}`}
+                      secondary={t('medicaLeben.report.occurrences', 'Apariciones: {{count}}', { count })}
                     />
                   </ListItem>
                 ))}
               </List>
             ) : (
-              <Typography variant="body2" color="text.secondary">Sin síntomas registrados.</Typography>
+              <Typography variant="body2" color="text.secondary">{t('medicaLeben.report.noSymptoms', 'Sin síntomas registrados.')}</Typography>
             )}
           </Paper>
         </Grid>
 
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 2, mb: 2 }}>
-            <Typography variant="h6" gutterBottom>Eventos críticos detectados</Typography>
+            <Typography variant="h6" gutterBottom>{t('medicaLeben.report.criticalEventsDetected', 'Eventos críticos detectados')}</Typography>
             {Array.isArray(data.criticalEvents) && data.criticalEvents.length > 0 ? (
               <List dense>
                 {data.criticalEvents.map((ev, idx) => (
@@ -198,12 +201,12 @@ export default function MedicaLebenReportPage() {
                 ))}
               </List>
             ) : (
-              <Typography variant="body2" color="text.secondary">No se registran eventos críticos específicos.</Typography>
+              <Typography variant="body2" color="text.secondary">{t('medicaLeben.report.noCriticalEvents', 'No se registran eventos críticos específicos.')}</Typography>
             )}
           </Paper>
 
           <Paper sx={{ p: 2, mb: 2 }}>
-            <Typography variant="h6" gutterBottom>Recomendaciones</Typography>
+            <Typography variant="h6" gutterBottom>{t('medicaLeben.report.recommendations', 'Recomendaciones')}</Typography>
             {Array.isArray(data.recommendations) && data.recommendations.length > 0 ? (
               <List dense>
                 {data.recommendations.map((rec, idx) => (
@@ -213,12 +216,12 @@ export default function MedicaLebenReportPage() {
                 ))}
               </List>
             ) : (
-              <Typography variant="body2" color="text.secondary">Sin recomendaciones específicas.</Typography>
+              <Typography variant="body2" color="text.secondary">{t('medicaLeben.report.noRecommendations', 'Sin recomendaciones específicas.')}</Typography>
             )}
           </Paper>
 
           <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>Notas clínicas</Typography>
+            <Typography variant="h6" gutterBottom>{t('medicaLeben.report.clinicalNotes', 'Notas clínicas')}</Typography>
             {Array.isArray(data.notas) && data.notas.length > 0 ? (
               <List dense>
                 {data.notas.map((nota, idx) => (
@@ -228,16 +231,16 @@ export default function MedicaLebenReportPage() {
                 ))}
               </List>
             ) : (
-              <Typography variant="body2" color="text.secondary">Sin notas adicionales.</Typography>
+              <Typography variant="body2" color="text.secondary">{t('medicaLeben.report.noNotes', 'Sin notas adicionales.')}</Typography>
             )}
           </Paper>
 
           <Paper sx={{ p: 2, mt: 2 }}>
-            <Typography variant="h6" gutterBottom>Preguntas no contestadas</Typography>
+            <Typography variant="h6" gutterBottom>{t('medicaLeben.report.unanswered', 'Preguntas no contestadas')}</Typography>
             {Array.isArray(data.unansweredQuestions) && data.unansweredQuestions.length > 0 ? (
               <>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  Total: {data.unansweredQuestions.length}
+                  {t('medicaLeben.report.unansweredTotal', 'Total: {{count}}', { count: data.unansweredQuestions.length })}
                 </Typography>
                 <List dense sx={{ maxHeight: 240, overflow: 'auto' }}>
                   {data.unansweredQuestions.map((q, idx) => (
@@ -255,7 +258,7 @@ export default function MedicaLebenReportPage() {
               </>
             ) : (
               <Typography variant="body2" color="text.secondary">
-                Todas las preguntas se encuentran respondidas según el backend.
+                {t('medicaLeben.report.allAnswered', 'Todas las preguntas se encuentran respondidas según el backend.')}
               </Typography>
             )}
           </Paper>

@@ -54,7 +54,7 @@ export default function CompanySurveyPage() {
           textAlign: 'center'
         }}
       >
-        Gestión de Encuestas de Empresa
+        {t("companySurvey.page.title", "Gestión de Encuestas de Empresa")}
       </Typography>
       
       <Box sx={{ 
@@ -71,7 +71,7 @@ export default function CompanySurveyPage() {
           <Tabs 
             value={tabValue} 
             onChange={handleTabChange} 
-            aria-label="company survey tabs"
+            aria-label={t("companySurvey.page.tabsAria", "company survey tabs")}
             sx={{
               '& .MuiTab-root': {
                 fontWeight: 600,
@@ -96,8 +96,8 @@ export default function CompanySurveyPage() {
               }
             }}
           >
-            <Tab label="Crear Nueva Encuesta" />
-            <Tab label="Encuestas Creadas" />
+            <Tab label={t("companySurvey.page.createTab", "Crear Nueva Encuesta")} />
+            <Tab label={t("companySurvey.page.listTab", "Encuestas Creadas")} />
           </Tabs>
         </Box>
       

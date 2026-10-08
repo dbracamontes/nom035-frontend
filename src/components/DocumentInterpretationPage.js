@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   Autocomplete,
@@ -27,6 +28,7 @@ import {
 } from "../api/nom035";
 
 export default function DocumentInterpretationPage() {
+  const { t } = useTranslation();
   const MONTH_NAMES = React.useMemo(
     () => [
       "ENERO",
@@ -64,11 +66,14 @@ export default function DocumentInterpretationPage() {
 
   const requiredDocs = React.useMemo(
     () => [
-      { key: "ACTA", label: "ACTA CONSTITUTIVA" },
-      { key: "ASAMBLEA", label: "ASAMBLEA" },
-      { key: "CONSTANCIA_SITUACION_FISCAL", label: "CONSTANCIA SITUACION FISCAL" },
+      { key: "ACTA", label: t("docInterpretation.docs.acta", "ACTA CONSTITUTIVA") },
+      { key: "ASAMBLEA", label: t("docInterpretation.docs.asamblea", "ASAMBLEA") },
+      {
+        key: "CONSTANCIA_SITUACION_FISCAL",
+        label: t("docInterpretation.docs.constancia", "CONSTANCIA SITUACION FISCAL"),
+      },
     ],
-    []
+    [t]
   );
 
   const dateGroups = React.useMemo(
@@ -285,7 +290,7 @@ export default function DocumentInterpretationPage() {
     const missing = requiredDocs.filter((doc) => !docFiles[doc.key]);
     if (missing.length > 0) {
       const missingNames = missing.map((doc) => doc.label).join(", ");
-      setError(`Faltan documentos obligatorios: ${missingNames}`);
+      setError(t("docInterpretation.missingDocs", "Faltan documentos obligatorios: {{names}}", { names: missingNames }));
       return;
     }
 
@@ -350,7 +355,7 @@ export default function DocumentInterpretationPage() {
       const labels = missingRequiredFields
         .map((f) => `${f.label || f.key} (${f.key})`)
         .join(", ");
-      setError(`Faltan campos requeridos: ${labels}`);
+      setError(t("docInterpretation.missingFields", "Faltan campos requeridos: {{labels}}", { labels }));
       return;
     }
 
@@ -415,31 +420,31 @@ export default function DocumentInterpretationPage() {
   return (
     <Box sx={{ p: 3, display: "flex", gap: 3, flexDirection: "column" }}>
       <Typography variant="h5" fontWeight={600}>
-        Interpretacion de Paquete Documental
+        {t("docInterpretation.title", "Interpretacion de Paquete Documental")}
       </Typography>
       <Paper sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
           <Typography variant="body2" color="text.secondary" sx={{ alignSelf: "center" }}>
-            Plantilla:
+            {t("docInterpretation.template", "Plantilla:")}
           </Typography>
           <Button
             variant={templateType === "DOCUMENTO_04" ? "contained" : "outlined"}
             onClick={() => setTemplateType("DOCUMENTO_04")}
             disabled={loading || generatingContract}
           >
-            Persona fisica (4.0)
+            {t("docInterpretation.naturalPerson", "Persona fisica (4.0)")}
           </Button>
           <Button
             variant={templateType === "DOCUMENTO_04_1" ? "contained" : "outlined"}
             onClick={() => setTemplateType("DOCUMENTO_04_1")}
             disabled={loading || generatingContract}
           >
-            Persona moral (4.1)
+            {t("docInterpretation.legalEntity", "Persona moral (4.1)")}
           </Button>
         </Stack>
 
         <Typography variant="subtitle1" fontWeight={600}>
-          Paso 1: Adjunta los 3 documentos obligatorios
+          {t("docInterpretation.step1", "Paso 1: Adjunta los 3 documentos obligatorios")}
         </Typography>
 
         <Stack spacing={1.5}>
@@ -455,7 +460,7 @@ export default function DocumentInterpretationPage() {
                 <Typography sx={{ minWidth: 300, fontWeight: 600 }}>{doc.label}</Typography>
                 <Chip
                   size="small"
-                  label={file ? "Adjuntado" : "Pendiente"}
+                  label={file ? t("docInterpretation.attached", "Adjuntado") : t("docInterpretation.pending", "Pendiente")}
                   color={file ? "success" : "default"}
                 />
                 <Button
@@ -465,7 +470,7 @@ export default function DocumentInterpretationPage() {
                   startIcon={<CloudUploadIcon />}
                   disabled={loading || generatingContract}
                 >
-                  {file ? "Reemplazar" : "Adjuntar"}
+                  {file ? t("docInterpretation.replace", "Reemplazar") : t("docInterpretation.attach", "Adjuntar")}
                   <input
                     hidden
                     accept="application/pdf,.pdf,.docx,.txt,.jpg,.jpeg,.png,.xls,.xlsx"
@@ -477,7 +482,7 @@ export default function DocumentInterpretationPage() {
                   />
                 </Button>
                 <Typography variant="body2" color="text.secondary">
-                  {file ? file.name : "Sin archivo"}
+                  {file ? file.name : t("docInterpretation.noFile", "Sin archivo")}
                 </Typography>
               </Stack>
             );
@@ -486,7 +491,7 @@ export default function DocumentInterpretationPage() {
 
         <Stack direction="row" spacing={1}>
           <Button variant="outlined" onClick={handleInterpretPackage} disabled={loading}>
-            Interpretar paquete (3 documentos)
+            {t("docInterpretation.interpretPackage", "Interpretar paquete (3 documentos)")}
           </Button>
         </Stack>
 
@@ -495,21 +500,21 @@ export default function DocumentInterpretationPage() {
 
         {sourceJobIds.length > 0 && (
           <Stack direction="row" spacing={2} alignItems="center">
-            <Chip label={`Jobs OCR/IA: ${sourceJobIds.join(", ")}`} color="primary" />
+            <Chip label={t("docInterpretation.ocrJobs", "Jobs OCR/IA: {{ids}}", { ids: sourceJobIds.join(", ") })} color="primary" />
           </Stack>
         )}
       </Paper>
 
       <Paper sx={{ p: 2, maxWidth: 900, mx: 'auto', width: "100%" }}>
         <Typography variant="h6" gutterBottom>
-          Vista previa consolidada
+          {t("docInterpretation.consolidatedPreview", "Vista previa consolidada")}
         </Typography>
         <Divider sx={{ mb: 2 }} />
         <TextField
           fullWidth
           multiline
           minRows={18}
-          label="Texto consolidado"
+          label={t("docInterpretation.consolidatedText", "Texto consolidado")}
           value={combinedPreview}
           InputProps={{ readOnly: true }}
         />
@@ -517,13 +522,13 @@ export default function DocumentInterpretationPage() {
 
       <Paper sx={{ p: 2, maxWidth: 900, mx: 'auto', width: "100%" }}>
         <Typography variant="h6" gutterBottom>
-          Campos sugeridos por IA
+          {t("docInterpretation.suggestedFields", "Campos sugeridos por IA")}
         </Typography>
         <Divider sx={{ mb: 2 }} />
 
         {missingRequiredFields.length > 0 && (
           <Alert severity="warning" sx={{ mb: 2 }}>
-            Faltan {missingRequiredFields.length} campos requeridos. Completa los campos en la lista para poder generar el contrato.
+            {t("docInterpretation.missingFieldsWarning", "Faltan {{count}} campos requeridos. Completa los campos en la lista para poder generar el contrato.", { count: missingRequiredFields.length })}
           </Alert>
         )}
 
@@ -584,7 +589,7 @@ export default function DocumentInterpretationPage() {
                       required={Boolean(field.required)}
                       fullWidth
                       InputLabelProps={{ shrink: true }}
-                      helperText="Este selector llena DIA, MES y AÑO del grupo automaticamente."
+                      helperText={t("docInterpretation.dateHelper", "Este selector llena DIA, MES y AÑO del grupo automaticamente.")}
                     />
                   );
                 }
@@ -622,7 +627,7 @@ export default function DocumentInterpretationPage() {
 
         {fieldRows.length === 0 ? (
           <Typography variant="body2" color="text.secondary">
-            Aun no hay valores sugeridos.
+            {t("docInterpretation.noSuggested", "Aun no hay valores sugeridos.")}
           </Typography>
         ) : (
           <List>
@@ -643,27 +648,27 @@ export default function DocumentInterpretationPage() {
             onClick={handleGenerateContract}
             disabled={loading || generatingContract || Object.keys(suggestedValues || {}).length === 0}
           >
-            Generar contrato de prestacion de servicios
+            {t("docInterpretation.generateContract", "Generar contrato de prestacion de servicios")}
           </Button>
           <Button
             startIcon={<DownloadIcon />}
             onClick={handleDownloadWord}
             disabled={!contractJobId || generatingContract}
           >
-            Descargar Word
+            {t("docInterpretation.downloadWord", "Descargar Word")}
           </Button>
           <Button
             startIcon={<DownloadIcon />}
             onClick={handleDownloadPdf}
             disabled={!contractJobId || generatingContract}
           >
-            Descargar PDF
+            {t("docInterpretation.downloadPdf", "Descargar PDF")}
           </Button>
         </Stack>
 
         {contractJobId && (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Job contrato: {contractJobId}
+            {t("docInterpretation.contractJob", "Job contrato: {{id}}", { id: contractJobId })}
           </Typography>
         )}
 
@@ -672,7 +677,7 @@ export default function DocumentInterpretationPage() {
           multiline
           minRows={10}
           sx={{ mt: 2 }}
-          label="Vista previa del contrato generado"
+          label={t("docInterpretation.contractPreview", "Vista previa del contrato generado")}
           value={contractPreview}
           InputProps={{ readOnly: true }}
         />

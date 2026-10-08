@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Box,
@@ -24,6 +25,7 @@ import {
 } from "../api/nom035";
 
 export default function MaterialidadPage() {
+  const { t } = useTranslation();
   const [companies, setCompanies] = React.useState([]);
   const [companyId, setCompanyId] = React.useState("");
   const [jobId, setJobId] = React.useState(null);
@@ -37,7 +39,7 @@ export default function MaterialidadPage() {
   React.useEffect(() => {
     getCompanies()
       .then((response) => setCompanies(Array.isArray(response.data) ? response.data : []))
-      .catch(() => setError("No se pudieron cargar las empresas disponibles."))
+      .catch(() => setError(t("materialidad.errors.loadCompanies", "No se pudieron cargar las empresas disponibles.")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -47,7 +49,7 @@ export default function MaterialidadPage() {
 
   const handleGenerate = async () => {
     if (!companyId) {
-      setError("Selecciona una empresa antes de generar la materialidad.");
+      setError(t("materialidad.errors.selectCompany", "Selecciona una empresa antes de generar la materialidad."));
       return;
     }
     setGenerating(true);
@@ -58,7 +60,7 @@ export default function MaterialidadPage() {
       const response = await generateMedicaLebenMaterialidad(companyId);
       const generatedJobId = response.data?.jobId;
       setJobId(generatedJobId);
-      setSuccess("Materialidad generada correctamente con las fotografías disponibles.");
+      setSuccess(t("materialidad.success.generated", "Materialidad generada correctamente con las fotografías disponibles."));
       if (generatedJobId) {
         const previewResponse = await getDocgenPreview(generatedJobId);
         setPreview(previewResponse.data?.text || "");
@@ -66,7 +68,7 @@ export default function MaterialidadPage() {
         setPreviewPdfUrl(URL.createObjectURL(pdfResponse.data));
       }
     } catch (requestError) {
-      setError(requestError?.response?.data?.message || "No se pudo generar la materialidad.");
+      setError(requestError?.response?.data?.message || t("materialidad.errors.generate", "No se pudo generar la materialidad."));
     } finally {
       setGenerating(false);
     }
@@ -88,18 +90,19 @@ export default function MaterialidadPage() {
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
       <Box>
-        <Typography variant="h4" sx={{ fontWeight: 700 }}>Materialidad</Typography>
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>{t('navigation.photoGenerator', 'Generador Alta Fotografías')}</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          Genera el expediente fotográfico usando las imágenes cargadas en Gestión de Empresas.
+          {t("materialidad.subtitle", "Genera el expediente fotográfico usando las imágenes cargadas en Gestión de Empresas.")}
         </Typography>
       </Box>
 
       <Paper sx={{ p: { xs: 2, md: 3 }, borderRadius: 3 }}>
         <Stack spacing={2}>
-          <Typography variant="h6">Nueva materialidad</Typography>
+          {/* Título oculto temporalmente; quitar `display: 'none'` para mostrarlo de nuevo. */}
+          <Typography variant="h6" sx={{ display: 'none' }}>{t('materialidad.newTitle', 'Nueva materialidad')}</Typography>
           <TextField
             select
-            label="Empresa Medica Leben"
+            label={t("materialidad.companyLabel", "Empresa Medica Leben")}
             value={companyId}
             onChange={(event) => setCompanyId(event.target.value)}
             disabled={loading || generating}
@@ -116,7 +119,7 @@ export default function MaterialidadPage() {
             disabled={loading || generating || !companyId}
             sx={{ alignSelf: { xs: "stretch", sm: "flex-start" } }}
           >
-            {generating ? "Generando..." : "GENERA REQUISITOS FOTOS"}
+            {generating ? t("materialidad.generating", "Generando...") : t("materialidad.generate", "GENERA REQUISITOS FOTOS")}
           </Button>
         </Stack>
       </Paper>
@@ -129,7 +132,7 @@ export default function MaterialidadPage() {
           <Stack spacing={2}>
             <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={2}>
               <Box>
-                <Typography variant="h6">Documento generado</Typography>
+                <Typography variant="h6">{t('materialidad.generatedDocument', 'Documento generado')}</Typography>
               </Box>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
                 <Button variant="outlined" startIcon={<DownloadIcon />} onClick={() => download("word")}>Word</Button>
@@ -139,15 +142,15 @@ export default function MaterialidadPage() {
             <Divider />
             <Stack direction="row" spacing={1} alignItems="center">
               <PreviewIcon color="primary" />
-              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Vista previa</Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{t('materialidad.preview', 'Vista previa')}</Typography>
             </Stack>
             {previewPdfUrl ? (
               <Box sx={{ height: { xs: 460, md: 680 }, border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-                <iframe title="Vista previa de materialidad" src={previewPdfUrl} style={{ width: "100%", height: "100%", border: 0 }} />
+                <iframe title={t("materialidad.previewTitle", "Vista previa de materialidad")} src={previewPdfUrl} style={{ width: "100%", height: "100%", border: 0 }} />
               </Box>
             ) : (
               <Box sx={{ backgroundColor: "grey.50", p: 2, borderRadius: 2, whiteSpace: "pre-wrap", maxHeight: 420, overflow: "auto" }}>
-                {preview || "La vista previa no está disponible."}
+                {preview || t("materialidad.previewUnavailable", "La vista previa no está disponible.")}
               </Box>
             )}
           </Stack>

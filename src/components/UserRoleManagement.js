@@ -156,7 +156,7 @@ export default function UserRoleManagement() {
       setRoles(rolesRes.data || []);
     } catch (err) {
       console.error("Error loading users/roles", err);
-      setError(t("users.errors.load"));
+      setError(t("users.errors.load", "No se pudieron cargar los usuarios o roles"));
     } finally {
       setLoading(false);
     }
@@ -199,7 +199,7 @@ export default function UserRoleManagement() {
       });
       setSnackbar({
         open: true,
-        message: t("users.feedback.updated"),
+        message: t("users.feedback.updated", "Cambios guardados correctamente"),
         severity: "success"
       });
       await loadData();
@@ -207,7 +207,7 @@ export default function UserRoleManagement() {
       console.error("Error updating user roles", err);
       setSnackbar({
         open: true,
-        message: t("users.errors.update"),
+        message: t("users.errors.update", "No fue posible guardar los cambios. Intenta más tarde."),
         severity: "error"
       });
       setRows((prev) =>
@@ -234,14 +234,14 @@ export default function UserRoleManagement() {
       });
       setSnackbar({
         open: true,
-        message: t("users.feedback.passwordGenerated"),
+        message: t("users.feedback.passwordGenerated", "Contraseña temporal generada"),
         severity: "success"
       });
     } catch (err) {
       console.error("Error generating password", err);
       setSnackbar({
         open: true,
-        message: t("users.errors.generatePassword"),
+        message: t("users.errors.generatePassword", "No se pudo generar la contraseña"),
         severity: "error"
       });
     } finally {
@@ -261,7 +261,7 @@ export default function UserRoleManagement() {
     if (!manualPasswordDialog.value || manualPasswordDialog.value.length < 6) {
       setSnackbar({
         open: true,
-        message: t("users.errors.manualPasswordLength"),
+        message: t("users.errors.manualPasswordLength", "La contraseña debe tener al menos 6 caracteres"),
         severity: "warning"
       });
       return;
@@ -269,7 +269,7 @@ export default function UserRoleManagement() {
     if (manualPasswordDialog.value !== manualPasswordDialog.confirm) {
       setSnackbar({
         open: true,
-        message: t("users.errors.manualPasswordMismatch"),
+        message: t("users.errors.manualPasswordMismatch", "Las contraseñas no coinciden"),
         severity: "warning"
       });
       return;
@@ -297,7 +297,7 @@ export default function UserRoleManagement() {
 
       setSnackbar({
         open: true,
-        message: t("users.feedback.manualPasswordSet"),
+        message: t("users.feedback.manualPasswordSet", "Contraseña actualizada correctamente"),
         severity: "success"
       });
       setManualPasswordDialog({ open: false, user: null, value: "", confirm: "" });
@@ -306,7 +306,7 @@ export default function UserRoleManagement() {
       console.error("Error setting manual password", err);
       setSnackbar({
         open: true,
-        message: t("users.errors.manualPassword"),
+        message: t("users.errors.manualPassword", "No se pudo actualizar la contraseña"),
         severity: "error"
       });
       setRows((prev) =>
@@ -321,7 +321,7 @@ export default function UserRoleManagement() {
     if (!row.data.email) {
       setSnackbar({
         open: true,
-        message: t("users.errors.emailRequired"),
+        message: t("users.errors.emailRequired", "El usuario no tiene correo registrado"),
         severity: "warning"
       });
       return;
@@ -340,14 +340,14 @@ export default function UserRoleManagement() {
       });
       setSnackbar({
         open: true,
-        message: t("users.feedback.resetLink"),
+        message: t("users.feedback.resetLink", "Se generó un enlace de recuperación"),
         severity: "info"
       });
     } catch (err) {
       console.error("Error requesting password reset", err);
       setSnackbar({
         open: true,
-        message: t("users.errors.requestReset"),
+        message: t("users.errors.requestReset", "No se pudo generar el enlace de recuperación"),
         severity: "error"
       });
     } finally {
@@ -379,9 +379,9 @@ export default function UserRoleManagement() {
       setDeleteDialog({ open: false, row: null });
       setSnackbar({
         open: true,
-        message: t(
-          row.employeeId ? "users.feedback.deletedWithEmployee" : "users.feedback.deleted"
-        ),
+        message: row.employeeId
+          ? t("users.feedback.deletedWithEmployee", "Usuario y empleado asociado eliminados exitosamente")
+          : t("users.feedback.deleted", "Usuario eliminado exitosamente"),
         severity: "success"
       });
       await loadData();
@@ -389,7 +389,7 @@ export default function UserRoleManagement() {
       console.error("Error deleting user", err);
       setSnackbar({
         open: true,
-        message: t("users.errors.delete"),
+        message: t("users.errors.delete", "No se pudo eliminar el usuario"),
         severity: "error"
       });
       setRows((prev) =>
@@ -407,10 +407,10 @@ export default function UserRoleManagement() {
   const handleCopy = async (value) => {
     try {
       await navigator.clipboard.writeText(value);
-      setSnackbar({ open: true, message: t("users.feedback.copied"), severity: "success" });
+      setSnackbar({ open: true, message: t("users.feedback.copied", "Copiado al portapapeles"), severity: "success" });
     } catch (err) {
       console.error("Clipboard error", err);
-      setSnackbar({ open: true, message: t("users.errors.copy"), severity: "error" });
+      setSnackbar({ open: true, message: t("users.errors.copy", "No se pudo copiar el texto"), severity: "error" });
     }
   };
 
@@ -424,7 +424,7 @@ export default function UserRoleManagement() {
         mb={2}
       >
         <Typography variant="h5" fontWeight={600} sx={{ flexGrow: 1 }}>
-          {t("users.title")}
+          {t("users.title", "Gestión de usuarios y roles")}
         </Typography>
         <Stack
           direction={{ xs: "column", sm: "row" }}
@@ -437,7 +437,7 @@ export default function UserRoleManagement() {
             type="search"
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder={t("users.labels.search")}
+            placeholder={t("users.labels.search", "Buscar por nombre o correo")}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -454,7 +454,7 @@ export default function UserRoleManagement() {
             disabled={loading}
             sx={{ whiteSpace: "nowrap" }}
           >
-            {t("users.actions.refresh")}
+            {t("users.actions.refresh", "Actualizar")}
           </Button>
         </Stack>
       </Stack>
@@ -473,7 +473,7 @@ export default function UserRoleManagement() {
 
       {!loading && !hasData && !error && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          {t("users.empty")}
+          {t("users.empty", "No hay usuarios registrados")}
         </Alert>
       )}
 
@@ -482,12 +482,12 @@ export default function UserRoleManagement() {
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>{t("users.columns.username")}</TableCell>
-                <TableCell>{t("users.columns.email")}</TableCell>
-                <TableCell>{t("users.columns.company")}</TableCell>
-                <TableCell>{t("users.columns.roles")}</TableCell>
-                <TableCell>{t("users.columns.enabled")}</TableCell>
-                <TableCell align="right">{t("users.columns.actions")}</TableCell>
+                <TableCell>{t("users.columns.username", "Usuario")}</TableCell>
+                <TableCell>{t("users.columns.email", "Correo")}</TableCell>
+                <TableCell>{t("users.columns.company", "Empresa")}</TableCell>
+                <TableCell>{t("users.columns.roles", "Roles")}</TableCell>
+                <TableCell>{t("users.columns.enabled", "Activo")}</TableCell>
+                <TableCell align="right">{t("users.columns.actions", "Acciones")}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -502,10 +502,10 @@ export default function UserRoleManagement() {
                     )}
                   </TableCell>
                   <TableCell sx={{ minWidth: 200 }}>
-                    <Typography>{row.data.email || t("users.labels.noEmail")}</Typography>
+                    <Typography>{row.data.email || t("users.labels.noEmail", "Sin correo")}</Typography>
                   </TableCell>
                   <TableCell sx={{ minWidth: 220 }}>
-                    <Typography>{row.companyName || t("users.labels.noCompany")}</Typography>
+                    <Typography>{row.companyName || t("users.labels.noCompany", "Sin empresa")}</Typography>
                     {(row.department || row.position) && (
                       <Typography variant="caption" color="text.secondary">
                         {[row.department, row.position].filter(Boolean).join(" • ")}
@@ -514,12 +514,12 @@ export default function UserRoleManagement() {
                   </TableCell>
                   <TableCell>
                     <FormControl size="small" fullWidth>
-                      <InputLabel>{t("users.labels.selectRoles")}</InputLabel>
+                      <InputLabel>{t("users.labels.selectRoles", "Seleccionar roles")}</InputLabel>
                       <Select
                         multiple
                         value={row.selectedRoles}
                         onChange={(event) => handleRoleChange(row.data.id, event.target.value)}
-                        input={<OutlinedInput label={t("users.labels.selectRoles")} />}
+                        input={<OutlinedInput label={t("users.labels.selectRoles", "Seleccionar roles")} />}
                         renderValue={(selected) => (
                           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                             {selected.map((value) => {
@@ -549,7 +549,7 @@ export default function UserRoleManagement() {
                   </TableCell>
                   <TableCell align="right">
                     <Stack direction="row" spacing={1} justifyContent="flex-end">
-                      <Tooltip title={t("users.actions.manualPassword")}>
+                      <Tooltip title={t("users.actions.manualPassword", "Asignar contraseña manual")}>
                         <span>
                           <IconButton
                             size="small"
@@ -561,7 +561,7 @@ export default function UserRoleManagement() {
                           </IconButton>
                         </span>
                       </Tooltip>
-                      <Tooltip title={t("users.actions.generatePassword")}>
+                      <Tooltip title={t("users.actions.generatePassword", "Generar contraseña temporal")}>
                         <span>
                           <IconButton
                             size="small"
@@ -573,7 +573,7 @@ export default function UserRoleManagement() {
                           </IconButton>
                         </span>
                       </Tooltip>
-                      <Tooltip title={t("users.actions.requestReset")}
+                      <Tooltip title={t("users.actions.requestReset", "Solicitar recuperación")}
                         >
                         <span>
                           <IconButton
@@ -586,7 +586,7 @@ export default function UserRoleManagement() {
                           </IconButton>
                         </span>
                       </Tooltip>
-                      <Tooltip title={t("users.actions.delete")}>
+                      <Tooltip title={t("users.actions.delete", "Eliminar usuario")}>
                         <span>
                           <IconButton
                             size="small"
@@ -598,7 +598,7 @@ export default function UserRoleManagement() {
                           </IconButton>
                         </span>
                       </Tooltip>
-                      <Tooltip title={t("users.actions.save")}
+                      <Tooltip title={t("users.actions.save", "Guardar cambios")}
                         >
                         <span>
                           <IconButton
@@ -632,14 +632,16 @@ export default function UserRoleManagement() {
           }
         }}
       >
-        <DialogTitle>{t("users.dialogs.deleteTitle")}</DialogTitle>
+        <DialogTitle>{t("users.dialogs.deleteTitle", "¿Eliminar usuario?")}</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            {t(deleteDialog.row?.employeeId
-              ? "users.dialogs.deleteBodyWithEmployee"
-              : "users.dialogs.deleteBody", {
-              username: deleteDialog.row?.displayName || deleteDialog.row?.data.username || ""
-            })}
+            {deleteDialog.row?.employeeId
+              ? t("users.dialogs.deleteBodyWithEmployee", "¿Estás seguro de que deseas eliminar a {{username}} y su registro de empleado asociado? Esta acción no se puede deshacer.", {
+                username: deleteDialog.row?.displayName || deleteDialog.row?.data.username || ""
+              })
+              : t("users.dialogs.deleteBody", "¿Estás seguro de que deseas eliminar a {{username}}? Esta acción no se puede deshacer.", {
+                username: deleteDialog.row?.displayName || deleteDialog.row?.data.username || ""
+              })}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -647,7 +649,7 @@ export default function UserRoleManagement() {
             onClick={() => setDeleteDialog({ open: false, row: null })}
             disabled={Boolean(deleteDialog.row?.busy)}
           >
-            {t("common.cancel")}
+            {t("common.cancel", "Cancelar")}
           </Button>
           <Button
             onClick={handleDeleteUser}
@@ -655,7 +657,7 @@ export default function UserRoleManagement() {
             variant="contained"
             disabled={Boolean(deleteDialog.row?.busy)}
           >
-            {deleteDialog.row?.busy ? <CircularProgress size={18} /> : t("common.confirm")}
+            {deleteDialog.row?.busy ? <CircularProgress size={18} /> : t("common.confirm", "Confirmar")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -666,16 +668,16 @@ export default function UserRoleManagement() {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>{t("users.dialogs.passwordTitle")}</DialogTitle>
+        <DialogTitle>{t("users.dialogs.passwordTitle", "Contraseña temporal generada")}</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            {t("users.dialogs.passwordBody", { username: passwordDialog.user?.username || "" })}
+            {t("users.dialogs.passwordBody", "Comparte la siguiente contraseña temporal con {{username}} y solicita que la cambie en su próximo acceso.", { username: passwordDialog.user?.username || "" })}
           </DialogContentText>
           <Paper variant="outlined" sx={{ p: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <Typography fontFamily="monospace" fontSize={18} fontWeight={600}>
               {passwordDialog.password}
             </Typography>
-            <Tooltip title={t("users.actions.copy")}
+            <Tooltip title={t("users.actions.copy", "Copiar")}
               >
               <IconButton onClick={() => handleCopy(passwordDialog.password)}>
                 <ContentCopyIcon fontSize="small" />
@@ -683,12 +685,12 @@ export default function UserRoleManagement() {
             </Tooltip>
           </Paper>
           <Alert severity="warning" sx={{ mt: 2 }}>
-            {t("users.dialogs.passwordWarning")}
+            {t("users.dialogs.passwordWarning", "Por seguridad, esta contraseña solo se muestra una vez. Copia y resguárdala antes de cerrar esta ventana.")}
           </Alert>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setPasswordDialog({ open: false, user: null, password: "" })}>
-            {t("common.cancel")}
+            {t("common.cancel", "Cancelar")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -699,10 +701,10 @@ export default function UserRoleManagement() {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>{t("users.dialogs.resetTitle")}</DialogTitle>
+        <DialogTitle>{t("users.dialogs.resetTitle", "Enlace de recuperación")}</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            {t("users.dialogs.resetBody")}
+            {t("users.dialogs.resetBody", "Comparte el siguiente token con el usuario para completar la recuperación de contraseña desde la pantalla de restablecimiento.")}
           </DialogContentText>
           {resetDialog.token && (
             <Paper variant="outlined" sx={{ p: 2, mt: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -712,11 +714,11 @@ export default function UserRoleManagement() {
                 </Typography>
                 {resetDialog.expiresAt && (
                   <Typography variant="caption" color="text.secondary">
-                    {t("users.labels.expires", { value: new Date(resetDialog.expiresAt).toLocaleString() })}
+                    {t("users.labels.expires", "Expira el {{value}}", { value: new Date(resetDialog.expiresAt).toLocaleString() })}
                   </Typography>
                 )}
               </Box>
-              <Tooltip title={t("users.actions.copy")}
+              <Tooltip title={t("users.actions.copy", "Copiar")}
                 >
                 <IconButton onClick={() => handleCopy(resetDialog.token)}>
                   <ContentCopyIcon fontSize="small" />
@@ -727,7 +729,7 @@ export default function UserRoleManagement() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setResetDialog({ open: false, token: "", expiresAt: null })}>
-            {t("common.cancel")}
+            {t("common.cancel", "Cancelar")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -738,14 +740,14 @@ export default function UserRoleManagement() {
         maxWidth="sm"
         fullWidth
       >
-  <DialogTitle>{t("users.dialogs.manualPasswordTitle", { username: manualPasswordDialog.user?.displayName || manualPasswordDialog.user?.data.username || "" })}</DialogTitle>
+  <DialogTitle>{t("users.dialogs.manualPasswordTitle", "Asignar contraseña a {{username}}", { username: manualPasswordDialog.user?.displayName || manualPasswordDialog.user?.data.username || "" })}</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            {t("users.dialogs.manualPasswordBody")}
+            {t("users.dialogs.manualPasswordBody", "Ingresa una contraseña temporal personalizada y compártela con el usuario.")}
           </DialogContentText>
           <Stack spacing={2}>
             <TextField
-              label={t("users.dialogs.manualPasswordLabel")}
+              label={t("users.dialogs.manualPasswordLabel", "Contraseña")}
               type="password"
               value={manualPasswordDialog.value}
               onChange={(event) =>
@@ -755,7 +757,7 @@ export default function UserRoleManagement() {
               autoFocus
             />
             <TextField
-              label={t("users.dialogs.manualPasswordConfirm")}
+              label={t("users.dialogs.manualPasswordConfirm", "Confirmar contraseña")}
               type="password"
               value={manualPasswordDialog.confirm}
               onChange={(event) =>
@@ -767,10 +769,10 @@ export default function UserRoleManagement() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setManualPasswordDialog({ open: false, user: null, value: "", confirm: "" })}>
-            {t("common.cancel")}
+            {            t("common.cancel", "Cancelar")}
           </Button>
           <Button onClick={handleManualPasswordSubmit} variant="contained">
-            {t("users.dialogs.manualPasswordSave")}
+            {t("users.dialogs.manualPasswordSave", "Guardar contraseña")}
           </Button>
         </DialogActions>
       </Dialog>

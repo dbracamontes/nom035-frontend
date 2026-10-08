@@ -45,7 +45,7 @@ export default function EmployeeList({ refreshFlag, selectedCompany: selectedCom
       .catch(err => {
         console.error('Error fetching companies:', err);
         setCompanies([]);
-        setError(t('employee.list.errorFetchCompanies') || 'No se pudieron cargar las empresas.');
+        setError(t('employee.list.errorFetchCompanies', 'No se pudieron cargar las empresas.'));
       });
   }, [t, user]);
 
@@ -65,7 +65,7 @@ export default function EmployeeList({ refreshFlag, selectedCompany: selectedCom
         .catch(err => {
           console.error('Error fetching employees by company:', err);
           setEmployees([]);
-          setError(t('employee.list.errorFetchEmployees') || 'No se pudieron cargar los empleados.');
+          setError(t('employee.list.errorFetchEmployees', 'No se pudieron cargar los empleados.'));
         });
     } else {
       getEmployees()
@@ -76,7 +76,7 @@ export default function EmployeeList({ refreshFlag, selectedCompany: selectedCom
         .catch(err => {
           console.error('Error fetching employees:', err);
           setEmployees([]);
-          setError(t('employee.list.errorFetchEmployees') || 'No se pudieron cargar los empleados.');
+          setError(t('employee.list.errorFetchEmployees', 'No se pudieron cargar los empleados.'));
         });
     }
   }, [selectedCompany, t, user]);
@@ -111,7 +111,7 @@ export default function EmployeeList({ refreshFlag, selectedCompany: selectedCom
       // Only block for roles that are neither ADMIN nor COMPANY
       if (!hasRole('ROLE_ADMIN') && !hasRole('ROLE_COMPANY')) {
         console.error('Delete permission denied (role) for employee', { employeeToDelete, userRoles: user?.roles });
-        setError(t('employee.list.errorNoPermission') || 'No tiene permiso para eliminar este empleado.');
+        setError(t('employee.list.errorNoPermission', 'No tiene permiso para eliminar este empleado.'));
         setConfirmDeleteOpen(false);
         setEmployeeToDelete(null);
         return;
@@ -125,11 +125,11 @@ export default function EmployeeList({ refreshFlag, selectedCompany: selectedCom
       console.error('Error deleting employee:', err);
       const status = err?.response?.status;
       if (status === 403) {
-        setError(t('employee.list.errorNoPermission') || 'No tiene permiso para eliminar este empleado.');
+        setError(t('employee.list.errorNoPermission', 'No tiene permiso para eliminar este empleado.'));
       } else if (status === 404) {
-        setError(t('employee.list.errorNotFound') || 'El empleado no existe.');
+        setError(t('employee.list.errorNotFound', 'El empleado no existe.'));
       } else {
-        setError(t('employee.list.errorDelete') || 'Error al eliminar el empleado.');
+        setError(t('employee.list.errorDelete', 'Error al eliminar el empleado.'));
       }
     }
     setConfirmDeleteOpen(false);
@@ -151,7 +151,7 @@ export default function EmployeeList({ refreshFlag, selectedCompany: selectedCom
       const empCompanyId = String(employee.companyId || employee.company_id || (employee.company && employee.company.id) || '');
       const myCompanyId = String(user?.companyId || (user?.company && user.company.id) || '');
       console.error('Edit permission denied for employee', { employee, empCompanyId, myCompanyId, userRoles: user?.roles, selectedCompany });
-      setError(t('employee.list.errorNoPermission') || 'No tiene permiso para editar este empleado.');
+      setError(t('employee.list.errorNoPermissionEdit', 'No tiene permiso para editar este empleado.'));
       return;
     }
     // Call the new prop to notify the parent page
@@ -162,16 +162,16 @@ export default function EmployeeList({ refreshFlag, selectedCompany: selectedCom
 
   return (
     <Paper sx={{ p: 2 }}>
-      <Typography variant="h6">{t("employee.list.title")}</Typography>
+      <Typography variant="h6">{t("employee.list.title", "Lista de Empleados")}</Typography>
       {hasRole('ROLE_ADMIN') ? (
         <TextField
           select
-          label={t("employee.list.filterByCompany")}
+          label={t("employee.list.filterByCompany", "Filtrar por Empresa")}
           value={selectedCompany}
           onChange={e => setSelectedCompany(e.target.value)}
           sx={{ mb: 2, minWidth: 200 }}
         >
-          <MenuItem value="">{t("employee.list.allCompanies")}</MenuItem>
+          <MenuItem value="">{t("employee.list.allCompanies", "Todas las Empresas")}</MenuItem>
           {companies.map(company => (
             <MenuItem key={company.id} value={company.id}>{company.name}</MenuItem>
           ))}
@@ -185,10 +185,10 @@ export default function EmployeeList({ refreshFlag, selectedCompany: selectedCom
           <ListItem key={e.id}
             secondaryAction={
               <Stack direction="row" spacing={1}>
-                <IconButton edge="end" aria-label="edit" onClick={() => handleEdit(e)}>
+                <IconButton edge="end" aria-label={t('employee.list.editAria', 'edit')} onClick={() => handleEdit(e)}>
                   <EditIcon />
                 </IconButton>
-                <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteClick(e.id)}>
+                <IconButton edge="end" aria-label={t('employee.list.deleteAria', 'delete')} onClick={() => handleDeleteClick(e.id)}>
                   <DeleteIcon />
                 </IconButton>
               </Stack>
@@ -196,7 +196,7 @@ export default function EmployeeList({ refreshFlag, selectedCompany: selectedCom
           >
             <ListItemText
               primary={e.name}
-              secondary={`${t("employee.list.companyLabel")}: ${e.companyName || t("employee.list.noCompany")} | ${e.department || ''} | ${e.position || ''} | ${e.companyCategory || ''} | ${e.seniorityYears != null ? `${e.seniorityYears} ${t("employee.list.years")}` : ''} | ${e.email || ''}`}
+              secondary={`${t("employee.list.companyLabel", "Empresa")}: ${e.companyName || t("employee.list.noCompany", "N/A")} | ${e.department || ''} | ${e.position || ''} | ${e.companyCategory || ''} | ${e.seniorityYears != null ? `${e.seniorityYears} ${t("employee.list.years", "años")}` : ''} | ${e.email || ''}`}
             />
           </ListItem>
         ))}

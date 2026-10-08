@@ -9,8 +9,10 @@ import {
   Typography,
 } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import { useTranslation } from 'react-i18next';
 
 export default function MedicaLebenConsultoriaPage() {
+  const { t } = useTranslation();
   const iframeRef = React.useRef(null);
   const [iframeLoaded, setIframeLoaded] = React.useState(false);
   const [iframeError, setIframeError] = React.useState(false);
@@ -46,7 +48,7 @@ export default function MedicaLebenConsultoriaPage() {
               fontWeight: 700,
             })}
           >
-            Abrir en pestaña nueva
+            {t('medicaLeben.consultoria.openNewTab', 'Abrir en pestaña nueva')}
           </Button>
         </CardActions>
       </Card>
@@ -66,21 +68,21 @@ export default function MedicaLebenConsultoriaPage() {
           >
             <CircularProgress size={24} />
             <Typography variant="body2" color="text.secondary">
-              Cargando Sistema Consultoría...
+              {t('medicaLeben.consultoria.loading', 'Cargando Sistema Consultoría...')}
             </Typography>
           </Stack>
         )}
         {iframeError && (
           <Box sx={{ p: 2 }}>
             <Typography variant="body2" color="error.main">
-              No se pudo cargar el módulo embebido. Verifica que exista /sistema-consultoria/app_creditos.html y recarga.
+              {t('medicaLeben.consultoria.loadError', 'No se pudo cargar el módulo embebido. Verifica que exista /sistema-consultoria/app_creditos.html y recarga.')}
             </Typography>
           </Box>
         )}
         <Box
           component="iframe"
           ref={iframeRef}
-          title="Sistema Consultoría Médica Leben"
+          title={t('medicaLeben.consultoria.iframeTitle', 'Sistema Consultoría Médica Leben')}
           src="/sistema-consultoria/app_creditos.html"
           onLoad={handleIframeLoad}
           onError={handleIframeError}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Box,
@@ -44,6 +45,7 @@ const statusConfig = {
 };
 
 export default function DocumentsPage() {
+  const { t } = useTranslation();
   const [documents, setDocuments] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [search, setSearch] = React.useState('');
@@ -82,6 +84,15 @@ export default function DocumentsPage() {
       isMounted = false;
     };
   }, []);
+
+  const statusLabel = (status) => ({
+    Todos: t('documentsUi.filters.all', 'Todos'),
+    Aprobado: t('documentsUi.status.approved', 'Aprobado'),
+    'En revisión': t('documentsUi.status.inReview', 'En revisión'),
+    Pendiente: t('documentsUi.status.pending', 'Pendiente'),
+    Rechazado: t('documentsUi.status.rejected', 'Rechazado'),
+  }[status] || status);
+  const divisionLabel = (division) => (division === 'Todos' ? t('documentsUi.filters.all', 'Todos') : division === 'Administración' ? t('documentsUi.divisions.administration', 'Administración') : division);
 
   const divisionOptions = ['Todos', 'NOM-035', 'MedicaLeben', 'Administración'];
   const statusOptions = ['Todos', 'Aprobado', 'En revisión', 'Pendiente', 'Rechazado'];
@@ -125,10 +136,10 @@ export default function DocumentsPage() {
   };
 
   const quickActions = [
-    { label: 'Todos', value: 'Todos' },
-    { label: 'Aprobados', value: 'Aprobado' },
-    { label: 'Pendientes', value: 'Pendiente' },
-    { label: 'En revisión', value: 'En revisión' },
+    { label: t('documentsUi.filters.all', 'Todos'), value: 'Todos' },
+    { label: t('documentsUi.filters.approved', 'Aprobados'), value: 'Aprobado' },
+    { label: t('documentsUi.filters.pending', 'Pendientes'), value: 'Pendiente' },
+    { label: t('documentsUi.status.inReview', 'En revisión'), value: 'En revisión' },
   ];
 
   const getAuthHeaders = () => {
@@ -147,7 +158,7 @@ export default function DocumentsPage() {
   const openDocument = async (url, options = {}) => {
     if (!url) return;
 
-    const { inline = false, title = 'Vista previa del documento' } = options;
+    const { inline = false, title = t('documentsUi.previewDocumentTitle', 'Vista previa del documento') } = options;
     const baseUrl = process.env.REACT_APP_API_URL || '';
     const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
 
@@ -270,9 +281,9 @@ export default function DocumentsPage() {
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} spacing={2}>
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>Centro de Documentos</Typography>
+          <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>{t('documents.title', 'Validación Documentos')}</Typography>
           <Typography variant="body2" color="text.secondary">
-            Consulta, valida, revisa y descarga todos los documentos de la operación y las divisiones activas.
+            {t('documentsUi.subtitle', 'Consulta, valida, revisa y descarga todos los documentos de la operación y las divisiones activas.')}
           </Typography>
         </Box>
       </Stack>
@@ -281,7 +292,7 @@ export default function DocumentsPage() {
         <Grid key="summary-total" size={{ xs: 12, sm: 6, md: 3 }}>
           <Card sx={{ borderRadius: 3, boxShadow: '0 10px 30px rgba(15, 23, 42, 0.06)' }}>
             <CardContent>
-              <Typography variant="caption" color="text.secondary">Total</Typography>
+              <Typography variant="caption" color="text.secondary">{t('documentsUi.summary.total', 'Total')}</Typography>
               <Typography variant="h4" sx={{ fontWeight: 700, mt: 1 }}>{summary.total}</Typography>
             </CardContent>
           </Card>
@@ -289,7 +300,7 @@ export default function DocumentsPage() {
         <Grid key="summary-approved" size={{ xs: 12, sm: 6, md: 3 }}>
           <Card sx={{ borderRadius: 3, boxShadow: '0 10px 30px rgba(15, 23, 42, 0.06)' }}>
             <CardContent>
-              <Typography variant="caption" color="text.secondary">Aprobados</Typography>
+              <Typography variant="caption" color="text.secondary">{t('documentsUi.summary.approved', 'Aprobados')}</Typography>
               <Typography variant="h4" sx={{ fontWeight: 700, mt: 1, color: 'success.main' }}>{summary.approved}</Typography>
             </CardContent>
           </Card>
@@ -297,7 +308,7 @@ export default function DocumentsPage() {
         <Grid key="summary-pending" size={{ xs: 12, sm: 6, md: 3 }}>
           <Card sx={{ borderRadius: 3, boxShadow: '0 10px 30px rgba(15, 23, 42, 0.06)' }}>
             <CardContent>
-              <Typography variant="caption" color="text.secondary">Pendientes</Typography>
+              <Typography variant="caption" color="text.secondary">{t('documentsUi.summary.pending', 'Pendientes')}</Typography>
               <Typography variant="h4" sx={{ fontWeight: 700, mt: 1, color: 'warning.main' }}>{summary.pending}</Typography>
             </CardContent>
           </Card>
@@ -305,7 +316,7 @@ export default function DocumentsPage() {
         <Grid key="summary-rejected" size={{ xs: 12, sm: 6, md: 3 }}>
           <Card sx={{ borderRadius: 3, boxShadow: '0 10px 30px rgba(15, 23, 42, 0.06)' }}>
             <CardContent>
-              <Typography variant="caption" color="text.secondary">Rechazados</Typography>
+              <Typography variant="caption" color="text.secondary">{t('documentsUi.summary.rejected', 'Rechazados')}</Typography>
               <Typography variant="h4" sx={{ fontWeight: 700, mt: 1, color: 'error.main' }}>{summary.rejected}</Typography>
             </CardContent>
           </Card>
@@ -319,7 +330,7 @@ export default function DocumentsPage() {
             size="small"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            label="Buscar documento"
+            label={t('documentsUi.search', 'Buscar documento')}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -331,25 +342,25 @@ export default function DocumentsPage() {
           <TextField
             select
             size="small"
-            label="División"
+            label={t('documentsUi.division', 'División')}
             value={divisionFilter}
             onChange={(e) => setDivisionFilter(e.target.value)}
             sx={{ minWidth: 170 }}
           >
             {divisionOptions.map((option) => (
-              <MenuItem key={option} value={option}>{option}</MenuItem>
+              <MenuItem key={option} value={option}>{divisionLabel(option)}</MenuItem>
             ))}
           </TextField>
           <TextField
             select
             size="small"
-            label="Estado"
+            label={t('documentsUi.statusLabel', 'Estado')}
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             sx={{ minWidth: 170 }}
           >
             {statusOptions.map((option) => (
-              <MenuItem key={option} value={option}>{option}</MenuItem>
+              <MenuItem key={option} value={option}>{statusLabel(option)}</MenuItem>
             ))}
           </TextField>
         </Stack>
@@ -375,7 +386,7 @@ export default function DocumentsPage() {
       ) : (
         <Stack spacing={2}>
           {filteredDocuments.length === 0 ? (
-            <Alert severity="info">No se encontraron documentos con los filtros aplicados.</Alert>
+            <Alert severity="info">{t('documentsUi.noResults', 'No se encontraron documentos con los filtros aplicados.')}</Alert>
           ) : (
             filteredDocuments.map((doc) => (
               <Card key={docKey(doc)} sx={{ borderRadius: 3, boxShadow: '0 12px 32px rgba(15, 23, 42, 0.06)' }}>
@@ -404,25 +415,25 @@ export default function DocumentsPage() {
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ xs: 'flex-start', sm: 'center' }}>
                       <Chip
                         icon={statusConfig[resolveDocStatus(doc)]?.icon || <FilterListIcon />}
-                        label={resolveDocStatus(doc)}
+                        label={statusLabel(resolveDocStatus(doc))}
                         color={statusConfig[resolveDocStatus(doc)]?.color || 'default'}
                         variant="filled"
                       />
 
                       <Stack direction="row" spacing={1}>
                         <Button size="small" variant="outlined" color="primary" onClick={() => openPreview({ ...doc, status: resolveDocStatus(doc), previewUrl: doc.previewUrl || doc.downloadUrl })}>
-                          Vista previa
+                          {t('documentsUi.actions.preview', 'Vista previa')}
                         </Button>
                         <Button size="small" variant="outlined" color="secondary" onClick={() => openDocument(doc.downloadUrl)}>
-                          Descargar
+                          {t('documentsUi.actions.download', 'Descargar')}
                         </Button>
                         {canApproveDoc(doc) && (
                           <>
                             <Button size="small" variant="contained" color="success" onClick={() => handleApproveDocument(doc, 'APPROVED')}>
-                              Aprobar
+                              {t('documentsUi.actions.approve', 'Aprobar')}
                             </Button>
                             <Button size="small" variant="outlined" color="error" onClick={() => handleApproveDocument(doc, 'REJECTED')}>
-                              Rechazar
+                              {t('documentsUi.actions.reject', 'Rechazar')}
                             </Button>
                           </>
                         )}
@@ -434,12 +445,12 @@ export default function DocumentsPage() {
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center" justifyContent="space-between">
                     <Stack direction="row" spacing={1} alignItems="center">
                       <ShieldIcon fontSize="small" color="action" />
-                      <Typography variant="body2" color="text.secondary">Seguridad: {doc.security}</Typography>
+                      <Typography variant="body2" color="text.secondary">{t('documentsUi.security', 'Seguridad: {{value}}', { value: doc.security })}</Typography>
                     </Stack>
                     <Stack direction="row" spacing={2} alignItems="center">
-                      <Typography variant="caption" color="text.secondary">Responsable: {doc.owner}</Typography>
-                      <Typography variant="caption" color="text.secondary">Fecha: {doc.uploadedAt}</Typography>
-                      <Typography variant="caption" color="text.secondary">Tamaño: {doc.size}</Typography>
+                      <Typography variant="caption" color="text.secondary">{t('documentsUi.owner', 'Responsable: {{value}}', { value: doc.owner })}</Typography>
+                      <Typography variant="caption" color="text.secondary">{t('documentsUi.date', 'Fecha: {{value}}', { value: doc.uploadedAt })}</Typography>
+                      <Typography variant="caption" color="text.secondary">{t('documentsUi.size', 'Tamaño: {{value}}', { value: doc.size })}</Typography>
                     </Stack>
                   </Stack>
                 </CardContent>
@@ -450,7 +461,7 @@ export default function DocumentsPage() {
       )}
 
       <Dialog open={Boolean(selectedDoc)} onClose={() => setSelectedDoc(null)} maxWidth="md" fullWidth>
-        <DialogTitle>{selectedDoc?.title || 'Vista previa del documento'}</DialogTitle>
+        <DialogTitle>{selectedDoc?.title || t('documentsUi.previewDocumentTitle', 'Vista previa del documento')}</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2}>
             <Typography variant="body2" color="text.secondary">
@@ -461,14 +472,14 @@ export default function DocumentsPage() {
               isWordPreviewFile(selectedDoc) || !supportsInlinePreview(selectedDoc) ? (
                 <Paper sx={{ p: 3, bgcolor: 'grey.50', borderRadius: 2 }}>
                   <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, minHeight: 220, textAlign: 'center' }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>Vista previa no disponible para este tipo de archivo</Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>{t('documentsUi.previewUnavailableType', 'Vista previa no disponible para este tipo de archivo')}</Typography>
                     <Typography variant="body2" color="text.secondary">
                       {isWordPreviewFile(selectedDoc)
-                        ? 'Word no puede renderizarse inline en este navegador. Descarga el archivo para abrirlo con Word.'
-                        : 'Este tipo de archivo no tiene una vista previa embebida segura en el navegador.'}
+                        ? t('documentsUi.wordNotInline', 'Word no puede renderizarse inline en este navegador. Descarga el archivo para abrirlo con Word.')
+                        : t('documentsUi.noEmbeddedPreview', 'Este tipo de archivo no tiene una vista previa embebida segura en el navegador.')}
                     </Typography>
                     <Button variant="contained" startIcon={<DownloadIcon />} onClick={() => openDocument(selectedDoc?.downloadUrl || selectedDoc?.previewUrl, { title: selectedDoc?.title || 'documento' })}>
-                      Descargar archivo
+                      {t('documentsUi.actions.downloadFile', 'Descargar archivo')}
                     </Button>
                   </Box>
                 </Paper>
@@ -481,13 +492,13 @@ export default function DocumentsPage() {
                       </Box>
                     ) : previewBlobUrl ? (
                       <iframe
-                        title={selectedDoc?.title || 'Vista previa'}
+                        title={selectedDoc?.title || t('documentsUi.actions.preview', 'Vista previa')}
                         src={previewBlobUrl}
                         style={{ width: '100%', height: '100%', border: 'none' }}
                       />
                     ) : (
                       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'text.secondary' }}>
-                        No se pudo cargar la vista previa.
+                        {t('documentsUi.previewLoadError', 'No se pudo cargar la vista previa.')}
                       </Box>
                     )}
                   </Box>
@@ -496,30 +507,30 @@ export default function DocumentsPage() {
             ) : (
               <Paper sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
                 <Typography variant="body1" whiteSpace="pre-line">
-                  {selectedDoc?.previewText || 'No hay texto de vista previa disponible para este documento.'}
+                  {selectedDoc?.previewText || t('documentsUi.noPreviewText', 'No hay texto de vista previa disponible para este documento.')}
                 </Typography>
               </Paper>
             )}
 
             <Typography variant="caption" color="text.secondary">
-              Responsable: {selectedDoc?.owner} · Fecha: {selectedDoc?.uploadedAt} · Tamaño: {selectedDoc?.size}
+              {t('documentsUi.ownerDateSize', 'Responsable: {{owner}} · Fecha: {{date}} · Tamaño: {{size}}', { owner: selectedDoc?.owner, date: selectedDoc?.uploadedAt, size: selectedDoc?.size })}
             </Typography>
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'space-between' }}>
-          <Button onClick={() => setSelectedDoc(null)}>Cerrar</Button>
+          <Button onClick={() => setSelectedDoc(null)}>{t('documentsUi.actions.close', 'Cerrar')}</Button>
           <Stack direction="row" spacing={1}>
             {selectedDoc && canApproveDoc(selectedDoc) && (
               <>
                 <Button variant="contained" color="success" onClick={() => handleApproveDocument(selectedDoc, 'APPROVED')}>
-                  Aprobar documento
+                  {t('documentsUi.actions.approveDocument', 'Aprobar documento')}
                 </Button>
                 <Button variant="outlined" color="error" onClick={() => handleApproveDocument(selectedDoc, 'REJECTED')}>
-                  Rechazar documento
+                  {t('documentsUi.actions.rejectDocument', 'Rechazar documento')}
                 </Button>
               </>
             )}
-            <Button variant="contained" startIcon={<DownloadIcon />} onClick={() => openDocument(selectedDoc?.downloadUrl)}>Descargar</Button>
+            <Button variant="contained" startIcon={<DownloadIcon />} onClick={() => openDocument(selectedDoc?.downloadUrl)}>{t('documentsUi.actions.download', 'Descargar')}</Button>
           </Stack>
         </DialogActions>
       </Dialog>

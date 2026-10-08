@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useContext } from "react";
-import { 
+import {
   getSurveyResponses, getCompanies, getSurveys, getEmployees, getParticipationSummary, getSurveyApplications,
   getCompanyDictamenSummary,
   downloadCompanyDictamenSummaryPdf,
@@ -9,8 +9,8 @@ import {
   downloadApplicationPonderacionesPdf,
   downloadApplicationPonderacionesPdfBranded
 } from "../api/nom035";
-import { 
-  Box, Typography, Paper, Tab, Tabs, Grid, Card, CardContent, 
+import {
+  Box, Typography, Paper, Tab, Tabs, Grid, Card, CardContent,
   CircularProgress, Alert, MenuItem, TextField, Chip, LinearProgress,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Accordion, AccordionSummary, AccordionDetails, Button, Stack
@@ -21,7 +21,7 @@ import 'jspdf-autotable';
 import {
   ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar, PieChart, Pie, Cell
 } from 'recharts';
-import { 
+import {
   TrendingUp as TrendingUpIcon,
   People as PeopleIcon,
   Assessment as AssessmentIcon,
@@ -44,7 +44,7 @@ const NOM035_MODULES = {
     riskLevels: { low: [0, 5], medium: [6, 9], high: [10, 20], veryHigh: [21, 40] }
   },
   2: {
-    name: "Cargas de trabajo", 
+    name: "Cargas de trabajo",
     description: "Cargas cuantitativas, ritmo de trabajo, cargas mentales",
     color: "#9c27b0",
     riskLevels: { low: [0, 10], medium: [11, 20], high: [21, 30], veryHigh: [31, 60] }
@@ -62,7 +62,7 @@ const NOM035_MODULES = {
     riskLevels: { low: [0, 4], medium: [5, 6], high: [7, 10], veryHigh: [11, 16] }
   },
   5: {
-    name: "Interferencia en la relación trabajo-familia", 
+    name: "Interferencia en la relación trabajo-familia",
     description: "Tiempo limitado, atención a responsabilidades familiares",
     color: "#2196f3",
     riskLevels: { low: [0, 4], medium: [5, 8], high: [9, 12], veryHigh: [13, 16] }
@@ -85,9 +85,9 @@ const NOM035_MODULES = {
 const getRiskLevel = (score, moduleNum) => {
   const module = NOM035_MODULES[moduleNum];
   if (!module) return 'low';
-  
+
   const { low, medium, high, veryHigh } = module.riskLevels;
-  
+
   if (score >= veryHigh[0] && score <= veryHigh[1]) return 'veryHigh';
   if (score >= high[0] && score <= high[1]) return 'high';
   if (score >= medium[0] && score <= medium[1]) return 'medium';
@@ -108,12 +108,12 @@ function StatCard({ title, value, subtitle, icon, color = '#1976d2' }) {
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <CardContent>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Box sx={{ 
-            p: 1, 
-            borderRadius: 2, 
+          <Box sx={{
+            p: 1,
+            borderRadius: 2,
             backgroundColor: color + '20',
             color: color,
-            mr: 2 
+            mr: 2
           }}>
             {icon}
           </Box>
@@ -121,11 +121,11 @@ function StatCard({ title, value, subtitle, icon, color = '#1976d2' }) {
             {title}
           </Typography>
         </Box>
-        
+
         <Typography variant="h3" sx={{ fontWeight: 700, color: color, mb: 1 }}>
           {value}
         </Typography>
-        
+
         {subtitle && (
           <Typography variant="body2" color="text.secondary">
             {subtitle}
@@ -150,7 +150,7 @@ export default function SurveyResults() {
   const [currentTab, setCurrentTab] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // Estados para datos
   const [responses, setResponses] = useState([]);
   const [companies, setCompanies] = useState([]);
@@ -160,7 +160,7 @@ export default function SurveyResults() {
   const [surveyApplications, setSurveyApplications] = useState([]); // nuevo para relacionar respuesta->empleado->empresa
   const [selectedCompany, setSelectedCompany] = useState('');
   const [selectedSurvey, setSelectedSurvey] = useState('');
-  
+
   // Estados para estadísticas procesadas
   const [participationStats, setParticipationStats] = useState({});
   const [moduleResults, setModuleResults] = useState([]);
@@ -310,7 +310,7 @@ export default function SurveyResults() {
       saveBlob(res.data, `dictamen-summary-company-${safeCompany}.pdf`);
     } catch (e) {
       console.error('Error downloading company dictamen PDF:', e);
-      setDictamenError('No se pudo descargar el PDF');
+      setDictamenError(t('surveyResults.dictamenPdfError', 'No se pudo descargar el PDF'));
     } finally {
       setDictamenLoading(false);
     }
@@ -323,10 +323,10 @@ export default function SurveyResults() {
       const app = surveyApplications.find(a => String(a.id) === String(applicationId)) || {};
       const survey = surveys.find(s => s.id === app.surveyId) || {};
       const surveyTitle = survey.title || '';
-      
+
       // Determinar si es Medica Leben basándose en el título
       const isMedicaLeben = surveyTitle.toLowerCase().includes('medica leben') || surveyTitle.toLowerCase().includes('médica leben');
-      
+
       // Llamar al endpoint correspondiente según el tipo de encuesta
       let res;
       if (isMedicaLeben) {
@@ -364,7 +364,7 @@ export default function SurveyResults() {
     const title = (surveyTitle || '').toLowerCase();
     const isMedicaLeben = title.includes('medica leben') || title.includes('médica leben');
     if (!isMedicaLeben) {
-      alert('Solo aplica para encuestas Médica Leben');
+      alert(t('surveyResults.onlyMedicaLeben', 'Solo aplica para encuestas Médica Leben'));
       return;
     }
     navigate(`/medica-leben-report/${applicationId}`);
@@ -407,7 +407,7 @@ export default function SurveyResults() {
       });
     } catch (error) {
       console.error('Error loading dashboard data:', error);
-      setError('Error al cargar los datos del dashboard');
+      setError(t('surveyResults.loadError', 'Error al cargar los datos del dashboard'));
       log.error('Initial data load failed', { error: error?.message });
     } finally {
       setLoading(false);
@@ -531,7 +531,7 @@ export default function SurveyResults() {
         setDictamenSummary(res.data || null);
       } catch (e) {
         console.error('Error fetching dictamen summary:', e);
-        setDictamenError('No se pudo cargar el dictamen');
+        setDictamenError(t('surveyResults.dictamenLoadError', 'No se pudo cargar el dictamen'));
       } finally {
         setDictamenLoading(false);
       }
@@ -544,7 +544,7 @@ export default function SurveyResults() {
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
         <CircularProgress size={60} />
         <Typography variant="h6" sx={{ ml: 2 }}>
-          Cargando dashboard de resultados...
+          {t('surveyResults.loadingDashboard', 'Cargando dashboard de resultados...')}
         </Typography>
       </Box>
     );
@@ -561,13 +561,12 @@ export default function SurveyResults() {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" sx={{ mb: 3, fontWeight: 700, color: '#212121', letterSpacing: 1 }}>
-        Dashboard de Resultados
-      </Typography>
+        {t('navigation.resultsDashboard', 'Resultados')}      </Typography>
 
       {/* Filtros de selección */}
   <Paper sx={{ p: 3, mb: 3, backgroundColor: '#f5f5f5', borderRadius: 3, boxShadow: 2 }}>
         <Typography variant="h6" sx={{ mb: 2, fontWeight: 700, color: '#212121' }}>
-          Filtros de Análisis
+          {t('surveyResults.filters.title', 'Filtros de Análisis')}
         </Typography>
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
@@ -575,10 +574,10 @@ export default function SurveyResults() {
               <TextField
                 fullWidth
                 disabled
-                label="Empresa"
+                label={t('surveyResults.filters.company', 'Empresa')}
                 value={(() => {
                   const companyObj = companies.find(c => String(c.id) === String(selectedCompany));
-                  return companyObj ? companyObj.name : 'Mi Empresa';
+                  return companyObj ? companyObj.name : t('surveyResults.filters.myCompany', 'Mi Empresa');
                 })()}
                 variant="outlined"
                 sx={{ backgroundColor: '#fff', borderRadius: 2, minWidth: 300 }}
@@ -588,14 +587,14 @@ export default function SurveyResults() {
               <TextField
                 select
                 fullWidth
-                label="Seleccionar Empresa"
+                label={t('surveyResults.filters.selectCompany', 'Seleccionar Empresa')}
                 value={selectedCompany}
                 onChange={e => { setSelectedCompany(e.target.value); log.debug('Company filter changed', { companyId: e.target.value }); }}
                 variant="outlined"
                 sx={{ backgroundColor: '#fff', borderRadius: 2, minWidth: 300 }}
                 InputProps={{ style: { fontSize: 16 } }}
               >
-                <MenuItem value="">Todas las empresas</MenuItem>
+                <MenuItem value="">{t('surveyResults.filters.allCompanies', 'Todas las empresas')}</MenuItem>
                 {companies.map(company => (
                   <MenuItem key={company.id} value={company.id}>
                     {company.name}
@@ -608,17 +607,17 @@ export default function SurveyResults() {
             <TextField
               select
               fullWidth
-              label="Seleccionar Encuesta"
+              label={t('surveyResults.filters.selectSurvey', 'Seleccionar Encuesta')}
               value={selectedSurvey}
               onChange={e => { setSelectedSurvey(e.target.value); log.debug('Survey filter changed', { surveyId: e.target.value }); }}
               variant="outlined"
               sx={{ backgroundColor: '#fff', borderRadius: 2, minWidth: 300 }}
               InputProps={{ style: { fontSize: 16 } }}
             >
-              <MenuItem value="">Todas las encuestas</MenuItem>
+              <MenuItem value="">{t('surveyResults.filters.allSurveys', 'Todas las encuestas')}</MenuItem>
               {surveys.filter(Boolean).map(survey => (
                 <MenuItem key={survey.id} value={survey.id}>
-                  {survey.title || survey.name || `Encuesta ${survey.id}`}
+                  {survey.title || survey.name || t('surveyResults.filters.surveyNumber', 'Encuesta {{id}}', { id: survey.id })}
                 </MenuItem>
               ))}
             </TextField>
@@ -629,37 +628,37 @@ export default function SurveyResults() {
       {/* Resumen de estadísticas principales */}
   <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} md={3}>
-          <StatCard 
-            title="Total Empleados"
+          <StatCard
+            title={t('surveyResults.stats.totalEmployees', 'Total Empleados')}
             value={participationStats.total || 0}
-            subtitle="Empleados registrados"
+            subtitle={t('surveyResults.stats.registeredEmployees', 'Empleados registrados')}
             icon={<PeopleIcon sx={{ fontSize: 40, color: '#2196f3' }} />}
             color="#2196f3"
           />
         </Grid>
         <Grid item xs={12} md={3}>
-          <StatCard 
-            title="Han Respondido"
+          <StatCard
+            title={t('surveyResults.stats.responded', 'Han Respondido')}
             value={participationStats.responded || 0}
-            subtitle={`${participationStats.percentage || 0}% de participación`}
+            subtitle={t('surveyResults.stats.participationPercent', '{{percent}}% de participación', { percent: participationStats.percentage || 0 })}
             icon={<CheckCircleIcon sx={{ fontSize: 40, color: '#9c27b0' }} />}
             color="#9c27b0"
           />
         </Grid>
         <Grid item xs={12} md={3}>
-          <StatCard 
-            title="Pendientes"
+          <StatCard
+            title={t('surveyResults.stats.pending', 'Pendientes')}
             value={participationStats.pending || 0}
-            subtitle="Encuestas por completar"
+            subtitle={t('surveyResults.stats.surveysToComplete', 'Encuestas por completar')}
             icon={<WarningIcon sx={{ fontSize: 40, color: '#2196f3' }} />}
             color="#2196f3"
           />
         </Grid>
         <Grid item xs={12} md={3}>
-          <StatCard 
-            title="Total Respuestas"
+          <StatCard
+            title={t('surveyResults.stats.totalResponses', 'Total Respuestas')}
             value={filteredResponses.length}
-            subtitle="Respuestas registradas"
+            subtitle={t('surveyResults.stats.recordedResponses', 'Respuestas registradas')}
             icon={<AssessmentIcon sx={{ fontSize: 40, color: '#9c27b0' }} />}
             color="#9c27b0"
           />
@@ -668,28 +667,28 @@ export default function SurveyResults() {
 
       {/* Pestañas para diferentes vistas */}
       <Paper sx={{ mb: 3, backgroundColor: '#fff', borderRadius: 3, boxShadow: 2 }}>
-        <Tabs 
-          value={currentTab} 
+        <Tabs
+          value={currentTab}
           onChange={handleTabChange}
           variant="scrollable"
           scrollButtons="auto"
           sx={{ borderBottom: 3, borderColor: '#2196f3', backgroundColor: '#fff', borderRadius: 3 }}
         >
-          <Tab 
-            label="📈 Participación" 
+          <Tab
+            label={t('surveyResults.tabs.participation', '📈 Participación')}
             icon={<TrendingUpIcon sx={{ color: '#2196f3' }} />}
             iconPosition="start"
           />
-          <Tab 
-            label="Resultados por Módulo"
+          <Tab
+            label={t('surveyResults.tabs.moduleResults', 'Resultados por Módulo')}
           />
-          <Tab 
-            label="⚠️ Análisis de Riesgo" 
+          <Tab
+            label={t('surveyResults.tabs.riskAnalysis', '⚠️ Análisis de Riesgo')}
             icon={<WarningIcon sx={{ color: '#2196f3' }} />}
             iconPosition="start"
           />
-          <Tab 
-            label="📋 Detalle de Respuestas" 
+          <Tab
+            label={t('surveyResults.tabs.responseDetail', '📋 Detalle de Respuestas')}
             icon={<AssessmentIcon sx={{ color: '#9c27b0' }} />}
             iconPosition="start"
           />
@@ -700,21 +699,21 @@ export default function SurveyResults() {
           {currentTab === 0 && (
             <Box>
               <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-                📈 Estadísticas de Participación
+                📈 {t('surveyResults.participation.title', 'Estadísticas de Participación')}
               </Typography>
-              
+
               <Grid container spacing={3}>
                 {/* Gráfico circular de participación - Versión simplificada */}
                 <Grid item xs={12} md={6}>
                   <Card>
                     <CardContent>
                       <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                        Distribución de Participación
+                        {t('surveyResults.participation.distribution', 'Distribución de Participación')}
                       </Typography>
                       <Box sx={{ textAlign: 'center', py: 4 }}>
                         <Box sx={{ position: 'relative', display: 'inline-flex', mb: 3 }}>
-                          <CircularProgress 
-                            variant="determinate" 
+                          <CircularProgress
+                            variant="determinate"
                             value={participationStats.percentage || 0}
                             size={120}
                             thickness={8}
@@ -732,7 +731,7 @@ export default function SurveyResults() {
                               {participationStats.percentage || 0}%
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                              Participación
+                              {t('surveyResults.participation.participationLabel', 'Participación')}
                             </Typography>
                           </Box>
                         </Box>
@@ -743,7 +742,7 @@ export default function SurveyResults() {
                                 {participationStats.responded || 0}
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
-                                Han Respondido
+                                {t('surveyResults.stats.responded', 'Han Respondido')}
                               </Typography>
                             </Box>
                           </Grid>
@@ -753,7 +752,7 @@ export default function SurveyResults() {
                                 {participationStats.pending || 0}
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
-                                Pendientes
+                                {t('surveyResults.stats.pending', 'Pendientes')}
                               </Typography>
                             </Box>
                           </Grid>
@@ -762,25 +761,25 @@ export default function SurveyResults() {
                     </CardContent>
                   </Card>
                 </Grid>
-                
+
                 {/* Progreso de participación */}
                 <Grid item xs={12} md={6}>
                   <Card sx={{ height: '100%' }}>
                     <CardContent>
                       <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                        Progreso de Participación
+                        {t('surveyResults.participation.progress', 'Progreso de Participación')}
                       </Typography>
                       <Box sx={{ mb: 3 }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                           <Typography variant="body2" color="text.secondary">
-                            Empleados que han respondido
+                            {t('surveyResults.participation.employeesResponded', 'Empleados que han respondido')}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             {participationStats.percentage || 0}%
                           </Typography>
                         </Box>
-                        <LinearProgress 
-                          variant="determinate" 
+                        <LinearProgress
+                          variant="determinate"
                           value={participationStats.percentage || 0}
                           sx={{ height: 8, borderRadius: 5, backgroundColor: '#e3e3fa', '& .MuiLinearProgress-bar': { backgroundColor: '#2196f3' } }}
                         />
@@ -792,7 +791,7 @@ export default function SurveyResults() {
                               {participationStats.responded || 0}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                              Completadas
+                              {t('surveyResults.participation.completed', 'Completadas')}
                             </Typography>
                           </Box>
                         </Grid>
@@ -802,37 +801,37 @@ export default function SurveyResults() {
                               {participationStats.pending || 0}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                              Pendientes
+                              {t('surveyResults.stats.pending', 'Pendientes')}
                             </Typography>
                           </Box>
                         </Grid>
                       </Grid>
                       <Box sx={{ mt: 3, p: 2, backgroundColor: '#f5f5f5', borderRadius: 2 }}>
                         <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
-                          <strong>Meta:</strong> Alcanzar 85% de participación para cumplir con NOM-035
+                          <strong>{t('surveyResults.participation.goalLabel', 'Meta:')}</strong> {t('surveyResults.participation.goalText', 'Alcanzar 85% de participación para cumplir con NOM-035')}
                         </Typography>
                       </Box>
                     </CardContent>
                   </Card>
                 </Grid>
-                
+
                 {/* Tabla de resumen por empresa */}
                 <Grid item xs={12}>
                   <Card>
                     <CardContent>
                       <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                        Resumen por Empresa
+                        {t('surveyResults.participation.companySummary', 'Resumen por Empresa')}
                       </Typography>
                       <TableContainer>
                         <Table>
                           <TableHead>
                             <TableRow>
-                              <TableCell><strong>Empresa</strong></TableCell>
-                              <TableCell align="center"><strong>Total Empleados</strong></TableCell>
-                              <TableCell align="center"><strong>Han Respondido</strong></TableCell>
-                              <TableCell align="center"><strong>Pendientes</strong></TableCell>
-                              <TableCell align="center"><strong>% Participación</strong></TableCell>
-                              <TableCell align="center"><strong>Estado</strong></TableCell>
+                              <TableCell><strong>{t('surveyResults.filters.company', 'Empresa')}</strong></TableCell>
+                              <TableCell align="center"><strong>{t('surveyResults.stats.totalEmployees', 'Total Empleados')}</strong></TableCell>
+                              <TableCell align="center"><strong>{t('surveyResults.stats.responded', 'Han Respondido')}</strong></TableCell>
+                              <TableCell align="center"><strong>{t('surveyResults.stats.pending', 'Pendientes')}</strong></TableCell>
+                              <TableCell align="center"><strong>{t('surveyResults.participation.percentHeader', '% Participación')}</strong></TableCell>
+                              <TableCell align="center"><strong>{t('surveyResults.participation.statusHeader', 'Estado')}</strong></TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
@@ -854,7 +853,7 @@ export default function SurveyResults() {
                                   <Typography variant="body2" sx={{ fontWeight: 700, color: row.participationPercent >= 85 ? '#2196f3' : '#9c27b0' }}>{row.participationPercent}%</Typography>
                                 </TableCell>
                                 <TableCell align="center">
-                                  <Chip 
+                                  <Chip
                                     label={row.status}
                                     sx={{ backgroundColor: row.participationPercent >= 85 ? '#e3f2fd' : '#ede7f6', color: row.participationPercent >= 85 ? '#2196f3' : '#9c27b0', fontWeight: 700 }}
                                     size="small"
@@ -865,7 +864,7 @@ export default function SurveyResults() {
                               <TableRow>
                                 <TableCell colSpan={6} align="center">
                                   <Typography color="text.secondary">
-                                    No hay empresas registradas
+                                    {t('surveyResults.participation.noCompanies', 'No hay empresas registradas')}
                                   </Typography>
                                 </TableCell>
                               </TableRow>
@@ -879,23 +878,23 @@ export default function SurveyResults() {
               </Grid>
             </Box>
           )}
-          
+
           {/* Resultados por Módulo */}
           {currentTab === 1 && (
             <Box>
               <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-                Resultados por Módulo NOM-035
+                {t('surveyResults.modules.title', 'Resultados por Módulo NOM-035')}
               </Typography>
-              
+
               <Grid container spacing={3}>
                 {/* Gráfico de barras por módulo */}
                 <Grid item xs={12} lg={8}>
                   <Card>
                     <CardContent>
                       <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                        Puntuación Promedio por Módulo
+                        {t('surveyResults.modules.averageScoreByModule', 'Puntuación Promedio por Módulo')}
                       </Typography>
-                      
+
                       <Box sx={{ height: 400 }}>
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart
@@ -903,22 +902,22 @@ export default function SurveyResults() {
                             margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
                           >
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis 
-                              dataKey="name" 
+                            <XAxis
+                              dataKey="name"
                               angle={-45}
                               textAnchor="end"
                               height={100}
                               fontSize={12}
                             />
                             <YAxis />
-                            <Tooltip 
-                              formatter={(value, name) => [value, 'Puntuación Promedio']}
-                              labelFormatter={(label) => `Módulo: ${label}`}
+                            <Tooltip
+                              formatter={(value, name) => [value, t('surveyResults.modules.averageScore', 'Puntuación Promedio')]}
+                              labelFormatter={(label) => `${t('surveyResults.modules.module', 'Módulo')}: ${label}`}
                             />
                             <Legend />
-                            <Bar 
-                              dataKey="averageScore" 
-                              name="Puntuación Promedio"
+                            <Bar
+                              dataKey="averageScore"
+                              name={t('surveyResults.modules.averageScore', 'Puntuación Promedio')}
                               fill="#8884d8"
                               radius={[4, 4, 0, 0]}
                             />
@@ -928,26 +927,26 @@ export default function SurveyResults() {
                     </CardContent>
                   </Card>
                 </Grid>
-                
+
                 {/* Resumen de módulos con mayor riesgo */}
                 <Grid item xs={12} lg={4}>
                   <Card sx={{ height: '100%' }}>
                     <CardContent>
                       <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                        Módulos de Mayor Riesgo
+                        {t('surveyResults.modules.highestRisk', 'Módulos de Mayor Riesgo')}
                       </Typography>
-                      
+
                       <Box sx={{ maxHeight: 350, overflowY: 'auto' }}>
                         {[...moduleResults]
                           .sort((a, b) => b.averageScore - a.averageScore)
                           .slice(0, 7)
                           .map((module, index) => (
-                            <Box 
-                              key={module.module} 
-                              sx={{ 
-                                mb: 2, 
-                                p: 2, 
-                                backgroundColor: index < 3 ? '#ffebee' : '#f5f5f5', 
+                            <Box
+                              key={module.module}
+                              sx={{
+                                mb: 2,
+                                p: 2,
+                                backgroundColor: index < 3 ? '#ffebee' : '#f5f5f5',
                                 borderRadius: 2,
                                 border: index < 3 ? '1px solid #ffcdd2' : '1px solid #e0e0e0'
                               }}
@@ -956,7 +955,7 @@ export default function SurveyResults() {
                                 <Typography variant="body2" sx={{ fontWeight: 600, mr: 1 }}>
                                   #{index + 1}
                                 </Typography>
-                                <Chip 
+                                <Chip
                                   label={t(`dashboard.risk.${module.riskLevel}`)}
                                   size="small"
                                   color={
@@ -970,13 +969,13 @@ export default function SurveyResults() {
                                   {module.averageScore}
                                 </Typography>
                               </Box>
-                              
+
                               <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                Módulo {module.module}: {module.name}
+                                {t('surveyResults.modules.moduleNameLine', 'Módulo {{num}}: {{name}}', { num: module.module, name: module.name })}
                               </Typography>
-                              
+
                               <Typography variant="caption" color="text.secondary">
-                                {module.responses} respuestas registradas
+                                {t('surveyResults.modules.responsesRecorded', '{{count}} respuestas registradas', { count: module.responses })}
                               </Typography>
                             </Box>
                           ))
@@ -985,37 +984,37 @@ export default function SurveyResults() {
                     </CardContent>
                   </Card>
                 </Grid>
-                
+
                 {/* Detalle de cada módulo en acordeones */}
                 <Grid item xs={12}>
                   <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                    Detalle por Módulo
+                    {t('surveyResults.modules.detailByModule', 'Detalle por Módulo')}
                   </Typography>
-                  
+
                   {moduleResults.map((module) => (
                     <Accordion key={module.module} sx={{ mb: 1 }}>
-                      <AccordionSummary 
+                      <AccordionSummary
                         expandIcon={<ExpandMoreIcon />}
-                        sx={{ 
+                        sx={{
                           backgroundColor: `${module.color}20`,
                           '&:hover': { backgroundColor: `${module.color}30` }
                         }}
                       >
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                           <Typography variant="h6" sx={{ fontWeight: 600, mr: 2 }}>
-                            Módulo {module.module}: {module.name}
+                            {t('surveyResults.modules.moduleNameLine', 'Módulo {{num}}: {{name}}', { num: module.module, name: module.name })}
                           </Typography>
-                          
-                          <Chip 
-                            label={`Puntuación: ${module.averageScore}`}
-                            sx={{ 
+
+                          <Chip
+                            label={t('surveyResults.modules.scoreLabel', 'Puntuación: {{score}}', { score: module.averageScore })}
+                            sx={{
                               backgroundColor: RISK_COLORS[module.riskLevel],
                               color: 'white',
                               mr: 2
                             }}
                           />
-                          
-                          <Chip 
+
+                          <Chip
                        label={t(`dashboard.risk.${module.riskLevel}`)}
                             color={
                               module.riskLevel === 'veryHigh' ? 'error' :
@@ -1026,14 +1025,14 @@ export default function SurveyResults() {
                           />
                         </Box>
                       </AccordionSummary>
-                      
+
                       <AccordionDetails>
                         <Grid container spacing={3}>
                           <Grid item xs={12} md={8}>
                             <Typography variant="body1" sx={{ mb: 2 }}>
-                              <strong>Descripción:</strong> {NOM035_MODULES[module.module]?.description}
+                              <strong>{t('surveyResults.modules.descriptionLabel', 'Descripción:')}</strong> {NOM035_MODULES[module.module]?.description}
                             </Typography>
-                            
+
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                               {t('dashboard.risk.moduleDescription', {
                                 module: module.name,
@@ -1041,16 +1040,16 @@ export default function SurveyResults() {
                                 risk: t(`dashboard.risk.${module.riskLevel}`)
                               })}
                             </Typography>
-                            
+
                             <Box sx={{ mb: 2 }}>
                               <Typography variant="body2" sx={{ mb: 1 }}>
-                                Distribución de riesgo:
+                                {t('surveyResults.modules.riskDistribution', 'Distribución de riesgo:')}
                               </Typography>
-                              <LinearProgress 
-                                variant="determinate" 
+                              <LinearProgress
+                                variant="determinate"
                                 value={(module.averageScore / 40) * 100}
-                                sx={{ 
-                                  height: 8, 
+                                sx={{
+                                  height: 8,
                                   borderRadius: 4,
                                   backgroundColor: '#e0e0e0',
                                   '& .MuiLinearProgress-bar': {
@@ -1060,26 +1059,26 @@ export default function SurveyResults() {
                               />
                             </Box>
                           </Grid>
-                          
+
                           <Grid item xs={12} md={4}>
-                            <Box sx={{ 
-                              p: 2, 
-                              backgroundColor: `${RISK_COLORS[module.riskLevel]}20`, 
+                            <Box sx={{
+                              p: 2,
+                              backgroundColor: `${RISK_COLORS[module.riskLevel]}20`,
                               borderRadius: 2,
                               textAlign: 'center'
                             }}>
-                              <Typography variant="h4" sx={{ 
-                                fontWeight: 700, 
+                              <Typography variant="h4" sx={{
+                                fontWeight: 700,
                                 color: RISK_COLORS[module.riskLevel],
                                 mb: 1
                               }}>
                                 {module.averageScore}/40
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
-                                Puntuación Promedio
+                                {t('surveyResults.modules.averageScore', 'Puntuación Promedio')}
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
-                                {module.responses} respuestas
+                                {t('surveyResults.modules.responsesCount', '{{count}} respuestas', { count: module.responses })}
                               </Typography>
                             </Box>
                           </Grid>
@@ -1091,23 +1090,23 @@ export default function SurveyResults() {
               </Grid>
             </Box>
           )}
-          
+
           {/* Análisis de Riesgo */}
           {currentTab === 2 && (
             <Box>
               <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-                ⚠️ Análisis de Riesgo Psicosocial
+                ⚠️ {t('surveyResults.risk.title', 'Análisis de Riesgo Psicosocial')}
               </Typography>
-              
+
               <Grid container spacing={3}>
                 {/* Resumen general de riesgo */}
                 <Grid item xs={12} md={6}>
                   <Card>
                     <CardContent>
                       <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                        Distribución General de Riesgo
+                        {t('surveyResults.risk.generalDistribution', 'Distribución General de Riesgo')}
                       </Typography>
-                      
+
                       <Box sx={{ height: 300 }}>
                         {/* Enlarged pie chart container */}
                         <Box sx={{ height: 420 }}>
@@ -1123,7 +1122,7 @@ export default function SurveyResults() {
                                 cx="50%"
                                 cy="50%"
                                 labelLine={false}
-                                label={({ name, value, percent }) => 
+                                label={({ name, value, percent }) =>
                                   value > 0 ? `${name}: ${value} (${(percent * 100).toFixed(0)}%)` : null
                                 }
                                 outerRadius={130}
@@ -1150,15 +1149,15 @@ export default function SurveyResults() {
                     </CardContent>
                   </Card>
                 </Grid>
-                
+
                 {/* Indicadores de alerta */}
                 <Grid item xs={12} md={6}>
                   <Card sx={{ height: '100%' }}>
                     <CardContent>
                       <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                        Indicadores de Alerta
+                        {t('surveyResults.risk.alertIndicators', 'Indicadores de Alerta')}
                       </Typography>
-                      
+
                       <Box sx={{ mb: 3 }}>
                         {/* Alerta crítica */}
                         {(riskAnalysis.veryHigh || 0) > 0 && (
@@ -1169,7 +1168,7 @@ export default function SurveyResults() {
                             </Typography>
                           </Alert>
                         )}
-                        
+
                         {/* Alerta alta */}
                         {(riskAnalysis.high || 0) > 0 && (
                           <Alert severity="warning" sx={{ mb: 2 }}>
@@ -1179,7 +1178,7 @@ export default function SurveyResults() {
                             </Typography>
                           </Alert>
                         )}
-                        
+
                         {/* Situación favorable */}
                         {(riskAnalysis.low || 0) >= 5 && (
                           <Alert severity="success" sx={{ mb: 2 }}>
@@ -1189,7 +1188,7 @@ export default function SurveyResults() {
                           </Alert>
                         )}
                       </Box>
-                      
+
                       {/* Medidores de riesgo */}
                       <Box>
                         {[
@@ -1207,11 +1206,11 @@ export default function SurveyResults() {
                                 {riskAnalysis[level] || 0} {t('dashboard.risk.modules')}
                               </Typography>
                             </Box>
-                            <LinearProgress 
-                              variant="determinate" 
+                            <LinearProgress
+                              variant="determinate"
                               value={((riskAnalysis[level] || 0) / 7) * 100}
-                              sx={{ 
-                                height: 6, 
+                              sx={{
+                                height: 6,
                                 borderRadius: 3,
                                 backgroundColor: '#f0f0f0',
                                 '& .MuiLinearProgress-bar': {
@@ -1225,24 +1224,24 @@ export default function SurveyResults() {
                     </CardContent>
                   </Card>
                 </Grid>
-                
+
                 {/* Matriz de riesgo por módulo */}
                 <Grid item xs={12}>
                   <Card>
                     <CardContent>
                       <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                        Matriz de Riesgo por Módulo
+                        {t('surveyResults.risk.matrixTitle', 'Matriz de Riesgo por Módulo')}
                       </Typography>
-                      
+
                       <TableContainer>
                         <Table>
                           <TableHead>
                             <TableRow>
-                              <TableCell><strong>Módulo</strong></TableCell>
-                              <TableCell align="center"><strong>Puntuación</strong></TableCell>
-                              <TableCell align="center"><strong>Nivel de Riesgo</strong></TableCell>
-                              <TableCell align="center"><strong>Respuestas</strong></TableCell>
-                              <TableCell align="center"><strong>Recomendación</strong></TableCell>
+                              <TableCell><strong>{t('surveyResults.risk.module', 'Módulo')}</strong></TableCell>
+                              <TableCell align="center"><strong>{t('surveyResults.risk.score', 'Puntuación')}</strong></TableCell>
+                              <TableCell align="center"><strong>{t('surveyResults.risk.riskLevel', 'Nivel de Riesgo')}</strong></TableCell>
+                              <TableCell align="center"><strong>{t('surveyResults.risk.responses', 'Respuestas')}</strong></TableCell>
+                              <TableCell align="center"><strong>{t('surveyResults.risk.recommendation', 'Recomendación')}</strong></TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
@@ -1255,19 +1254,19 @@ export default function SurveyResults() {
                                 <TableRow key={module.module}>
                                   <TableCell>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                      Módulo {module.module}: {module.name}
+                                      {t('surveyResults.modules.moduleNameLine', 'Módulo {{num}}: {{name}}', { num: module.module, name: module.name })}
                                     </Typography>
                                   </TableCell>
                                   <TableCell align="center">
-                                    <Typography variant="h6" sx={{ 
-                                      fontWeight: 700, 
-                                      color: RISK_COLORS[module.riskLevel] 
+                                    <Typography variant="h6" sx={{
+                                      fontWeight: 700,
+                                      color: RISK_COLORS[module.riskLevel]
                                     }}>
                                       {module.averageScore}
                                     </Typography>
                                   </TableCell>
                                   <TableCell align="center">
-                                    <Chip 
+                                    <Chip
                                       label={
                                         t(`dashboard.risk.${module.riskLevel}`)
                                       }
@@ -1282,9 +1281,9 @@ export default function SurveyResults() {
                                   <TableCell align="center">{module.responses}</TableCell>
                                   <TableCell align="center">
                                     <Typography variant="body2" color="text.secondary">
-                                      {module.riskLevel === 'veryHigh' ? '🚨 Acción inmediata' :
-                                       module.riskLevel === 'high' ? '⚠️ Medidas preventivas' :
-                                       module.riskLevel === 'medium' ? '📋 Monitoreo continuo' : '✅ Mantener condiciones'}
+                                      {module.riskLevel === 'veryHigh' ? `🚨 ${t('surveyResults.risk.immediateAction', 'Acción inmediata')}` :
+                                       module.riskLevel === 'high' ? `⚠️ ${t('surveyResults.risk.preventiveMeasures', 'Medidas preventivas')}` :
+                                       module.riskLevel === 'medium' ? `📋 ${t('surveyResults.risk.continuousMonitoring', 'Monitoreo continuo')}` : `✅ ${t('surveyResults.risk.maintainConditions', 'Mantener condiciones')}`}
                                     </Typography>
                                   </TableCell>
                                 </TableRow>
@@ -1296,7 +1295,7 @@ export default function SurveyResults() {
                     </CardContent>
                   </Card>
                 </Grid>
-                
+
                 {/* Recomendaciones según NOM-035 */}
                 <Grid item xs={12}>
                   <Card>
@@ -1304,7 +1303,7 @@ export default function SurveyResults() {
                       <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
                         📋 {t('dashboard.risk.recommendations.title')}
                       </Typography>
-                      
+
                       <Grid container spacing={2}>
                         <Grid item xs={12} md={6}>
                           <Box sx={{ p: 2, backgroundColor: '#ffebee', borderRadius: 2 }}>
@@ -1325,7 +1324,7 @@ export default function SurveyResults() {
                             </Typography>
                           </Box>
                         </Grid>
-                        
+
                         <Grid item xs={12} md={6}>
                           <Box sx={{ p: 2, backgroundColor: '#fff3e0', borderRadius: 2 }}>
                             <Typography variant="h6" sx={{ fontWeight: 600, color: '#f57c00', mb: 1 }}>
@@ -1352,20 +1351,20 @@ export default function SurveyResults() {
               </Grid>
             </Box>
           )}
-          
+
           {/* Detalle de Respuestas */}
           {currentTab === 3 && (
             <Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  📋 Detalle de Respuestas
+                  📋 {t('surveyResults.detail.title', 'Detalle de Respuestas')}
                 </Typography>
                 <Stack direction="row" spacing={2}>
                   <Button variant="contained" color="success" onClick={handleExportExcel} disabled={!filteredResponses.length}>
-                    Exportar a Excel
+                    {t('surveyResults.detail.exportExcel', 'Exportar a Excel')}
                   </Button>
                   <Button variant="contained" color="primary" onClick={handleExportPDF} disabled={!filteredResponses.length}>
-                    Exportar a PDF
+                    {t('surveyResults.detail.exportPdf', 'Exportar a PDF')}
                   </Button>
                 </Stack>
               </Box>
@@ -1373,12 +1372,12 @@ export default function SurveyResults() {
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell><strong>Empleado</strong></TableCell>
-                      <TableCell><strong>Encuesta</strong></TableCell>
-                      <TableCell><strong>Fecha</strong></TableCell>
-                      <TableCell><strong>Nivel de riesgo</strong></TableCell>
-                      <TableCell align="center"><strong>Ponderación PDF</strong></TableCell>
-                      <TableCell align="center"><strong>Reporte individual</strong></TableCell>
+                      <TableCell><strong>{t('surveyResults.detail.employee', 'Empleado')}</strong></TableCell>
+                      <TableCell><strong>{t('surveyResults.detail.survey', 'Encuesta')}</strong></TableCell>
+                      <TableCell><strong>{t('surveyResults.detail.date', 'Fecha')}</strong></TableCell>
+                      <TableCell><strong>{t('surveyResults.detail.riskLevel', 'Nivel de riesgo')}</strong></TableCell>
+                      <TableCell align="center"><strong>{t('surveyResults.detail.weightingPdf', 'Ponderación PDF')}</strong></TableCell>
+                      <TableCell align="center"><strong>{t('surveyResults.detail.individualReport', 'Reporte individual')}</strong></TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1406,14 +1405,14 @@ export default function SurveyResults() {
                             <TableCell>{fecha ? fecha.toLocaleString() : ''}</TableCell>
                             <TableCell>{risk}</TableCell>
                             <TableCell align="center">
-                              <Button 
-                                size="small" 
-                                variant="outlined" 
-                                startIcon={<DownloadIcon />} 
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<DownloadIcon />}
                                 onClick={() => handleDownloadApplicationPdf(app.id)}
                                 disabled={!app || !app.id}
                               >
-                                Descargar
+                                {t('surveyResults.detail.download', 'Descargar')}
                               </Button>
                             </TableCell>
                             <TableCell align="center">
@@ -1424,21 +1423,21 @@ export default function SurveyResults() {
                                   onClick={() => handleViewMedicaLebenReport(app.id, survey.title || r.surveyTitle || '')}
                                   disabled={!app || !app.id}
                                 >
-                                  Ver reporte
-                                </Button>
-                              )}
+                                  {t('surveyResults.detail.viewReport', 'Ver reporte')}
+                                                                  </Button>
+                                                                )}
                             </TableCell>
                           </TableRow>
                         );
                       }) : (
                         <TableRow>
                           <TableCell colSpan={6} align="center">
-                            <Typography color="text.secondary">No hay respuestas para los filtros seleccionados.</Typography>
+                            <Typography color="text.secondary">{t('surveyResults.detail.noResponses', 'No hay respuestas para los filtros seleccionados.')}</Typography>
                           </TableCell>
                         </TableRow>
                       );
                     })()}
-                    
+
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -1451,19 +1450,19 @@ export default function SurveyResults() {
   { false && (isAdmin || isCompanyRole) && (
     <Paper sx={{ p: 2, mb: 3, borderRadius: 3 }}>
       <Stack spacing={2} direction={{ xs: 'column', md: 'row' }} flexWrap="wrap">
-        <TextField label="Título" value={brandTitle} onChange={e=>setBrandTitle(e.target.value)} size="small" sx={{ minWidth: 180 }} />
-        <TextField label="Subtítulo" value={brandSubtitle} onChange={e=>setBrandSubtitle(e.target.value)} size="small" sx={{ minWidth: 180 }} />
-        <TextField label="Nombre Empresa" value={brandCompanyName} onChange={e=>setBrandCompanyName(e.target.value)} size="small" sx={{ minWidth: 180 }} />
+        <TextField label={t('surveyResults.branding.title', 'Título')} value={brandTitle} onChange={e=>setBrandTitle(e.target.value)} size="small" sx={{ minWidth: 180 }} />
+        <TextField label={t('surveyResults.branding.subtitle', 'Subtítulo')} value={brandSubtitle} onChange={e=>setBrandSubtitle(e.target.value)} size="small" sx={{ minWidth: 180 }} />
+        <TextField label={t('surveyResults.branding.companyName', 'Nombre Empresa')} value={brandCompanyName} onChange={e=>setBrandCompanyName(e.target.value)} size="small" sx={{ minWidth: 180 }} />
         <TextField label="Footer" value={brandFooterText} onChange={e=>setBrandFooterText(e.target.value)} size="small" sx={{ minWidth: 140 }} />
         <TextField label="Primary Hex" value={brandPrimaryHex} onChange={e=>setBrandPrimaryHex(e.target.value)} size="small" sx={{ minWidth: 130 }} />
         <TextField label="Secondary Hex" value={brandSecondaryHex} onChange={e=>setBrandSecondaryHex(e.target.value)} size="small" sx={{ minWidth: 130 }} />
         <TextField label="Logo Classpath" placeholder="/branding/logo.png" value={brandLogoClasspath} onChange={e=>setBrandLogoClasspath(e.target.value)} size="small" sx={{ minWidth: 180 }} />
         <Button variant="contained" color="primary" disabled={!selectedCompany || dictamenLoading} onClick={handleDownloadCompanyPdf} startIcon={<DownloadIcon />}>
-          PDF Empresa{dictamenLoading ? '...' : ''}
+          {t('surveyResults.branding.companyPdf', 'PDF Empresa')}{dictamenLoading ? '...' : ''}
         </Button>
       </Stack>
       <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-        Usa estos campos para personalizar encabezado/colores. Logo debe existir en recursos backend.
+        {t('surveyResults.branding.hint', 'Usa estos campos para personalizar encabezado/colores. Logo debe existir en recursos backend.')}
       </Typography>
     </Paper>
   ) }
