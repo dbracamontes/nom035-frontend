@@ -7,6 +7,7 @@ import {
 } from "@mui/material";
 import { createCompanySurvey, createSurveyApplication, getCompanies, getEmployeesByCompany, getSurveys, getSurveyWithQuestions } from "../api/nom035";
 import { normalizeQuestionList } from "../utils/surveyUtils";
+import { useTranslation } from 'react-i18next';
 
 // Unified field style: responsive, no fixed minWidth/minHeight
 const fieldSx = {
@@ -70,6 +71,7 @@ const selectMenuProps = {
 };
 
 export default function CompanySurveyForm({ onCreated }) {
+  const { t, i18n } = useTranslation();
   // Pagination state for survey questions in the details dialog
   const [questionPage, setQuestionPage] = useState(0);
   const questionPageSize = 10;
@@ -176,12 +178,12 @@ export default function CompanySurveyForm({ onCreated }) {
     setSuccessOpen(false);
 
     if (!selectedCompany || !selectedAssignmentSurvey) {
-      alert("Por favor seleccione una empresa y la encuesta a asignar");
+      alert(t("companySurvey.form.selectCompanyAndSurvey", "Por favor seleccione una empresa y la encuesta a asignar"));
       return;
     }
 
     if (selectedEmployees.length === 0) {
-      setErrorMsg("Selecciona al menos un empleado para asignar la encuesta");
+      setErrorMsg(t("companySurvey.form.selectAtLeastOneEmployee", "Selecciona al menos un empleado para asignar la encuesta"));
       setErrorOpen(true);
       return;
     }
@@ -229,10 +231,12 @@ export default function CompanySurveyForm({ onCreated }) {
 
         if (failedAssignments.length > 0) {
           console.error("Errores al crear aplicaciones de encuesta:", failedAssignments);
-          setErrorMsg("La encuesta se creó, pero no se pudo asignar a todos los empleados seleccionados.");
+          setErrorMsg(t("companySurvey.form.partialAssignError", "La encuesta se creó, pero no se pudo asignar a todos los empleados seleccionados."));
           setErrorOpen(true);
         } else {
-          const successMessage = `Encuesta creada y asignada a ${selectedEmployees.length} empleado${selectedEmployees.length === 1 ? "" : "s"}.`;
+          const successMessage = selectedEmployees.length === 1
+            ? t("companySurvey.form.createdAndAssignedOne", "Encuesta creada y asignada a 1 empleado.")
+            : t("companySurvey.form.createdAndAssignedMany", "Encuesta creada y asignada a {{count}} empleados.", { count: selectedEmployees.length });
           setSuccessMsg(successMessage);
           setSuccessOpen(true);
         }
@@ -251,7 +255,7 @@ export default function CompanySurveyForm({ onCreated }) {
       if (onCreated) onCreated();
     } catch (error) {
       console.error("Error creating company survey:", error);
-      setErrorMsg("Error al crear la encuesta de empresa");
+      setErrorMsg(t("companySurvey.form.createError", "Error al crear la encuesta de empresa"));
       setErrorOpen(true);
     }
   };
@@ -312,14 +316,14 @@ export default function CompanySurveyForm({ onCreated }) {
           <TextField
             select
             fullWidth
-            label="Seleccionar Empresa"
+            label={t("companySurvey.form.selectCompany", "Seleccionar Empresa")}
             value={selectedCompany}
             onChange={e => setSelectedCompany(e.target.value)}
             required
             sx={fieldSx}
             MenuProps={selectMenuProps}
           >
-            <MenuItem value="">-- Seleccionar Empresa --</MenuItem>
+            <MenuItem value="">{t("companySurvey.form.selectCompanyOption", "-- Seleccionar Empresa --")}</MenuItem>
             {companies.map(company => (
               <MenuItem key={company.id} value={company.id}>
                 {company.name}
@@ -333,15 +337,15 @@ export default function CompanySurveyForm({ onCreated }) {
           <TextField
             select
             fullWidth
-            label="Asignar Encuesta"
+            label={t("companySurvey.form.assignSurvey", "Asignar Encuesta")}
             value={selectedAssignmentSurvey}
             onChange={e => setSelectedAssignmentSurvey(e.target.value)}
             required
             sx={fieldSx}
             MenuProps={selectMenuProps}
-            helperText="Selecciona la encuesta que se asignará a la empresa"
+            helperText={t("companySurvey.form.assignSurveyHelper", "Selecciona la encuesta que se asignará a la empresa")}
           >
-            <MenuItem value="">-- Asignar Encuesta --</MenuItem>
+            <MenuItem value="">{t("companySurvey.form.assignSurveyOption", "-- Asignar Encuesta --")}</MenuItem>
             {assignmentSurveyOptions.map((survey) => (
               <MenuItem key={survey.id} value={survey.id}>
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
@@ -354,9 +358,9 @@ export default function CompanySurveyForm({ onCreated }) {
                     </Typography>
                   )}
                   <Stack direction="row" spacing={1} alignItems="center">
-                    <Chip label={survey.guideType || "Personalizado"} size="small" color="primary" variant="outlined" />
+                    <Chip label={survey.guideType || t("companySurvey.form.custom", "Personalizado")} size="small" color="primary" variant="outlined" />
                     {((survey.title || "").toLowerCase().includes("leben")) && (
-                      <Chip label="Nuevo" size="small" color="secondary" />
+                      <Chip label={t("companySurvey.form.new", "Nuevo")} size="small" color="secondary" />
                     )}
                   </Stack>
                 </Box>
@@ -370,13 +374,13 @@ export default function CompanySurveyForm({ onCreated }) {
           <TextField
             select
             fullWidth
-            label="Visualizar Encuestas"
+            label={t("companySurvey.form.viewSurveys", "Visualizar Encuestas")}
             value={selectedSurvey}
             onChange={e => setSelectedSurvey(e.target.value)}
             sx={fieldSx}
             MenuProps={selectMenuProps}
           >
-            <MenuItem value="">-- Visualizar Encuesta --</MenuItem>
+            <MenuItem value="">{t("companySurvey.form.viewSurveyOption", "-- Visualizar Encuesta --")}</MenuItem>
             {surveys.map(survey => (
               <MenuItem key={survey.id} value={survey.id}>
                 {survey.title}
@@ -408,7 +412,7 @@ export default function CompanySurveyForm({ onCreated }) {
                   }
                 }}
               >
-                Ver detalles de la encuesta
+                {t("companySurvey.form.viewDetails", "Ver detalles de la encuesta")}
               </Button>
             </Box>
           )}
@@ -418,7 +422,7 @@ export default function CompanySurveyForm({ onCreated }) {
         <Box>
           <TextField
             fullWidth
-            label="Título Encuesta"
+            label={t("companySurvey.form.surveyTitle", "Título Encuesta")}
             value={title}
             onChange={e => setTitle(e.target.value)}
             required
@@ -431,7 +435,7 @@ export default function CompanySurveyForm({ onCreated }) {
           <TextField
             fullWidth
             type="datetime-local"
-            label="Fecha Inicio"
+            label={t("companySurvey.form.startDate", "Fecha Inicio")}
             value={startDate}
             onChange={e => setStartDate(e.target.value)}
             InputLabelProps={{ shrink: true }}
@@ -443,7 +447,7 @@ export default function CompanySurveyForm({ onCreated }) {
           <TextField
             fullWidth
             type="datetime-local"
-            label="Fecha Fin"
+            label={t("companySurvey.form.endDate", "Fecha Fin")}
             value={endDate}
             onChange={e => setEndDate(e.target.value)}
             InputLabelProps={{ shrink: true }}
@@ -457,7 +461,7 @@ export default function CompanySurveyForm({ onCreated }) {
             fullWidth
             multiline
             rows={3}
-            label="Descripción/Notas"
+            label={t("companySurvey.form.descriptionNotes", "Descripción/Notas")}
             value={description}
             onChange={e => setDescription(e.target.value)}
             sx={{
@@ -482,7 +486,7 @@ export default function CompanySurveyForm({ onCreated }) {
               mb: 2
             }}
           >
-            Empleados Seleccionados
+            {t("companySurvey.form.selectedEmployees", "Empleados Seleccionados")}
           </Typography>
           
           {selectedCompany ? (
@@ -499,13 +503,13 @@ export default function CompanySurveyForm({ onCreated }) {
                     onClick={() => setEmployeeDialogOpen(true)}
                     disabled={employees.length === 0}
                   >
-                    Seleccionar Empleados ({selectedEmployees.length}/{employees.length})
+                    {t("companySurvey.form.selectEmployeesCount", "Seleccionar Empleados ({{selected}}/{{total}})", { selected: selectedEmployees.length, total: employees.length })}
                   </Button>
                   {employees.length > 0 && (
                     <Button 
                       onClick={handleSelectAllEmployees}
                     >
-                      {selectedEmployees.length === employees.length ? "Deseleccionar Todos" : "Seleccionar Todos"}
+                      {selectedEmployees.length === employees.length ? t("companySurvey.form.deselectAll", "Deseleccionar Todos") : t("companySurvey.form.selectAll", "Seleccionar Todos")}
                     </Button>
                   )}
                 </Box>
@@ -527,7 +531,7 @@ export default function CompanySurveyForm({ onCreated }) {
             </>
           ) : (
             <Typography color="text.secondary">
-              Primero seleccione una empresa para ver los empleados disponibles
+              {t("companySurvey.form.selectCompanyFirst", "Primero seleccione una empresa para ver los empleados disponibles")}
             </Typography>
           )}
         </Box>
@@ -564,7 +568,7 @@ export default function CompanySurveyForm({ onCreated }) {
                 }
               }}
             >
-              Crear Encuesta de Empresa
+              {t("companySurvey.form.submit", "Crear Encuesta de Empresa")}
             </Button>
           </Box>
         </Box>
@@ -578,7 +582,7 @@ export default function CompanySurveyForm({ onCreated }) {
         fullWidth
       >
         <DialogTitle>
-          Seleccionar Empleados - {selectedCompanyName}
+          {t("companySurvey.form.selectEmployeesTitle", "Seleccionar Empleados - {{company}}", { company: selectedCompanyName })}
         </DialogTitle>
         <DialogContent>
           <List>
@@ -604,7 +608,7 @@ export default function CompanySurveyForm({ onCreated }) {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEmployeeDialogOpen(false)}>
-            Cerrar
+            {t("companySurvey.form.close", "Cerrar")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -635,7 +639,7 @@ export default function CompanySurveyForm({ onCreated }) {
           alignItems: 'center',
           gap: 1
         }}>
-          Detalles de la Encuesta
+          {t("companySurvey.form.surveyDetails", "Detalles de la Encuesta")}
         </DialogTitle>
         <DialogContent sx={{ p: 3 }}>
           {surveyDetails && (
@@ -660,18 +664,18 @@ export default function CompanySurveyForm({ onCreated }) {
                 <Grid container spacing={2}>
                   <Grid item xs={6}>
                     <Typography variant="caption" sx={{ color: '#64748b', display: 'block' }}>
-                      Tipo de Guía
+                      {t("companySurvey.form.guideType", "Tipo de Guía")}
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, color: '#1e293b' }}>
-                      Guía {surveyDetails.guideType || 'No especificado'}
+                      {t("companySurvey.form.guideValue", "Guía {{type}}", { type: surveyDetails.guideType || t("companySurvey.form.notSpecified", "No especificado") })}
                     </Typography>
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="caption" sx={{ color: '#64748b', display: 'block' }}>
-                      Estado
+                      {t("companySurvey.form.status", "Estado")}
                     </Typography>
                     <Chip 
-                      label={surveyDetails.active ? 'Activa' : 'Inactiva'}
+                      label={surveyDetails.active ? t('companySurvey.form.active', 'Activa') : t('companySurvey.form.inactive', 'Inactiva')}
                       size="small"
                       sx={{ 
                         backgroundColor: surveyDetails.active ? '#dcfce7' : '#fee2e2',
@@ -682,16 +686,16 @@ export default function CompanySurveyForm({ onCreated }) {
                   </Grid>
                   <Grid item xs={12}>
                     <Typography variant="caption" sx={{ color: '#64748b', display: 'block' }}>
-                      Fecha de Creación
+                      {t("companySurvey.form.createdAt", "Fecha de Creación")}
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, color: '#1e293b' }}>
-                      {surveyDetails.createdAt ? new Date(surveyDetails.createdAt).toLocaleDateString('es-ES', {
+                      {surveyDetails.createdAt ? new Date(surveyDetails.createdAt).toLocaleDateString(i18n.language && i18n.language.startsWith('en') ? 'en-US' : 'es-ES', {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric',
                         hour: '2-digit',
                         minute: '2-digit'
-                      }) : 'No disponible'}
+                      }) : t('companySurvey.form.notAvailable', 'No disponible')}
                     </Typography>
                   </Grid>
                 </Grid>
@@ -713,7 +717,7 @@ export default function CompanySurveyForm({ onCreated }) {
                   mb: 2
                 }}
               >
-                Preguntas:
+                {t("companySurvey.form.questions", "Preguntas:")}
               </Typography>
               {(() => {
                 // Permitir que la respuesta sea un array plano o un objeto con questions
@@ -733,10 +737,10 @@ export default function CompanySurveyForm({ onCreated }) {
                         border: '1px solid rgba(251, 146, 60, 0.3)'
                       }}>
                         <Typography variant="h6" sx={{ color: '#9a3412', mb: 2, fontWeight: 600 }}>
-                          No se encontraron preguntas registradas
+                          {t("companySurvey.form.noQuestionsFound", "No se encontraron preguntas registradas")}
                         </Typography>
                         <Typography variant="body2" sx={{ color: '#c2410c' }}>
-                          Aún no se han importado las preguntas para esta encuesta.
+                          {t("companySurvey.form.questionsNotImported", "Aún no se han importado las preguntas para esta encuesta.")}
                         </Typography>
                       </Box>
                     );
@@ -751,14 +755,14 @@ export default function CompanySurveyForm({ onCreated }) {
                   <Box sx={{ maxHeight: '400px', overflowY: 'auto', pr: 1 }}>
                     <Typography variant="body2" sx={{ color: '#64748b', mb: 2, fontStyle: 'italic' }}>
                       {safeQuestions.length > 0
-                        ? `Mostrando ${safeQuestions.length} preguntas registradas para "${surveyDetails?.title || 'Encuesta'}"`
-                        : 'Esta encuesta aún no tiene preguntas registradas.'}
+                        ? t("companySurvey.form.showingQuestions", "Mostrando {{count}} preguntas registradas para \"{{title}}\"", { count: safeQuestions.length, title: surveyDetails?.title || t("companySurvey.form.surveyFallback", "Encuesta") })
+                        : t('companySurvey.form.noQuestionsYet', 'Esta encuesta aún no tiene preguntas registradas.')}
                     </Typography>
                     {/* Mensaje de advertencia si se detecta posible endpoint incorrecto */}
                     {safeQuestions.length > 0 && safeQuestions.length <= 8 && (
                       <Box sx={{ mb: 2, p: 2, background: '#fffbe6', border: '1px solid #facc15', borderRadius: 2 }}>
                         <Typography variant="body2" sx={{ color: '#b45309', fontWeight: 600 }}>
-                          ⚠️ Atención: Solo se están mostrando {safeQuestions.length} preguntas. Es probable que el sistema esté usando el endpoint incorrecto (/api/surveys/[id] en vez de /api/surveys/[id]/questions).
+                          {t("companySurvey.form.endpointWarning", "⚠️ Atención: Solo se están mostrando {{count}} preguntas. Es probable que el sistema esté usando el endpoint incorrecto (/api/surveys/[id] en vez de /api/surveys/[id]/questions).", { count: safeQuestions.length })}
                         </Typography>
                       </Box>
                     )}
@@ -775,7 +779,7 @@ export default function CompanySurveyForm({ onCreated }) {
                         }}
                       >
                         <Typography variant="body1" sx={{ fontWeight: 600, color: '#1e293b', mb: 2 }}>
-                          {questionPage * questionPageSize + index + 1}. {question.text || question.question || question.pregunta || 'Pregunta sin texto'}
+                          {questionPage * questionPageSize + index + 1}. {question.text || question.question || question.pregunta || t('companySurvey.form.questionNoText', 'Pregunta sin texto')}
                         </Typography>
                         {question.category && (
                           <Chip 
@@ -792,7 +796,7 @@ export default function CompanySurveyForm({ onCreated }) {
                         {question.normalizedOptions && question.normalizedOptions.length > 0 && (
                           <Box sx={{ mt: 2 }}>
                             <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 500, display: 'block', mb: 1 }}>
-                              Opciones de respuesta:
+                              {t("companySurvey.form.answerOptions", "Opciones de respuesta:")}
                             </Typography>
                             <Stack spacing={1}>
                               {question.normalizedOptions.map((option) => (
@@ -815,11 +819,11 @@ export default function CompanySurveyForm({ onCreated }) {
                         {question.type === 'matrix' && question.metadata && (
                           <Box sx={{ mt: 2 }}>
                             <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 500, display: 'block', mb: 1 }}>
-                              Matriz ({(question.metadata.selection || 'checkbox') === 'radio' ? 'una respuesta por fila' : 'múltiples respuestas por fila'})
+                              {t("companySurvey.form.matrix", "Matriz ({{mode}})", { mode: (question.metadata.selection || "checkbox") === "radio" ? t("companySurvey.form.onePerRow", "una respuesta por fila") : t("companySurvey.form.multiplePerRow", "múltiples respuestas por fila") })}
                             </Typography>
                             <Stack direction="row" spacing={2} flexWrap="wrap">
                               <Box>
-                                <Typography variant="overline" sx={{ color: '#94a3b8' }}>Filas</Typography>
+                                <Typography variant="overline" sx={{ color: '#94a3b8' }}>{t("companySurvey.form.rows", "Filas")}</Typography>
                                 <Stack spacing={0.5}>
                                   {(question.metadata.rows || []).map((row) => (
                                     <Chip key={row} label={row} size="small" variant="outlined" />
@@ -827,7 +831,7 @@ export default function CompanySurveyForm({ onCreated }) {
                                 </Stack>
                               </Box>
                               <Box>
-                                <Typography variant="overline" sx={{ color: '#94a3b8' }}>Columnas</Typography>
+                                <Typography variant="overline" sx={{ color: '#94a3b8' }}>{t("companySurvey.form.columns", "Columnas")}</Typography>
                                 <Stack spacing={0.5}>
                                   {(question.metadata.columns || []).map((col) => (
                                     <Chip key={col} label={col} size="small" color="primary" variant="outlined" />
@@ -843,13 +847,13 @@ export default function CompanySurveyForm({ onCreated }) {
                     {totalPages > 1 && (
                       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
                         <Button onClick={() => setQuestionPage(p => Math.max(0, p - 1))} disabled={questionPage === 0} sx={{ mr: 2 }}>
-                          Anterior
+                          {t("companySurvey.form.previous", "Anterior")}
                         </Button>
                         <Typography sx={{ alignSelf: 'center', fontWeight: 500 }}>
-                          Página {questionPage + 1} de {totalPages}
+                          {t("companySurvey.form.pageOf", "Página {{page}} de {{total}}", { page: questionPage + 1, total: totalPages })}
                         </Typography>
                         <Button onClick={() => setQuestionPage(p => Math.min(totalPages - 1, p + 1))} disabled={questionPage === totalPages - 1} sx={{ ml: 2 }}>
-                          Siguiente
+                          {t("companySurvey.form.next", "Siguiente")}
                         </Button>
                       </Box>
                     )}
@@ -875,7 +879,7 @@ export default function CompanySurveyForm({ onCreated }) {
               }
             }}
           >
-            Cerrar
+            {t("companySurvey.form.close", "Cerrar")}
           </Button>
         </DialogActions>
       </Dialog>

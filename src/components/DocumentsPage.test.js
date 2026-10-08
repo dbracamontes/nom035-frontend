@@ -16,7 +16,7 @@ jest.mock('../api/nom035', () => ({
 test('renders document center overview and empty state when the backend has no documents', async () => {
   render(<DocumentsPage />);
 
-  expect(screen.getByText(/Centro de Documentos/i)).toBeInTheDocument();
+  expect(screen.getByText(/Validación Documentos/i)).toBeInTheDocument();
 
   await waitFor(() => {
     expect(screen.getByLabelText(/Buscar documento/i)).toBeInTheDocument();

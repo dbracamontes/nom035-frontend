@@ -5,7 +5,7 @@ import CompanyForm from "./CompanyForm";
 
 jest.mock("axios", () => ({ post: jest.fn() }));
 jest.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key) => key }),
+  useTranslation: () => ({ t: (key, def) => (typeof def === "string" ? def : key) }),
 }));
 
 describe("CompanyForm contact fields", () => {

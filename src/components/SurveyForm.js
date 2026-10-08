@@ -44,31 +44,31 @@ export default function SurveyForm({ survey, onCreated }) {
   return (
     <Paper sx={{ p: 2, mb: 2 }}>
       <Box component="form" onSubmit={handleSubmit}>
-        <TextField label={t("survey.form.title")} value={title} onChange={e => setTitle(e.target.value)} required sx={{ mr: 2 }} />
-        <TextField label={t("survey.form.description")} value={description} onChange={e => setDescription(e.target.value)} sx={{ mr: 2 }} />
+        <TextField label={t("survey.form.title", "Título")} value={title} onChange={e => setTitle(e.target.value)} required sx={{ mr: 2 }} />
+        <TextField label={t("survey.form.description", "Descripción")} value={description} onChange={e => setDescription(e.target.value)} sx={{ mr: 2 }} />
         <TextField
           select
-          label={t("survey.form.company")}
+          label={t("survey.form.company", "Empresa")}
           value={companyId}
           onChange={e => setCompanyId(e.target.value)}
           required
           sx={{ mr: 2, minWidth: 120 }}
         >
-          <MenuItem value="">{t("survey.form.selectCompany")}</MenuItem>
+          <MenuItem value="">{t("survey.form.selectCompany", "Seleccionar Empresa")}</MenuItem>
           {companies.map(company => (
             <MenuItem key={company.id} value={company.id}>{company.name}</MenuItem>
           ))}
         </TextField>
         {questions.map((q, idx) => (
           <Box key={idx} sx={{ mt: 2, mb: 2 }}>
-            <TextField label={t("survey.form.questionText")} value={q.text} onChange={e => handleQChange(idx, "text", e.target.value)} required sx={{ mr: 2 }} />
-            <TextField label={t("survey.form.type")} value={q.type} onChange={e => handleQChange(idx, "type", e.target.value)} sx={{ mr: 2 }} />
-            <TextField label={t("survey.form.options")} value={q.options} onChange={e => handleQChange(idx, "options", e.target.value)} sx={{ mr: 2 }} />
-            <TextField label={t("survey.form.answerScores")} value={q.answerScores} onChange={e => handleQChange(idx, "answerScores", e.target.value)} sx={{ mr: 2 }} />
+            <TextField label={t("survey.form.questionText", "Texto de la Pregunta")} value={q.text} onChange={e => handleQChange(idx, "text", e.target.value)} required sx={{ mr: 2 }} />
+            <TextField label={t("survey.form.type", "Tipo")} value={q.type} onChange={e => handleQChange(idx, "type", e.target.value)} sx={{ mr: 2 }} />
+            <TextField label={t("survey.form.options", "Opciones")} value={q.options} onChange={e => handleQChange(idx, "options", e.target.value)} sx={{ mr: 2 }} />
+            <TextField label={t("survey.form.answerScores", "Puntuaciones de Respuestas (JSON)")} value={q.answerScores} onChange={e => handleQChange(idx, "answerScores", e.target.value)} sx={{ mr: 2 }} />
           </Box>
         ))}
         <IconButton onClick={addQuestion}><AddIcon /></IconButton>
-        <Button type="submit" variant="contained">{survey ? t("survey.form.updateSurvey") : t("survey.form.createSurvey")}</Button>
+        <Button type="submit" variant="contained">{survey ? t("survey.form.updateSurvey", "Actualizar Encuesta") : t("survey.form.createSurvey", "Crear Encuesta")}</Button>
       </Box>
     </Paper>
   );

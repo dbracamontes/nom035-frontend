@@ -46,7 +46,7 @@ export default function CompanyList({ onEdit, onOpenCompanyDocs, onRefresh, refr
       if (onRefresh) onRefresh();
     } catch (error) {
       console.error("Error deleting company:", error);
-      alert("Error al eliminar la empresa. Es posible que tenga empleados asociados.");
+      alert(t('companiesUi.list.deleteError', 'Error al eliminar la empresa. Es posible que tenga empleados asociados.'));
     }
   };
 
@@ -94,21 +94,21 @@ export default function CompanyList({ onEdit, onOpenCompanyDocs, onRefresh, refr
           {t('companies.list.title') || 'Lista de Empresas'}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Total: {companies.length} empresas
+          {t('companiesUi.list.total', 'Total: {{count}} empresas', { count: companies.length })}
         </Typography>
       </Box>
 
       {/* Filtros de búsqueda */}
       <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
         <TextField
-          label="Filtrar por nombre"
+          label={t('companiesUi.list.filterName', 'Filtrar por nombre')}
           size="small"
           variant="outlined"
           value={nameFilter}
           onChange={(e) => setNameFilter(e.target.value)}
         />
         <TextField
-          label="Filtrar por RFC / Tax ID"
+          label={t('companiesUi.list.filterTaxId', 'Filtrar por RFC / Tax ID')}
           size="small"
           variant="outlined"
           value={rfcFilter}
@@ -122,17 +122,17 @@ export default function CompanyList({ onEdit, onOpenCompanyDocs, onRefresh, refr
           <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
             <TableRow>
               <TableCell sx={{ fontWeight: 'bold' }}>ID</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Nombre</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>RFC / Tax ID</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Fecha de Creación</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }} align="center">Acciones</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>{t('companiesUi.list.colName', 'Nombre')}</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>{t('companiesUi.list.colTaxId', 'RFC / Tax ID')}</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>{t('companiesUi.list.colCreatedAt', 'Fecha de Creación')}</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }} align="center">{t('companiesUi.list.colActions', 'Acciones')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
                 <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                  Cargando empresas...
+                  {t('companiesUi.list.loading', 'Cargando empresas...')}
                 </TableCell>
               </TableRow>
             ) : filteredCompanies.length === 0 ? (
@@ -140,8 +140,8 @@ export default function CompanyList({ onEdit, onOpenCompanyDocs, onRefresh, refr
                 <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                   <Typography variant="body2" color="text.secondary">
                     {companies.length === 0
-                      ? 'No hay empresas registradas. Crea una nueva empresa para comenzar.'
-                      : 'No se encontraron empresas que coincidan con los filtros.'}
+                      ? t('companiesUi.list.empty', 'No hay empresas registradas. Crea una nueva empresa para comenzar.')
+                      : t('companiesUi.list.noMatches', 'No se encontraron empresas que coincidan con los filtros.')}
                   </Typography>
                 </TableCell>
               </TableRow>
@@ -172,7 +172,7 @@ export default function CompanyList({ onEdit, onOpenCompanyDocs, onRefresh, refr
                         </Typography>
                         {missingDocs && (
                           <Chip
-                            label="Docs Médica LEBEN faltantes"
+                            label={t('companiesUi.list.missingDocsChip', 'Docs Médica LEBEN faltantes')}
                             color="error"
                             size="small"
                             variant="outlined"
@@ -213,7 +213,7 @@ export default function CompanyList({ onEdit, onOpenCompanyDocs, onRefresh, refr
                 return missingDocs ? (
                   <Tooltip
                     key={company.id}
-                    title="Documentación Médica LEBEN faltante. Haz clic en el ícono de edición para capturarla."
+                    title={t('companiesUi.list.missingDocsTooltip', 'Documentación Médica LEBEN faltante. Haz clic en el ícono de edición para capturarla.')}
                     arrow
                     placement="top"
                   >
@@ -233,22 +233,21 @@ export default function CompanyList({ onEdit, onOpenCompanyDocs, onRefresh, refr
         open={deleteDialog.open} 
         onClose={() => setDeleteDialog({ open: false, company: null })}
       >
-        <DialogTitle>Confirmar Eliminación</DialogTitle>
+        <DialogTitle>{t('companiesUi.list.confirmDeleteTitle', 'Confirmar Eliminación')}</DialogTitle>
         <DialogContent>
           <Typography>
-            ¿Está seguro que desea eliminar la empresa <strong>{deleteDialog.company?.name}</strong>?
+            {t('companiesUi.list.confirmDeleteBefore', '¿Está seguro que desea eliminar la empresa')} <strong>{deleteDialog.company?.name}</strong>{t('companiesUi.list.confirmDeleteAfter', '?')}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            Esta acción no se puede deshacer. Si la empresa tiene empleados o encuestas asociadas, 
-            la eliminación podría fallar.
+            {t('companiesUi.list.confirmDeleteWarning', 'Esta acción no se puede deshacer. Si la empresa tiene empleados o encuestas asociadas, la eliminación podría fallar.')}
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialog({ open: false, company: null })}>
-            Cancelar
+            {t('common.cancel', 'Cancelar')}
           </Button>
           <Button onClick={handleDelete} color="error" variant="contained">
-            Eliminar
+            {t('common.delete', 'Eliminar')}
           </Button>
         </DialogActions>
       </Dialog>

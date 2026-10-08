@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Button, TextField, Paper, Typography, Alert, Divider, Stack, ToggleButtonGroup, ToggleButton, Box } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { requestPasswordReset, confirmPasswordReset } from '../api/nom035';
 
 
 function LoginPage({ onLogin }) {
+  const { t } = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
@@ -26,7 +28,7 @@ function LoginPage({ onLogin }) {
     const result = await onLogin(username, password);
     setLoading(false);
     if (!result.success) {
-      setError(result.error || 'Error de autenticación');
+      setError(result.error || t('login.authError', 'Error de autenticación'));
     }
   };
 
@@ -39,20 +41,20 @@ function LoginPage({ onLogin }) {
         const response = await requestPasswordReset(recoveryEmail.trim());
         setGeneratedToken(response.data?.token || null);
         const expiresAt = response.data?.expiresAt ? new Date(response.data.expiresAt).toLocaleString() : null;
-        setRecoveryMessage(expiresAt ? `Token generado. Expira el ${expiresAt}.` : 'Token generado correctamente.');
+        setRecoveryMessage(expiresAt ? t('login.tokenGeneratedExpires', 'Token generado. Expira el {{date}}.', { date: expiresAt }) : t('login.tokenGenerated', 'Token generado correctamente.'));
       } else {
         if (resetPasswordValue !== resetPasswordConfirm) {
-          throw new Error('Las contraseñas no coinciden');
+          throw new Error(t('login.passwordMismatch', 'Las contraseñas no coinciden'));
         }
         await confirmPasswordReset(resetToken.trim(), resetPasswordValue);
-        setRecoveryMessage('Contraseña restablecida. Ya puedes iniciar sesión con la nueva contraseña.');
+        setRecoveryMessage(t('login.passwordResetSuccess', 'Contraseña restablecida. Ya puedes iniciar sesión con la nueva contraseña.'));
         setGeneratedToken(null);
         setResetToken('');
         setResetPasswordValue('');
         setResetPasswordConfirm('');
       }
     } catch (err) {
-      const message = err.response?.data?.message || err.message || 'No se pudo completar la operación';
+      const message = err.response?.data?.message || err.message || t('login.operationFailed', 'No se pudo completar la operación');
       setRecoveryError(message);
     } finally {
       setRecoveryLoading(false);
@@ -68,11 +70,11 @@ function LoginPage({ onLogin }) {
 
   return (
     <Paper elevation={3} style={{ maxWidth: 350, margin: '80px auto', padding: 32 }}>
-      <Typography variant="h5" align="center" gutterBottom>Iniciar sesión</Typography>
+      <Typography variant="h5" align="center" gutterBottom>{t('login.title', 'Iniciar sesión')}</Typography>
       {error && <Alert severity="error">{error}</Alert>}
       <form onSubmit={handleSubmit}>
         <TextField
-          label="Usuario o correo electrónico"
+          label={t('login.userOrEmail', 'Usuario o correo electrónico')}
           value={username}
           onChange={e => setUsername(e.target.value)}
           fullWidth
@@ -80,7 +82,7 @@ function LoginPage({ onLogin }) {
           autoFocus
         />
         <TextField
-          label="Contraseña"
+          label={t('login.password', 'Contraseña')}
           type="password"
           value={password}
           onChange={e => setPassword(e.target.value)}
@@ -103,7 +105,7 @@ function LoginPage({ onLogin }) {
           })}
           disabled={loading}
         >
-          {loading ? 'Entrando...' : 'Entrar'}
+          {loading ? t('login.signingIn', 'Entrando...') : t('login.signIn', 'Entrar')}
         </Button>
       </form>
 
@@ -127,13 +129,13 @@ function LoginPage({ onLogin }) {
             })
           }
         >
-          {showRecovery ? 'Ocultar recuperación' : '¿Olvidaste tu contraseña?'}
+          {showRecovery ? t('login.hideRecovery', 'Ocultar recuperación') : t('login.forgotPassword', '¿Olvidaste tu contraseña?')}
         </Button>
       </Divider>
 
       {showRecovery && (
         <Box>
-          <Typography variant="subtitle1" gutterBottom>Recuperación de contraseña</Typography>
+          <Typography variant="subtitle1" gutterBottom>{t('login.recoveryTitle', 'Recuperación de contraseña')}</Typography>
           <ToggleButtonGroup
             value={recoveryMode}
             exclusive
@@ -155,15 +157,15 @@ function LoginPage({ onLogin }) {
             size="small"
             sx={{ mb: 2 }}
           >
-            <ToggleButton value="request">Solicitar token</ToggleButton>
-            <ToggleButton value="confirm">Restablecer</ToggleButton>
+            <ToggleButton value="request"            >{t('login.requestToken', 'Solicitar token')}</ToggleButton>
+                        <ToggleButton value="confirm">{t('login.reset', 'Restablecer')}</ToggleButton>
           </ToggleButtonGroup>
 
           <Stack spacing={2}>
             {recoveryMode === 'request' ? (
               <>
                 <TextField
-                  label="Correo electrónico"
+                  label={t('login.email', 'Correo electrónico')}
                   type="email"
                   value={recoveryEmail}
                   onChange={e => setRecoveryEmail(e.target.value)}
@@ -172,27 +174,27 @@ function LoginPage({ onLogin }) {
                 {generatedToken && (
                   <Alert severity="info">
                     <Typography variant="body2" fontWeight={600}>Token: {generatedToken}</Typography>
-                    <Typography variant="caption">Comparte este token con el usuario o úsalo en el formulario de restablecimiento.</Typography>
+                    <Typography variant="caption">{t('login.shareTokenHint', 'Comparte este token con el usuario o úsalo en el formulario de restablecimiento.')}</Typography>
                   </Alert>
                 )}
               </>
             ) : (
               <>
                 <TextField
-                  label="Token de recuperación"
+                  label={t('login.recoveryToken', 'Token de recuperación')}
                   value={resetToken}
                   onChange={e => setResetToken(e.target.value)}
                   fullWidth
                 />
                 <TextField
-                  label="Nueva contraseña"
+                  label={t('login.newPassword', 'Nueva contraseña')}
                   type="password"
                   value={resetPasswordValue}
                   onChange={e => setResetPasswordValue(e.target.value)}
                   fullWidth
                 />
                 <TextField
-                  label="Confirmar contraseña"
+                  label={t('login.confirmPassword', 'Confirmar contraseña')}
                   type="password"
                   value={resetPasswordConfirm}
                   onChange={e => setResetPasswordConfirm(e.target.value)}
@@ -209,7 +211,7 @@ function LoginPage({ onLogin }) {
               onClick={handleRecoveryAction}
               disabled={isRecoveryActionDisabled()}
             >
-              {recoveryLoading ? 'Procesando...' : (recoveryMode === 'request' ? 'Generar token' : 'Restablecer contraseña')}
+              {recoveryLoading ? t('login.processing', 'Procesando...') : (recoveryMode === 'request' ? t('login.generateToken', 'Generar token') : t('login.resetPassword', 'Restablecer contraseña'))}
             </Button>
           </Stack>
         </Box>

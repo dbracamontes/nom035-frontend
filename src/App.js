@@ -41,11 +41,7 @@ import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 const drawerWidth = 220;
 
 export default function App() {
-  const { t, i18n } = useTranslation();
-  // Forzar idioma español al montar la app
-  useEffect(() => {
-    i18n.changeLanguage('es');
-  }, [i18n]);
+  const { t } = useTranslation();
   const { user, login, logout, loading } = useContext(UserContext);
   const [selected, setSelected] = useState(0);
   const [openNom035, setOpenNom035] = useState(true);
@@ -82,7 +78,8 @@ export default function App() {
       id: 'surveys',
       label: t('navigation.section.surveys', 'Encuestas'),
       items: [
-        { text: t("navigation.surveys"), icon: <AssignmentIcon />, component: <><SurveyForm /><SurveyList /></>, roles: ['ROLE_ADMIN'] },
+        // Oculto temporalmente; poner hidden en false para volver a habilitarlo.
+        { text: t("navigation.surveys"), icon: <AssignmentIcon />, component: <><SurveyForm /><SurveyList /></>, roles: ['ROLE_ADMIN'], hidden: true },
         { text: t("navigation.companySurveys"), icon: <BusinessIcon />, component: <CompanySurveyPage />, roles: ['ROLE_ADMIN'] },
         { text: t("navigation.answerSurvey"), icon: <QuizIcon />, component: <EmployeeSurveyAnswer />, roles: ['ROLE_EMPLOYEE'] },
       ],
@@ -97,26 +94,26 @@ export default function App() {
     },
     {
       id: 'documents',
-      label: 'Documentos',
+      label: t('navigation.section.documents', 'Documentos'),
       items: [
-        { text: 'Centro de Documentos', icon: <DescriptionIcon />, component: <DocumentsPage />, roles: ['ROLE_ADMIN'] },
-        { text: 'Materialidad', icon: <DescriptionIcon />, component: <MaterialidadPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
+        { text: t('navigation.documentsCenter', 'Centro de Documentos'), icon: <DescriptionIcon />, component: <DocumentsPage />, roles: ['ROLE_ADMIN'] },
+        { text: t('navigation.photoGenerator', 'Generador Alta Fotografías'), icon: <DescriptionIcon />, component: <MaterialidadPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
       ],
     },
     {
       id: 'docgen',
       label: t('navigation.section.docgen', 'Generar Documentos'),
       items: [
-        { text: 'Interpretación de Documento', icon: <DescriptionIcon />, component: <DocumentInterpretationPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
-        { text: 'Crear Documento', icon: <DescriptionIcon />, component: <DocumentCreationPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
-        { text: 'Genera Contrato', icon: <DescriptionIcon />, component: <ContractGenerationPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
+        { text: t('navigation.documentInterpretation', 'Interpretación de Documento'), icon: <DescriptionIcon />, component: <DocumentInterpretationPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
+        { text: t('navigation.createDocument', 'Crear Documento'), icon: <DescriptionIcon />, component: <DocumentCreationPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
+        { text: t('navigation.generateContract', 'Genera Contrato'), icon: <DescriptionIcon />, component: <ContractGenerationPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
       ],
     },
     {
       id: 'movements',
-      label: 'Bitácora de Movimientos',
+      label: t('navigation.section.movements', 'Bitácora de Movimientos'),
       items: [
-        { text: 'Bitácora', icon: <DescriptionIcon />, component: <ContractMovementLogPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
+        { text: t('navigation.movementLog', 'Bitácora'), icon: <DescriptionIcon />, component: <ContractMovementLogPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
       ],
     },
   ];
@@ -124,8 +121,11 @@ export default function App() {
   // Filtrar grupos de menú según el rol del usuario
   const filteredGroups = (user ? allMenuGroups.map(group => ({
     ...group,
-    items: group.items.filter(option => option.roles.some(role => hasRole(role)))
-  })).filter(group => group.items.length > 0) : allMenuGroups);
+    items: group.items.filter(option => !option.hidden && option.roles.some(role => hasRole(role)))
+  })).filter(group => group.items.length > 0) : allMenuGroups.map(group => ({
+    ...group,
+    items: group.items.filter(option => !option.hidden)
+  })).filter(group => group.items.length > 0));
 
   // Aplanar los items filtrados para mantener el manejo por índice
   const flatMenuOptions = filteredGroups.flatMap(group => group.items);
@@ -141,13 +141,13 @@ export default function App() {
   const medicaLebenOptions = [
     {
       id: 'ml-companies',
-      label: 'Gestión de Empresas Médica LEBEN',
+      label: t('navigation.mlCompanies', 'Gestión de Empresas Médica LEBEN'),
       component: <MedicaLebenCompaniesPage resetTrigger={mlReset} />, // pasar trigger
       roles: ['ROLE_ADMIN', 'ROLE_GENERADOR', 'ROLE_COTIZADOR'],
     },
     {
       id: 'ml-consultoria',
-      label: 'Sistema Consultoría',
+      label: t('navigation.mlConsultoria', 'Sistema Consultoría'),
       component: <MedicaLebenConsultoriaPage />,
       roles: ['ROLE_ADMIN', 'ROLE_GENERADOR', 'ROLE_COTIZADOR'],
     },
@@ -234,7 +234,7 @@ export default function App() {
               <List>
                 {/* NOM-035 main menu */}
                 <ListItemButton onClick={() => setOpenNom035(prev => !prev)}>
-                  <ListItemText primary="Encuestas" />
+                  <ListItemText primary={t('navigation.operation', 'Operación')} />
                   {openNom035 ? <ExpandLess /> : <ExpandMore />}
                 </ListItemButton>
                 <Collapse in={openNom035} timeout="auto" unmountOnExit>
@@ -270,7 +270,7 @@ export default function App() {
                 {(!user || hasRole('ROLE_ADMIN') || hasRole('ROLE_GENERADOR') || hasRole('ROLE_COTIZADOR')) && (
                   <>
                     <ListItemButton onClick={() => setOpenMedicaLeben(prev => !prev)}>
-                      <ListItemText primary="Medica LEBEN" />
+                      <ListItemText primary={t('navigation.medicaLeben', 'Medica LEBEN')} />
                       {openMedicaLeben ? <ExpandLess /> : <ExpandMore />}
                     </ListItemButton>
                     <Collapse in={openMedicaLeben} timeout="auto" unmountOnExit>

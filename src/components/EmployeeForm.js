@@ -92,7 +92,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
       setDocs(existingDocs || []); // Store only what exists
     } catch (e) {
       console.error("Error fetching employee docs", e);
-      setDocError("No se pudieron cargar los documentos del empleado.");
+      setDocError(t("employeesUi.form.docs.errorLoad", "No se pudieron cargar los documentos del empleado."));
     } finally {
       setDocLoading(false);
     }
@@ -198,7 +198,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
     const companyIdStr = String(form.companyId || "");
     const hasCompany = !!companyIdStr && companies.some(c => String(c.id) === companyIdStr);
     if (!form.name || !form.email || !hasCompany) {
-      alert(t("employee.form.validation.nameEmailCompanyRequired"));
+      alert(t("employee.form.validation.nameEmailCompanyRequired", "Nombre, Email y Empresa son requeridos."));
       return;
     }
     const { companyId, ...rest } = form;
@@ -232,7 +232,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
             companyCategory: created.companyCategory || form.companyCategory,
             seniorityYears: created.seniorityYears ?? form.seniorityYears
           });
-          setDocSuccess("Empleado creado. Ahora puedes subir los documentos.");
+          setDocSuccess(t("employeesUi.form.docs.createdUploadHint", "Empleado creado. Ahora puedes subir los documentos."));
           // fetch documents skeleton/values for the newly created employee
           fetchAndPrepareDocs(created.id);
         } else {
@@ -242,7 +242,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
         }
       }
     } catch (err) {
-      let msg = t("employee.form.error.generic");
+      let msg = t("employee.form.error.generic", "Error al guardar el empleado.");
       if (err && err.response && err.response.data && err.response.data.error) {
         msg = err.response.data.error;
       } else if (err && err.response && err.response.status === 403) {
@@ -281,7 +281,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
 
   const ensureDocRecord = async (docType) => {
     if (!effectiveEmployee || !effectiveEmployee.id) {
-      throw new Error("No hay empleado activo para asociar el documento.");
+      throw new Error(t("employeesUi.form.docs.noActiveEmployee", "No hay empleado activo para asociar el documento."));
     }
 
     const existingDoc = docs.find((d) => d.typeId === docType.id || d.name === docType.name);
@@ -298,7 +298,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
     const createdDoc = response && response.data ? response.data : null;
 
     if (!createdDoc || !createdDoc.id) {
-      throw new Error("No se pudo crear el registro del documento.");
+      throw new Error(t("employeesUi.form.docs.errorCreateRecord", "No se pudo crear el registro del documento."));
     }
 
     setDocs((prev) => {
@@ -315,7 +315,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
 
     const maxBytes = 5 * 1024 * 1024;
     if (file.size > maxBytes) {
-      setDocError("El archivo es demasiado grande. El tamaño máximo permitido es 5 MB.");
+      setDocError(t("employeesUi.form.docs.fileTooLarge", "El archivo es demasiado grande. El tamaño máximo permitido es 5 MB."));
       e.target.value = "";
       return;
     }
@@ -345,7 +345,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
         const docRecord = docType ? (existingDoc || await ensureDocRecord(docType)) : existingDoc;
 
         if (!docRecord || !docRecord.id) {
-          throw new Error("No se pudo localizar o crear el documento para subir el archivo.");
+          throw new Error(t("employeesUi.form.docs.errorLocateDoc", "No se pudo localizar o crear el documento para subir el archivo."));
         }
 
         setUploadingDocIds((prev) => ({ ...prev, [docRecord.id]: true }));
@@ -357,17 +357,17 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
       }
 
       setDocFiles({});
-      setDocSuccess("Documentos guardados correctamente.");
+      setDocSuccess(t("employeesUi.form.docs.saved", "Documentos guardados correctamente."));
       await fetchAndPrepareDocs(effectiveEmployee.id);
     } catch (e) {
       console.error("Error saving employee docs", e);
       if (e?.code === "FILE_TOO_LARGE") {
-        setDocError("Uno o más archivos superan el tamaño máximo permitido de 5 MB.");
+        setDocError(t("employeesUi.form.docs.filesTooLarge", "Uno o más archivos superan el tamaño máximo permitido de 5 MB."));
       } else if (e?.response?.status === 413 ||
                  (typeof e?.response?.data === 'string' && e.response.data.includes('Maximum upload size exceeded'))) {
-        setDocError("El archivo es demasiado grande. El tamaño máximo permitido es 5 MB.");
+        setDocError(t("employeesUi.form.docs.fileTooLarge", "El archivo es demasiado grande. El tamaño máximo permitido es 5 MB."));
       } else {
-        setDocError("Error al guardar los documentos.");
+        setDocError(t("employeesUi.form.docs.errorSave", "Error al guardar los documentos."));
       }
     } finally {
       setDocLoading(false);
@@ -376,17 +376,17 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
 
   const handleDeleteDocFile = async (docId) => {
     if (!effectiveEmployee || !effectiveEmployee.id) return;
-    if (!window.confirm("¿Está seguro de que desea eliminar este archivo?")) return;
+    if (!window.confirm(t("employeesUi.form.docs.confirmDeleteFile", "¿Está seguro de que desea eliminar este archivo?"))) return;
     setDocLoading(true);
     setDocError("");
     setDocSuccess("");
     try {
       await deleteEmployeeDocFile(effectiveEmployee.id, docId);
-      setDocSuccess("Archivo eliminado correctamente.");
+      setDocSuccess(t("employeesUi.form.docs.fileDeleted", "Archivo eliminado correctamente."));
       fetchAndPrepareDocs(effectiveEmployee.id); // Refresh docs state
     } catch (e) {
       console.error("Error deleting doc file", e);
-      setDocError("Error al eliminar el archivo.");
+      setDocError(t("employeesUi.form.docs.errorDeleteFile", "Error al eliminar el archivo."));
     } finally {
       setDocLoading(false);
     }
@@ -407,7 +407,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
       window.URL.revokeObjectURL(url);
     } catch (e) {
       console.error('Error descargando archivo', e);
-      alert('No se pudo descargar el archivo.');
+      alert(t("employeesUi.form.docs.errorDownload", "No se pudo descargar el archivo."));
     }
   };
 
@@ -434,9 +434,14 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
     const fileToUpload = docFiles[docType.id] || (docId ? docFiles[docId] : null);
     const hasExistingFile = !!doc?.hasFile;
     const isUploading = !!(docId && uploadingDocIds[docId]);
-    const fileName = fileToUpload?.name || doc?.fileName || "Sin archivo";
+    const fileName = fileToUpload?.name || doc?.fileName || t("employeesUi.form.docs.noFile", "Sin archivo");
     const statusValue = isUploading ? 'Pendiente' : normalizeEmployeeDocStatus(doc?.status);
-    const statusLabel = isUploading ? 'Subiendo' : statusValue;
+    const statusTexts = {
+      Pendiente: t("employeesUi.form.docs.status.pending", "Pendiente"),
+      Aprobado: t("employeesUi.form.docs.status.approved", "Aprobado"),
+      Rechazado: t("employeesUi.form.docs.status.rejected", "Rechazado"),
+    };
+    const statusLabel = isUploading ? t("employeesUi.form.docs.status.uploading", "Subiendo") : statusTexts[statusValue];
     const statusColor = isUploading ? 'warning' : (statusValue === 'Aprobado' ? 'success' : (statusValue === 'Rechazado' ? 'error' : 'warning'));
 
     return (
@@ -453,7 +458,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
       >
         <ListItemText
           primary={docType.name}
-          secondary={fileToUpload ? fileName : (doc ? fileName : "Registro no disponible")}
+          secondary={fileToUpload ? fileName : (doc ? fileName : t("employeesUi.form.docs.recordUnavailable", "Registro no disponible"))}
           sx={{ mr: 2 }}
         />
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -463,7 +468,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
             size="small"
           />
           {hasExistingFile && (
-            <Tooltip title="Descargar archivo">
+            <Tooltip title={t("employeesUi.form.docs.download", "Descargar archivo")}>
               <IconButton
                 size="small"
                 color="primary"
@@ -480,7 +485,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
               component="label"
               startIcon={<UploadFileIcon />}
             >
-              {fileToUpload ? "Listo para subir" : "Elegir"}
+              {fileToUpload ? t("employeesUi.form.docs.readyToUpload", "Listo para subir") : t("employeesUi.form.docs.choose", "Elegir")}
               <input
                 type="file"
                 hidden
@@ -489,7 +494,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
             </Button>
           )}
           {docId && hasExistingFile && (
-            <Tooltip title="Eliminar archivo">
+            <Tooltip title={t("employeesUi.form.docs.deleteFile", "Eliminar archivo")}>
               <IconButton size="small" color="error" onClick={() => handleDeleteDocFile(docId)}>
                 <DeleteIcon fontSize="small" />
               </IconButton>
@@ -505,35 +510,35 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
   return (
     <Paper sx={{ p: 3, boxShadow: 3, mt: 2 }}>
       <Box component="form" noValidate autoComplete="off">
-        <Typography variant="h6" sx={{ mb: 2 }}>Datos del Empleado</Typography>
+        <Typography variant="h6" sx={{ mb: 2 }}>{t("employeesUi.form.title", "Datos del Empleado")}</Typography>
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}><TextField label={t("employee.form.name")} name="name" value={form.name} onChange={handleChange} required fullWidth size="small" sx={inputSx} /></Grid>
-          <Grid item xs={12} sm={6}><TextField label={t("employee.form.department")} name="department" value={form.department} onChange={handleChange} required fullWidth size="small" sx={inputSx} /></Grid>
-          <Grid item xs={12} sm={6}><TextField label={t("employee.form.position")} name="position" value={form.position} onChange={handleChange} fullWidth size="small" sx={inputSx} /></Grid>
-          <Grid item xs={12} sm={6}><TextField type="date" label={t("employee.form.dateOfBirth")} name="dateOfBirth" value={form.dateOfBirth} onChange={handleChange} InputLabelProps={{ shrink: true }} fullWidth size="small" sx={inputSx} /></Grid>
-          <Grid item xs={12} sm={6}><TextField select label={t("employee.form.genderLabel")} name="gender" value={form.gender} onChange={handleChange} fullWidth size="small" sx={inputSx}>
+          <Grid item xs={12} sm={6}><TextField label={t("employee.form.name", "Nombre")} name="name" value={form.name} onChange={handleChange} required fullWidth size="small" sx={inputSx} /></Grid>
+          <Grid item xs={12} sm={6}><TextField label={t("employee.form.department", "Departamento")} name="department" value={form.department} onChange={handleChange} required fullWidth size="small" sx={inputSx} /></Grid>
+          <Grid item xs={12} sm={6}><TextField label={t("employee.form.position", "Puesto")} name="position" value={form.position} onChange={handleChange} fullWidth size="small" sx={inputSx} /></Grid>
+          <Grid item xs={12} sm={6}><TextField type="date" label={t("employee.form.dateOfBirth", "Fecha de nacimiento")} name="dateOfBirth" value={form.dateOfBirth} onChange={handleChange} InputLabelProps={{ shrink: true }} fullWidth size="small" sx={inputSx} /></Grid>
+          <Grid item xs={12} sm={6}><TextField select label={t("employee.form.genderLabel", "Sexo")} name="gender" value={form.gender} onChange={handleChange} fullWidth size="small" sx={inputSx}>
               <MenuItem value="">{t("employee.form.genderSelect", "Selecciona sexo")}</MenuItem>
-              <MenuItem value="M">{t("employee.form.genderM")}</MenuItem>
-              <MenuItem value="F">{t("employee.form.genderF")}</MenuItem>
-              <MenuItem value="Otro">{t("employee.form.genderOther")}</MenuItem>
+              <MenuItem value="M">{t("employee.form.genderM", "Masculino")}</MenuItem>
+              <MenuItem value="F">{t("employee.form.genderF", "Femenino")}</MenuItem>
+              <MenuItem value="Otro">{t("employee.form.genderOther", "Otro")}</MenuItem>
             </TextField></Grid>
-          <Grid item xs={12} sm={6}><TextField label={t("employee.form.email")} name="email" value={form.email} onChange={handleChange} required fullWidth size="small" sx={inputSx} /></Grid>
-          <Grid item xs={12} sm={6}><TextField select label={t("employee.form.maritalStatusLabel")} name="maritalStatus" value={form.maritalStatus} onChange={handleChange} fullWidth size="small" sx={inputSx}>
-              <MenuItem value="">{t("employee.form.maritalStatusSelect")}</MenuItem>
-              <MenuItem value="Soltero">{t("employee.form.maritalStatusSingle")}</MenuItem>
-              <MenuItem value="Casado">{t("employee.form.maritalStatusMarried")}</MenuItem>
-              <MenuItem value="Divorciado">{t("employee.form.maritalStatusDivorced")}</MenuItem>
-              <MenuItem value="Viudo">{t("employee.form.maritalStatusWidowed")}</MenuItem>
+          <Grid item xs={12} sm={6}><TextField label={t("employee.form.email", "Email")} name="email" value={form.email} onChange={handleChange} required fullWidth size="small" sx={inputSx} /></Grid>
+          <Grid item xs={12} sm={6}><TextField select label={t("employee.form.maritalStatusLabel", "Estado civil")} name="maritalStatus" value={form.maritalStatus} onChange={handleChange} fullWidth size="small" sx={inputSx}>
+              <MenuItem value="">{t("employee.form.maritalStatusSelect", "Selecciona estado civil")}</MenuItem>
+              <MenuItem value="Soltero">{t("employee.form.maritalStatusSingle", "Soltero")}</MenuItem>
+              <MenuItem value="Casado">{t("employee.form.maritalStatusMarried", "Casado")}</MenuItem>
+              <MenuItem value="Divorciado">{t("employee.form.maritalStatusDivorced", "Divorciado")}</MenuItem>
+              <MenuItem value="Viudo">{t("employee.form.maritalStatusWidowed", "Viudo")}</MenuItem>
             </TextField></Grid>
           <Grid item xs={12} sm={6}><TextField label={t("employee.form.curp", "CURP")} name="curp" value={form.curp} onChange={handleChange} fullWidth size="small" sx={inputSx} /></Grid>
-          <Grid item xs={12} sm={6}><TextField label={t("employee.form.education")} name="education" value={form.education} onChange={handleChange} fullWidth size="small" sx={inputSx} /></Grid>
-          <Grid item xs={12} sm={6}><TextField label={t("employee.form.companyCategory")} name="companyCategory" value={form.companyCategory} onChange={handleChange} fullWidth size="small" sx={inputSx} /></Grid>
-          <Grid item xs={12} sm={6}><TextField type="number" inputProps={{ min: 0, step: 1 }} label={t("employee.form.seniorityYears")} name="seniorityYears" value={form.seniorityYears} onChange={handleChange} fullWidth size="small" sx={inputSx} /></Grid>
+          <Grid item xs={12} sm={6}><TextField label={t("employee.form.education", "Estudios realizados")} name="education" value={form.education} onChange={handleChange} fullWidth size="small" sx={inputSx} /></Grid>
+          <Grid item xs={12} sm={6}><TextField label={t("employee.form.companyCategory", "Categoría en la empresa")} name="companyCategory" value={form.companyCategory} onChange={handleChange} fullWidth size="small" sx={inputSx} /></Grid>
+          <Grid item xs={12} sm={6}><TextField type="number" inputProps={{ min: 0, step: 1 }} label={t("employee.form.seniorityYears", "Antigüedad en el puesto (años)")} name="seniorityYears" value={form.seniorityYears} onChange={handleChange} fullWidth size="small" sx={inputSx} /></Grid>
           <Grid item xs={12} sm={6}>
             {hasRole('ROLE_COMPANY') ? (
-              <TextField label={t("employee.form.company")} value={companies.find(c => String(c.id) === String(form.companyId))?.name || ''} disabled fullWidth size="small" sx={inputSx} />
+              <TextField label={t("employee.form.company", "Empresa")} value={companies.find(c => String(c.id) === String(form.companyId))?.name || ''} disabled fullWidth size="small" sx={inputSx} />
             ) : (
-              <TextField select label={t("employee.form.company")} name="companyId" value={normalizeCompanyId(form.companyId, companies)} onChange={handleChange} required fullWidth size="small" sx={inputSx}>
+              <TextField select label={t("employee.form.company", "Empresa")} name="companyId" value={normalizeCompanyId(form.companyId, companies)} onChange={handleChange} required fullWidth size="small" sx={inputSx}>
                 <MenuItem value="">{t("employee.form.companySelect", "Selecciona una empresa")}</MenuItem>
                 {companies.map(company => (<MenuItem key={company.id} value={String(company.id)}>{company.name}</MenuItem>))}
               </TextField>
@@ -562,12 +567,12 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
 
       {(effectiveEmployee && effectiveEmployee.id) && (
         <Box sx={{ mt: 4 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>Documentos del empleado</Typography>
+          <Typography variant="h6" sx={{ mb: 2 }}>{t("employeesUi.form.docs.title", "Documentos del empleado")}</Typography>
           {docError && <Alert severity="error" sx={{ mb: 2 }}>{docError}</Alert>}
           {docSuccess && <Alert severity="success" sx={{ mb: 2 }}>{docSuccess}</Alert>}
 
           {docLoading ? (
-            <Typography>Cargando documentos...</Typography>
+            <Typography>{t("employeesUi.form.docs.loading", "Cargando documentos...")}</Typography>
           ) : (
             <List sx={{ p: 0 }}>
               {documentTypes.map(renderDocItem)}
@@ -582,7 +587,7 @@ const EmployeeForm = forwardRef(({ employee, onComplete, isEdit, initialCompanyI
               onClick={handleSaveDocs}
               disabled={docLoading || Object.keys(docFiles).length === 0}
             >
-              Guardar Documentos
+              {t("employeesUi.form.docs.save", "Guardar Documentos")}
             </Button>
           </Box>
         </Box>

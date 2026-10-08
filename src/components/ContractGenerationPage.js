@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   Autocomplete,
@@ -30,6 +31,7 @@ import {
 const DEFAULT_TEMPLATE = "DOCUMENTO_04_1";
 
 export default function ContractGenerationPage() {
+  const { t } = useTranslation();
   const MONTH_NAMES = React.useMemo(
     () => [
       "ENERO",
@@ -72,11 +74,14 @@ export default function ContractGenerationPage() {
 
   const requiredDocs = React.useMemo(
     () => [
-      { key: "ACTA", label: "ACTA CONSTITUTIVA" },
-      { key: "ASAMBLEA", label: "ASAMBLEA" },
-      { key: "CONSTANCIA_SITUACION_FISCAL", label: "CONSTANCIA SITUACIÓN FISCAL" },
+      { key: "ACTA", label: t("contractGeneration.docs.acta", "ACTA CONSTITUTIVA") },
+      { key: "ASAMBLEA", label: t("contractGeneration.docs.asamblea", "ASAMBLEA") },
+      {
+        key: "CONSTANCIA_SITUACION_FISCAL",
+        label: t("contractGeneration.docs.constancia", "CONSTANCIA SITUACIÓN FISCAL"),
+      },
     ],
-    []
+    [t]
   );
 
   const dateGroups = React.useMemo(
@@ -421,7 +426,7 @@ export default function ContractGenerationPage() {
   return (
     <Box sx={{ p: 3, display: "flex", flexDirection: "column", gap: 3 }}>
       <Typography variant="h5" fontWeight={600}>
-        Genera Contrato
+        {t("contractGeneration.title", "Genera Contrato")}
       </Typography>
 
       {loading && <LinearProgress />}
@@ -432,26 +437,26 @@ export default function ContractGenerationPage() {
           <Stack spacing={2}>
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
               <Typography variant="body2" color="text.secondary" sx={{ alignSelf: "center" }}>
-                Plantilla:
+                {t("contractGeneration.template", "Plantilla:")}
               </Typography>
               <Button
                 variant={templateType === "DOCUMENTO_04" ? "contained" : "outlined"}
                 onClick={() => setTemplateType("DOCUMENTO_04")}
                 disabled={loading}
               >
-                Persona fisica (4.0)
+                {t("contractGeneration.naturalPerson", "Persona fisica (4.0)")}
               </Button>
               <Button
                 variant={templateType === "DOCUMENTO_04_1" ? "contained" : "outlined"}
                 onClick={() => setTemplateType("DOCUMENTO_04_1")}
                 disabled={loading}
               >
-                Persona moral (4.1)
+                {t("contractGeneration.legalEntity", "Persona moral (4.1)")}
               </Button>
             </Stack>
 
             <Typography variant="subtitle1" fontWeight={600}>
-              Paso 1: Adjunta los 3 documentos obligatorios
+              {t("contractGeneration.step1", "Paso 1: Adjunta los 3 documentos obligatorios")}
             </Typography>
 
             <Stack spacing={1.5}>
@@ -467,7 +472,7 @@ export default function ContractGenerationPage() {
                     <Typography sx={{ minWidth: 300, fontWeight: 600 }}>{doc.label}</Typography>
                     <Chip
                       size="small"
-                      label={file ? "Adjuntado" : "Pendiente"}
+                      label={file ? t("contractGeneration.attached", "Adjuntado") : t("contractGeneration.pending", "Pendiente")}
                       color={file ? "success" : "default"}
                     />
                     <Button
@@ -477,7 +482,7 @@ export default function ContractGenerationPage() {
                       startIcon={<CloudUploadIcon />}
                       disabled={loading}
                     >
-                      {file ? "Reemplazar" : "Adjuntar"}
+                      {file ? t("contractGeneration.replace", "Reemplazar") : t("contractGeneration.attach", "Adjuntar")}
                       <input
                         hidden
                         type="file"
@@ -489,7 +494,7 @@ export default function ContractGenerationPage() {
                       />
                     </Button>
                     <Typography variant="body2" color="text.secondary">
-                      {file ? file.name : "Sin archivo"}
+                      {file ? file.name : t("contractGeneration.noFile", "Sin archivo")}
                     </Typography>
                   </Stack>
                 );
@@ -497,12 +502,12 @@ export default function ContractGenerationPage() {
             </Stack>
 
             <Button variant="outlined" onClick={handlePrepare} disabled={loading} sx={{ alignSelf: "flex-start" }}>
-              Preparar contrato
+              {t("contractGeneration.prepare", "Preparar contrato")}
             </Button>
 
             {sourceJobIds.length > 0 && (
               <Typography variant="body2" color="text.secondary">
-                Jobs de interpretación: {sourceJobIds.join(", ")}
+                {t("contractGeneration.interpretationJobs", "Jobs de interpretación: {{ids}}", { ids: sourceJobIds.join(", ") })}
               </Typography>
             )}
           </Stack>
@@ -514,12 +519,12 @@ export default function ContractGenerationPage() {
           <Stack spacing={2}>
             <Typography variant="subtitle1" fontWeight={600}>
               {templateType === "DOCUMENTO_04"
-                ? "Paso 2: Ajustar campos y generar contrato 4.0 (FISICA)"
-                : "Paso 2: Ajustar campos y generar contrato 4.1 (MORAL)"}
+                ? t("contractGeneration.step2Natural", "Paso 2: Ajustar campos y generar contrato 4.0 (FISICA)")
+                : t("contractGeneration.step2Legal", "Paso 2: Ajustar campos y generar contrato 4.1 (MORAL)")}
             </Typography>
 
             {fields.length === 0 ? (
-              <Alert severity="info">Primero prepara el contrato con 3 o más documentos.</Alert>
+              <Alert severity="info">{t("contractGeneration.prepareFirst", "Primero prepara el contrato con 3 o más documentos.")}</Alert>
             ) : (
               <>
                 {fields.map((field) => {
@@ -577,7 +582,7 @@ export default function ContractGenerationPage() {
                           required={Boolean(field.required)}
                           fullWidth
                           InputLabelProps={{ shrink: true }}
-                          helperText="Este selector llena DIA, MES y AÑO del grupo automáticamente."
+                          helperText={t("contractGeneration.dateHelper", "Este selector llena DIA, MES y AÑO del grupo automáticamente.")}
                         />
                       );
                     }
@@ -606,7 +611,7 @@ export default function ContractGenerationPage() {
                   );
                 })}
                 <Button variant="contained" onClick={handleGenerate} disabled={loading} sx={{ alignSelf: "flex-start" }}>
-                  Generar contrato
+                  {t("contractGeneration.generate", "Generar contrato")}
                 </Button>
               </>
             )}
@@ -617,19 +622,19 @@ export default function ContractGenerationPage() {
       <Card>
         <CardContent>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems="center" justifyContent="space-between">
-            <Typography variant="h6">Resultado generado</Typography>
+            <Typography variant="h6">{t("contractGeneration.result", "Resultado generado")}</Typography>
             <Stack direction="row" spacing={1}>
               <Button startIcon={<DownloadIcon />} onClick={handleDownloadWord} disabled={!contractJobId || loading}>
-                Descarga Word
+                {t("contractGeneration.downloadWord", "Descarga Word")}
               </Button>
               <Button startIcon={<DownloadIcon />} onClick={handleDownloadPdf} disabled={!contractJobId || loading}>
-                Descarga PDF
+                {t("contractGeneration.downloadPdf", "Descarga PDF")}
               </Button>
             </Stack>
           </Stack>
 
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Job contrato: {contractJobId || "-"}
+            {t("contractGeneration.contractJob", "Job contrato: {{id}}", { id: contractJobId || "-" })}
           </Typography>
 
           <TextField
@@ -637,7 +642,7 @@ export default function ContractGenerationPage() {
             multiline
             minRows={8}
             sx={{ mt: 2 }}
-            label="Vista previa combinada de documentos interpretados"
+            label={t("contractGeneration.combinedPreview", "Vista previa combinada de documentos interpretados")}
             value={combinedPreview}
             InputProps={{ readOnly: true }}
           />
@@ -647,7 +652,7 @@ export default function ContractGenerationPage() {
             multiline
             minRows={12}
             sx={{ mt: 2 }}
-            label="Vista previa del contrato generado"
+            label={t("contractGeneration.contractPreview", "Vista previa del contrato generado")}
             value={preview}
             InputProps={{ readOnly: true }}
           />
@@ -655,20 +660,20 @@ export default function ContractGenerationPage() {
       </Card>
 
       <Dialog open={missingDialogOpen} onClose={() => setMissingDialogOpen(false)}>
-        <DialogTitle>Faltan documentos obligatorios</DialogTitle>
+        <DialogTitle>{t("contractGeneration.missingDocsTitle", "Faltan documentos obligatorios")}</DialogTitle>
         <DialogContent>
           <Typography>
-            Tienes que adjuntar los 3 documentos mínimo para proseguir.
+            {t("contractGeneration.missingDocsBody", "Tienes que adjuntar los 3 documentos mínimo para proseguir.")}
           </Typography>
           {missingDocs.length > 0 && (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Pendientes: {missingDocs.join(", ")}
+              {t("contractGeneration.pendingList", "Pendientes: {{docs}}", { docs: missingDocs.join(", ") })}
             </Typography>
           )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setMissingDialogOpen(false)} autoFocus>
-            Entendido
+            {t("contractGeneration.understood", "Entendido")}
           </Button>
         </DialogActions>
       </Dialog>

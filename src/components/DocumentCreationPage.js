@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   Autocomplete,
@@ -29,6 +30,7 @@ import {
 } from "../api/nom035";
 
 export default function DocumentCreationPage() {
+  const { t } = useTranslation();
   const MONTH_NAMES = React.useMemo(
     () => [
       "ENERO",
@@ -450,7 +452,7 @@ export default function DocumentCreationPage() {
   return (
     <Box sx={{ p: 3, display: "flex", flexDirection: "column", gap: 3 }}>
       <Typography variant="h5" fontWeight={600}>
-        Crear Documento
+        {t("docCreation.title", "Crear Documento")}
       </Typography>
 
       <Box sx={{ display: "flex", justifyContent: "center" }}>
@@ -490,7 +492,7 @@ export default function DocumentCreationPage() {
             }));
           }}
           renderInput={(params) => (
-            <TextField {...params} label="Empresa" fullWidth />
+            <TextField {...params} label={t("docCreation.company", "Empresa")} fullWidth />
           )}
           sx={{ width: "100%", maxWidth: 900 }}
         />
@@ -511,11 +513,11 @@ export default function DocumentCreationPage() {
                   <Chip
                     size="small"
                     color={template.enabled ? "success" : "default"}
-                    label={template.enabled ? "Disponible" : "Próximamente"}
+                    label={template.enabled ? t("docCreation.available", "Disponible") : t("docCreation.comingSoon", "Próximamente")}
                   />
                 </Stack>
                 <Typography variant="body2" color="text.secondary">
-                  Tipo: {template.displayType || template.type}
+                  {t("docCreation.type", "Tipo: {{type}}", { type: template.displayType || template.type })}
                 </Typography>
               </CardContent>
               <CardActions sx={{ mt: "auto" }}>
@@ -525,10 +527,10 @@ export default function DocumentCreationPage() {
                   onClick={() => handleOpenSemi(template)}
                   sx={{ minWidth: 190 }}
                 >
-                  Genera semiautomático
+                  {t("docCreation.semiAuto", "Genera semiautomático")}
                 </Button>
                 <Button variant="contained" disabled sx={{ minWidth: 170 }}>
-                  Genera automático
+                  {t("docCreation.auto", "Genera automático")}
                 </Button>
               </CardActions>
             </Card>
@@ -539,27 +541,27 @@ export default function DocumentCreationPage() {
       <Card>
         <CardContent>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems="center" justifyContent="space-between">
-            <Typography variant="h6">Resultado generado</Typography>
+            <Typography variant="h6">{t("docCreation.result", "Resultado generado")}</Typography>
             <Stack direction="row" spacing={1}>
               <Button
                 startIcon={<DownloadIcon />}
                 onClick={handleDownloadWord}
                 disabled={!jobId || loading}
               >
-                Descarga Word
+                {t("docCreation.downloadWord", "Descarga Word")}
               </Button>
               <Button
                 startIcon={<DownloadIcon />}
                 onClick={handleDownloadPdf}
                 disabled={!jobId || loading}
               >
-                Descarga PDF
+                {t("docCreation.downloadPdf", "Descarga PDF")}
               </Button>
             </Stack>
           </Stack>
 
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Job: {jobId || "-"}
+            {t("docCreation.job", "Job: {{id}}", { id: jobId || "-" })}
           </Typography>
 
           <TextField
@@ -567,7 +569,7 @@ export default function DocumentCreationPage() {
             multiline
             minRows={12}
             sx={{ mt: 2 }}
-            label="Vista previa"
+            label={t("docCreation.preview", "Vista previa")}
             value={preview}
             InputProps={{ readOnly: true }}
           />
@@ -576,14 +578,14 @@ export default function DocumentCreationPage() {
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="md">
         <DialogTitle>
-          {selectedTemplate ? selectedTemplate.name : "Genera semiautomático"}
+          {selectedTemplate ? selectedTemplate.name : t("docCreation.semiAuto", "Genera semiautomático")}
         </DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             {selectedTemplate?.type === "DOCUMENTO_02" && (
               <>
                 <TextField
-                  label="Fecha de creación"
+                  label={t("docCreation.creationDate", "Fecha de creación")}
                   type="date"
                   value={toInputDate(creationDate)}
                   onChange={(e) => {
@@ -601,7 +603,7 @@ export default function DocumentCreationPage() {
                   InputLabelProps={{ shrink: true }}
                 />
                 <TextField
-                  label="Fecha del contrato"
+                  label={t("docCreation.contractDate", "Fecha del contrato")}
                   type="date"
                   value={toInputDate(
                     parseDateFromParts(
@@ -713,7 +715,7 @@ export default function DocumentCreationPage() {
                       required={Boolean(field.required)}
                       fullWidth
                       InputLabelProps={{ shrink: true }}
-                      helperText="Este selector llena DIA, MES y AÑO del grupo automáticamente."
+                      helperText={t("docCreation.dateHelper", "Este selector llena DIA, MES y AÑO del grupo automáticamente.")}
                     />
                   );
                 }
@@ -744,9 +746,9 @@ export default function DocumentCreationPage() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
+          <Button onClick={() => setDialogOpen(false)}>{t("docCreation.cancel", "Cancelar")}</Button>
           <Button variant="contained" onClick={handleGenerateSemi} disabled={loading || !selectedTemplate}>
-            Generar documento
+            {t("docCreation.generate", "Generar documento")}
           </Button>
         </DialogActions>
       </Dialog>

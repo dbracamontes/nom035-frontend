@@ -111,7 +111,7 @@ export default function SurveyResponsesTable() {
         const val = a?.textAnswer ?? a?.optionAnswerId ?? '';
         return `${q}: ${val}`;
       }).join("; ");
-      const answersSuffix = answersArr.length > 5 ? `; +${answersArr.length - 5} más` : '';
+      const answersSuffix = answersArr.length > 5 ? `; ${t('surveyResults.table.moreAnswers', '+{{n}} más', { n: answersArr.length - 5 })}` : '';
 
       return {
         id: appId,
@@ -152,7 +152,7 @@ export default function SurveyResponsesTable() {
     const title = (surveyTitle || '').toLowerCase();
     const isMedicaLeben = title.includes('medica leben') || title.includes('médica leben');
     if (!isMedicaLeben) {
-      alert('Solo aplica para encuestas Médica Leben');
+      alert(t('surveyResults.table.onlyMedicaLeben', 'Solo aplica para encuestas Médica Leben'));
       return;
     }
     navigate(`/medica-leben-report/${applicationId}`);
@@ -176,7 +176,7 @@ export default function SurveyResponsesTable() {
     { field: "answers", headerName: t('responses.answers'), width: 400 },
     {
       field: 'medicaLebenReport',
-      headerName: 'Reporte Médica Leben',
+      headerName: t('surveyResults.table.medicaLebenReport', 'Reporte Médica Leben'),
       width: 220,
       sortable: false,
       filterable: false,
@@ -189,13 +189,13 @@ export default function SurveyResponsesTable() {
           onClick={() => handleViewMedicaLebenReport(params.row.id, params.row.survey)}
           sx={{ minWidth: 180 }}
         >
-          Ver reporte individual
+          {t('surveyResults.table.viewIndividualReport', 'Ver reporte individual')}
         </Button>
       )
     },
     {
       field: 'responseReport',
-      headerName: 'Reporte Respuestas',
+      headerName: t('surveyResults.table.responsesReport', 'Reporte Respuestas'),
       width: 220,
       sortable: false,
       filterable: false,
@@ -208,7 +208,7 @@ export default function SurveyResponsesTable() {
           onClick={() => handleOpenResponseReport(params.row.id)}
           sx={{ minWidth: 180 }}
         >
-          Ver Respuestas
+          {t('surveyResults.table.viewResponses', 'Ver Respuestas')}
         </Button>
       )
     }
@@ -245,13 +245,13 @@ export default function SurveyResponsesTable() {
         <TextField
           select
           size="small"
-          label="Filtrar por Empresa"
+          label={t('surveyResults.table.filterByCompany', 'Filtrar por Empresa')}
           value={selectedCompany}
           onChange={e => setSelectedCompany(e.target.value)}
           sx={{ minWidth: 240 }}
         >
-          <MenuItem value="">Todas las Empresas</MenuItem>
-          {companies.filter(Boolean).map(comp => <MenuItem key={comp.id} value={comp.id}>{comp.name || `Empresa #${comp.id}`}</MenuItem>)}
+          <MenuItem value="">{t('surveyResults.table.allCompanies', 'Todas las Empresas')}</MenuItem>
+          {companies.filter(Boolean).map(comp => <MenuItem key={comp.id} value={comp.id}>{comp.name || t('surveyResults.table.companyNumber', 'Empresa #{{id}}', { id: comp.id })}</MenuItem>)}
         </TextField>
 
         <Box sx={{ flexGrow: 1 }} />

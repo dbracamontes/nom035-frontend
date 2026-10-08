@@ -69,21 +69,21 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
     const newErrors = {};
     
     if (!formData.name || formData.name.trim() === '') {
-      newErrors.name = 'El nombre de la empresa es obligatorio';
+      newErrors.name = t('companiesUi.form.nameRequired', 'El nombre de la empresa es obligatorio');
     } else if (formData.name.length > 150) {
-      newErrors.name = 'El nombre no puede exceder 150 caracteres';
+      newErrors.name = t('companiesUi.form.nameTooLong', 'El nombre no puede exceder 150 caracteres');
     }
 
     if (!formData.taxId || formData.taxId.trim() === '') {
-      newErrors.taxId = 'El RFC/Tax ID es obligatorio';
+      newErrors.taxId = t('companiesUi.form.taxIdRequired', 'El RFC/Tax ID es obligatorio');
     } else if (formData.taxId.length > 20) {
-      newErrors.taxId = 'El RFC/Tax ID no puede exceder 20 caracteres';
+      newErrors.taxId = t('companiesUi.form.taxIdTooLong', 'El RFC/Tax ID no puede exceder 20 caracteres');
     }
 
     if (!formData.folioMercantil || formData.folioMercantil.trim() === '') {
-      newErrors.folioMercantil = 'El Folio Mercantil es obligatorio';
+      newErrors.folioMercantil = t('companiesUi.form.folioRequired', 'El Folio Mercantil es obligatorio');
     } else if (formData.folioMercantil.length > 50) {
-      newErrors.folioMercantil = 'El Folio Mercantil no puede exceder 50 caracteres';
+      newErrors.folioMercantil = t('companiesUi.form.folioTooLong', 'El Folio Mercantil no puede exceder 50 caracteres');
     }
 
     setErrors(newErrors);
@@ -119,11 +119,11 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
       if (company && company.id) {
         // Update existing company
         await axios.put(`${API_BASE}/companies/${company.id}`, dataToSend);
-        setSuccessMessage('Empresa actualizada exitosamente');
+        setSuccessMessage(t('companiesUi.form.updated', 'Empresa actualizada exitosamente'));
       } else {
         // Create new company
         await axios.post(`${API_BASE}/companies`, dataToSend);
-        setSuccessMessage('Empresa creada exitosamente');
+        setSuccessMessage(t('companiesUi.form.created', 'Empresa creada exitosamente'));
       }
 
       setTimeout(() => {
@@ -134,7 +134,7 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
       console.error("Error saving company:", error);
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.error || 
-                          'Error al guardar la empresa';
+                          t('companiesUi.form.saveError', 'Error al guardar la empresa');
       setErrors({ submit: errorMessage });
     } finally {
       setLoading(false);
@@ -181,11 +181,11 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
           <Grid item xs={12}>
             <TextField
               fullWidth
-              label="Nombre de la Empresa *"
+              label={t('companiesUi.form.nameLabel', 'Nombre de la Empresa *')}
               value={formData.name}
               onChange={handleChange('name')}
               error={!!errors.name}
-              helperText={errors.name || 'Nombre completo de la empresa'}
+              helperText={errors.name || t('companiesUi.form.nameHelper', 'Nombre completo de la empresa')}
               variant="outlined"
               disabled={loading}
               inputProps={{ maxLength: 150 }}
@@ -196,15 +196,15 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
             <TextField
               fullWidth
               required
-              label="RFC / Tax ID"
+              label={t('companiesUi.form.taxIdLabel', 'RFC / Tax ID')}
               value={formData.taxId}
               onChange={handleChange('taxId')}
               error={!!errors.taxId}
-              helperText={errors.taxId || 'RFC de la empresa'}
+              helperText={errors.taxId || t('companiesUi.form.taxIdHelper', 'RFC de la empresa')}
               variant="outlined"
               disabled={loading}
               inputProps={{ maxLength: 20 }}
-              placeholder="Ej: ABC123456XYZ"
+              placeholder={t('companiesUi.form.taxIdPlaceholder', 'Ej: ABC123456XYZ')}
             />
           </Grid>
 
@@ -212,26 +212,26 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
             <TextField
               fullWidth
               required
-              label="Folio Mercantil"
+              label={t('companiesUi.form.folioLabel', 'Folio Mercantil')}
               value={formData.folioMercantil}
               onChange={handleChange('folioMercantil')}
               error={!!errors.folioMercantil}
-              helperText={errors.folioMercantil || 'Folio mercantil de la empresa'}
+              helperText={errors.folioMercantil || t('companiesUi.form.folioHelper', 'Folio mercantil de la empresa')}
               variant="outlined"
               disabled={loading}
               inputProps={{ maxLength: 50 }}
-              placeholder="Ej: FM-12345"
+              placeholder={t('companiesUi.form.folioPlaceholder', 'Ej: FM-12345')}
             />
           </Grid>
 
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
-              label="Cliente"
+              label={t('companiesUi.form.clientLabel', 'Cliente')}
               value={formData.cliente}
               onChange={handleChange('cliente')}
               error={!!errors.cliente}
-              helperText={errors.cliente || 'Cliente asociado a la empresa'}
+              helperText={errors.cliente || t('companiesUi.form.clientHelper', 'Cliente asociado a la empresa')}
               variant="outlined"
               disabled={loading}
               inputProps={{ maxLength: 150 }}
@@ -241,11 +241,11 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
-              label="Razón Social"
+              label={t('companiesUi.form.legalNameLabel', 'Razón Social')}
               value={formData.razonSocial}
               onChange={handleChange('razonSocial')}
               error={!!errors.razonSocial}
-              helperText={errors.razonSocial || 'Razón social de la empresa'}
+              helperText={errors.razonSocial || t('companiesUi.form.legalNameHelper', 'Razón social de la empresa')}
               variant="outlined"
               disabled={loading}
               inputProps={{ maxLength: 150 }}
@@ -255,11 +255,11 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
-              label="Representante de la empresa"
+              label={t('companiesUi.form.representativeLabel', 'Representante de la empresa')}
               value={formData.representante}
               onChange={handleChange('representante')}
               error={!!errors.representante}
-              helperText={errors.representante || 'Nombre del representante legal o contacto'}
+              helperText={errors.representante || t('companiesUi.form.representativeHelper', 'Nombre del representante legal o contacto')}
               variant="outlined"
               disabled={loading}
               inputProps={{ maxLength: 150 }}
@@ -269,11 +269,11 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
-              label="Sindicato"
+              label={t('companiesUi.form.unionLabel', 'Sindicato')}
               value={formData.sindicato}
               onChange={handleChange('sindicato')}
               error={!!errors.sindicato}
-              helperText={errors.sindicato || 'Sindicato de la empresa (si aplica)'}
+              helperText={errors.sindicato || t('companiesUi.form.unionHelper', 'Sindicato de la empresa (si aplica)')}
               variant="outlined"
               disabled={loading}
               inputProps={{ maxLength: 150 }}
@@ -283,11 +283,11 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
           <Grid item xs={12}>
             <TextField
               fullWidth
-              label="Domicilio"
+              label={t('companiesUi.form.addressLabel', 'Domicilio')}
               value={formData.domicilio}
               onChange={handleChange('domicilio')}
               error={!!errors.domicilio}
-              helperText={errors.domicilio || 'Domicilio fiscal o comercial de la empresa'}
+              helperText={errors.domicilio || t('companiesUi.form.addressHelper', 'Domicilio fiscal o comercial de la empresa')}
               variant="outlined"
               disabled={loading}
               inputProps={{ maxLength: 255 }}
@@ -297,7 +297,7 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
-              label="Ciudad"
+              label={t('companiesUi.form.cityLabel', 'Ciudad')}
               value={formData.ciudad}
               onChange={handleChange('ciudad')}
               disabled={loading}
@@ -308,7 +308,7 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
-              label="Código Postal"
+              label={t('companiesUi.form.postalCodeLabel', 'Código Postal')}
               value={formData.codigoPostal}
               onChange={handleChange('codigoPostal')}
               disabled={loading}
@@ -319,7 +319,7 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
-              label="Teléfono"
+              label={t('companiesUi.form.phoneLabel', 'Teléfono')}
               type="tel"
               value={formData.telefono}
               onChange={handleChange('telefono')}
@@ -331,7 +331,7 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
-              label="Correo Electrónico"
+              label={t('companiesUi.form.emailLabel', 'Correo Electrónico')}
               type="email"
               value={formData.correoElectronico}
               onChange={handleChange('correoElectronico')}
@@ -348,7 +348,7 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
                 value={company.id}
                 variant="outlined"
                 disabled
-                helperText="ID de la empresa (no editable)"
+                helperText={t('companiesUi.form.idHelper', 'ID de la empresa (no editable)')}
               />
             </Grid>
           )}
@@ -362,7 +362,7 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
             disabled={loading}
             size="large"
           >
-            Cancelar
+            {t('common.cancel', 'Cancelar')}
           </Button>
           <Button
             type="submit"
@@ -375,7 +375,7 @@ export default function CompanyForm({ company, onSave, onCancel, onOpenDocs }) {
               '&:hover': { backgroundColor: '#4f46e5' }
             }}
           >
-            {loading ? 'Guardando...' : (company && company.id ? 'Actualizar' : 'Crear Empresa')}
+            {loading ? t('companiesUi.form.saving', 'Guardando...') : (company && company.id ? t('companiesUi.form.update', 'Actualizar') : t('companiesUi.form.create', 'Crear Empresa'))}
           </Button>
         </Box>
       </form>

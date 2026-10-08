@@ -13,9 +13,12 @@ import {
   DateRange as DateRangeIcon,
   Business as BusinessIcon
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import { getCompanySurveys, deleteCompanySurvey, getCompanies, getSurveys, getEmployees, getSurveyApplications, getSurveyWithQuestions } from "../api/nom035";
 
 export default function CompanySurveyList({ refreshFlag }) {
+  const { t, i18n } = useTranslation();
+  const dateLocale = i18n.language && i18n.language.startsWith('en') ? 'en-US' : 'es-ES';
     // El progreso se toma directamente del backend (survey.completionRate)
   const [companySurveys, setCompanySurveys] = useState([]);
   const [companies, setCompanies] = useState([]);
@@ -49,7 +52,7 @@ export default function CompanySurveyList({ refreshFlag }) {
       setDetailError({});
     } catch (error) {
       console.error("Error fetching data:", error);
-      alert("Error al cargar los datos");
+      alert(t('companySurvey.list.loadError', 'Error al cargar los datos'));
       setCompanySurveys([]);
     }
   };
@@ -65,7 +68,7 @@ export default function CompanySurveyList({ refreshFlag }) {
       setDeleteDialog({ open: false, survey: null });
     } catch (error) {
       console.error("Error deleting company survey:", error);
-      alert("Error al eliminar la encuesta de empresa");
+      alert(t('companySurvey.list.deleteError', 'Error al eliminar la encuesta de empresa'));
     }
   };
 
@@ -89,7 +92,7 @@ export default function CompanySurveyList({ refreshFlag }) {
       setDetailError((prev) => ({ ...prev, [survey.id]: undefined }));
     } catch (error) {
       console.error("Error cargando preguntas de la encuesta:", error);
-      setDetailError((prev) => ({ ...prev, [survey.id]: "No se pudieron cargar las preguntas de la encuesta." }));
+      setDetailError((prev) => ({ ...prev, [survey.id]: t('companySurvey.list.questionsLoadError', 'No se pudieron cargar las preguntas de la encuesta.') }));
     } finally {
       setDetailLoading((prev) => ({ ...prev, [survey.id]: false }));
     }
@@ -98,22 +101,22 @@ export default function CompanySurveyList({ refreshFlag }) {
   // Helper functions to get names
   const getCompanyName = (companyId) => {
     const company = companies.find(c => c.id === companyId);
-    return company ? company.name : "Empresa no encontrada";
+    return company ? company.name : t('companySurvey.list.companyNotFound', 'Empresa no encontrada');
   };
 
   const getSurveyTitle = (surveyId) => {
     const survey = surveys.find(s => s.id === surveyId);
-    return survey ? survey.title : "Encuesta no encontrada";
+    return survey ? survey.title : t('companySurvey.list.surveyNotFound', 'Encuesta no encontrada');
   };
 
   const getSurveyDescription = (surveyId) => {
     const survey = surveys.find(s => s.id === surveyId);
-    return survey ? survey.description : "Sin descripción";
+    return survey ? survey.description : t('companySurvey.list.noDescription', 'Sin descripción');
   };
 
   const getEmployeeName = (employeeId) => {
     const employee = employees.find((emp) => emp.id === employeeId);
-    return employee ? employee.name : `Empleado #${employeeId}`;
+    return employee ? employee.name : t('companySurvey.list.employeeNumber', 'Empleado #{{id}}', { id: employeeId });
   };
 
   const getApplicationsForSurvey = (companySurveyId) => {
@@ -121,19 +124,19 @@ export default function CompanySurveyList({ refreshFlag }) {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return "No especificada";
+    if (!dateString) return t('companySurvey.list.notSpecified', 'No especificada');
     // Si el formato es YYYY-MM-DD, parsear manualmente como local para evitar desfase por zona horaria
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
       const [year, month, day] = dateString.split('-');
       const date = new Date(Number(year), Number(month) - 1, Number(day));
-      return date.toLocaleDateString('es-ES', {
+      return date.toLocaleDateString(dateLocale, {
         year: 'numeric',
         month: 'short',
         day: 'numeric'
       });
     }
     // Si no, usar el parseo estándar
-    return new Date(dateString).toLocaleDateString('es-ES', {
+    return new Date(dateString).toLocaleDateString(dateLocale, {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
@@ -154,27 +157,27 @@ export default function CompanySurveyList({ refreshFlag }) {
     if (status === "activo") {
       const now = new Date();
       const due = new Date(dueDate);
-      if (now > due) return "Expirada";
-      return "Activa";
+      if (now > due) return t('companySurvey.list.expired', 'Expirada');
+      return t('companySurvey.list.active', 'Activa');
     }
-    return status || "Sin estado";
+    return status || t('companySurvey.list.noStatus', 'Sin estado');
   };
 
   const formatStatusLabel = (status) => {
     switch ((status || "").toUpperCase()) {
       case "COMPLETADO":
-        return { label: "Completado", color: "success" };
+        return { label: t('companySurvey.list.completed', 'Completado'), color: "success" };
       case "EN_PROCESO":
-        return { label: "En progreso", color: "warning" };
+        return { label: t('companySurvey.list.inProgress', 'En progreso'), color: "warning" };
       default:
-        return { label: "Pendiente", color: "default" };
+        return { label: t('companySurvey.list.pending', 'Pendiente'), color: "default" };
     }
   };
 
   const formatDateTime = (value) => {
     if (!value) return "—";
     try {
-      return new Date(value).toLocaleString("es-ES", {
+      return new Date(value).toLocaleString(dateLocale, {
         year: "numeric",
         month: "short",
         day: "numeric",
@@ -204,7 +207,7 @@ export default function CompanySurveyList({ refreshFlag }) {
           textAlign: 'center'
         }}
       >
-        Encuestas de Empresa
+        {t('companySurvey.list.title', 'Encuestas de Empresa')}
       </Typography>
 
       {companySurveys.length === 0 ? (
@@ -223,10 +226,10 @@ export default function CompanySurveyList({ refreshFlag }) {
               fontWeight: 500
             }}
           >
-            📋 No hay encuestas de empresa creadas
+            {t('companySurvey.list.emptyTitle', '📋 No hay encuestas de empresa creadas')}
           </Typography>
           <Typography variant="body2" sx={{ color: '#94a3b8' }}>
-            Las encuestas aparecerán aquí una vez que las crees
+            {t('companySurvey.list.emptyHint', 'Las encuestas aparecerán aquí una vez que las crees')}
           </Typography>
         </Box>
       ) : (
@@ -285,7 +288,7 @@ export default function CompanySurveyList({ refreshFlag }) {
                           mb: 0.5
                         }}
                       >
-                        Encuesta #{survey.id}
+                        {t('companySurvey.list.surveyNumber', 'Encuesta #{{id}}', { id: survey.id })}
                       </Typography>
                       <Typography variant="body2" sx={{ color: '#64748b' }}>
                         {getSurveyTitle(survey.surveyId)}
@@ -327,21 +330,21 @@ export default function CompanySurveyList({ refreshFlag }) {
                     mb: 2
                   }}>
                     <Typography variant="body2" sx={{ color: '#475569', mb: 1 }}>
-                      {survey.notes || "Sin notas adicionales"}
+                      {survey.notes || t('companySurvey.list.noNotes', 'Sin notas adicionales')}
                     </Typography>
 
                     <Stack direction="row" spacing={2} sx={{ mb: 1 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <DateRangeIcon sx={{ fontSize: 16, mr: 0.5, color: '#6366f1' }} />
                         <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 500 }}>
-                          Vence: {formatDate(survey.dueDate)}
+                          {t('companySurvey.list.dueDate', 'Vence: {{date}}', { date: formatDate(survey.dueDate) })}
                         </Typography>
                       </Box>
                     </Stack>
 
                     <Box sx={{ mt: 2 }}>
                       <Typography variant="caption" sx={{ color: '#64748b', mb: 1, display: 'block' }}>
-                        Progreso: {(survey.completionRate * 100).toFixed(1)}%
+                        {t('companySurvey.list.progress', 'Progreso: {{value}}%', { value: (survey.completionRate * 100).toFixed(1) })}
                       </Typography>
                       <Box sx={{
                         width: '100%',
@@ -382,12 +385,13 @@ export default function CompanySurveyList({ refreshFlag }) {
                       }
                     }}
                   >
-                    {expandedCard === survey.id ? "Menos detalles" : "Más detalles"}
+                    {expandedCard === survey.id ? t('companySurvey.list.lessDetails', 'Menos detalles') : t('companySurvey.list.moreDetails', 'Más detalles')}
                   </Button>
                   
                   <IconButton 
                     size="small" 
                     onClick={() => setDeleteDialog({ open: true, survey })}
+                    aria-label={t('companySurvey.list.delete', 'Eliminar')}
                     sx={{
                       ml: 'auto',
                       background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
@@ -427,7 +431,7 @@ export default function CompanySurveyList({ refreshFlag }) {
                           alignItems: 'center'
                         }}
                       >
-                        📊 Información Detallada
+                        {t('companySurvey.list.detailedInfo', '📊 Información Detallada')}
                       </Typography>
                       <Box sx={{ 
                         display: 'grid', 
@@ -436,22 +440,22 @@ export default function CompanySurveyList({ refreshFlag }) {
                         mb: 3
                       }}>
                         <Typography variant="body2" sx={{ color: '#475569' }}>
-                          <strong style={{ color: '#6366f1' }}>ID:</strong> {survey.id}
+                          <strong style={{ color: '#6366f1' }}>{t('companySurvey.list.id', 'ID:')}</strong> {survey.id}
                         </Typography>
                         <Typography variant="body2" sx={{ color: '#475569' }}>
-                          <strong style={{ color: '#6366f1' }}>Empresa:</strong> {getCompanyName(survey.companyId)}
+                          <strong style={{ color: '#6366f1' }}>{t('companySurvey.list.company', 'Empresa:')}</strong> {getCompanyName(survey.companyId)}
                         </Typography>
                         <Typography variant="body2" sx={{ color: '#475569' }}>
-                          <strong style={{ color: '#6366f1' }}>Asignada:</strong> {formatDate(survey.assignedAt)}
+                          <strong style={{ color: '#6366f1' }}>{t('companySurvey.list.assigned', 'Asignada:')}</strong> {formatDate(survey.assignedAt)}
                         </Typography>
                         <Typography variant="body2" sx={{ color: '#475569' }}>
-                          <strong style={{ color: '#6366f1' }}>Versión:</strong> {survey.companyVersion}
+                          <strong style={{ color: '#6366f1' }}>{t('companySurvey.list.version', 'Versión:')}</strong> {survey.companyVersion}
                         </Typography>
                         <Typography variant="body2" sx={{ color: '#475569' }}>
-                          <strong style={{ color: '#6366f1' }}>Estado:</strong> {survey.status}
+                          <strong style={{ color: '#6366f1' }}>{t('companySurvey.list.status', 'Estado:')}</strong> {survey.status}
                         </Typography>
                         <Typography variant="body2" sx={{ color: '#475569' }}>
-                          <strong style={{ color: '#6366f1' }}>Progreso:</strong> {(survey.completionRate * 100).toFixed(1)}%
+                          <strong style={{ color: '#6366f1' }}>{t('companySurvey.list.progressLabel', 'Progreso:')}</strong> {(survey.completionRate * 100).toFixed(1)}%
                         </Typography>
                       </Box>
 
@@ -464,7 +468,7 @@ export default function CompanySurveyList({ refreshFlag }) {
                           mb: 1
                         }}
                       >
-                        📝 Descripción de la Encuesta Base
+                        {t('companySurvey.list.baseDescription', '📝 Descripción de la Encuesta Base')}
                       </Typography>
                       <Typography variant="body2" sx={{ color: '#64748b', mb: 3 }}>
                         {getSurveyDescription(survey.surveyId)}
@@ -479,10 +483,10 @@ export default function CompanySurveyList({ refreshFlag }) {
                           mb: 1
                         }}
                       >
-                        💬 Notas
+                        {t('companySurvey.list.notes', '💬 Notas')}
                       </Typography>
                       <Typography variant="body2" sx={{ color: '#64748b' }}>
-                        {survey.notes || "Sin notas adicionales"}
+                        {survey.notes || t('companySurvey.list.noNotes', 'Sin notas adicionales')}
                       </Typography>
 
                       <Divider sx={{ my: 3 }} />
@@ -496,17 +500,17 @@ export default function CompanySurveyList({ refreshFlag }) {
                           mb: 2
                         }}
                       >
-                        📌 Seguimiento de asignaciones
+                        {t('companySurvey.list.tracking', '📌 Seguimiento de asignaciones')}
                       </Typography>
 
                       {detailLoading[survey.id] ? (
                         <Typography variant="body2" sx={{ color: '#64748b' }}>
-                          Cargando preguntas y asignaciones...
+                          {t('companySurvey.list.loadingDetails', 'Cargando preguntas y asignaciones...')}
                         </Typography>
                       ) : (
                         <Stack spacing={2}>
                           <Typography variant="body2" sx={{ color: '#475569', mb: 2 }}>
-                            <strong style={{ color: '#6366f1' }}>Preguntas totales:</strong> {questionCounts[survey.surveyId] ?? '—'}
+                            <strong style={{ color: '#6366f1' }}>{t('companySurvey.list.totalQuestions', 'Preguntas totales:')}</strong> {questionCounts[survey.surveyId] ?? '—'}
                           </Typography>
                           {detailError[survey.id] && (
                             <Typography variant="body2" sx={{ color: '#dc2626' }}>
@@ -517,7 +521,7 @@ export default function CompanySurveyList({ refreshFlag }) {
                           {questionsBySurvey[survey.surveyId] && questionsBySurvey[survey.surveyId].length > 0 && (
                             <Box sx={{ mb: 2 }}>
                               <Typography variant="subtitle2" sx={{ color: '#6366f1', mb: 1 }}>
-                                Preguntas de la Guía
+                                {t('companySurvey.list.guideQuestions', 'Preguntas de la Guía')}
                               </Typography>
                               {questionsBySurvey[survey.surveyId].map((q, idx) => (
                                 <Box key={q.id} sx={{ mb: 2, p: 2, background: '#f1f5f9', borderRadius: 2 }}>
@@ -526,12 +530,12 @@ export default function CompanySurveyList({ refreshFlag }) {
                                   </Typography>
                                   {q.category && (
                                     <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 1 }}>
-                                      División: {q.category}
+                                      {t('companySurvey.list.division', 'División: {{value}}', { value: q.category })}
                                     </Typography>
                                   )}
                                   {q.options && Array.isArray(q.options) && q.options.length > 0 && (
                                     <Box sx={{ ml: 2 }}>
-                                      <Typography variant="caption" sx={{ color: '#475569' }}>Opciones de respuesta:</Typography>
+                                      <Typography variant="caption" sx={{ color: '#475569' }}>{t('companySurvey.list.answerOptions', 'Opciones de respuesta:')}</Typography>
                                       <ul style={{ margin: 0, paddingLeft: 16 }}>
                                         {q.options.map((opt, i) => (
                                           <li key={i} style={{ color: '#475569', fontSize: '0.95em' }}>
@@ -547,14 +551,14 @@ export default function CompanySurveyList({ refreshFlag }) {
                           )}
                           {/* Seguimiento de asignaciones */}
                           <Typography variant="subtitle2" sx={{ color: '#1d4ed8', mb: 1 }}>
-                            Seguimiento de asignaciones
+                            {t('companySurvey.list.tracking2', 'Seguimiento de asignaciones')}
                           </Typography>
                           {(() => {
                             const applicationsForSurvey = getApplicationsForSurvey(survey.id);
                             if (applicationsForSurvey.length === 0) {
                               return (
                                 <Typography variant="body2" sx={{ color: '#94a3b8' }}>
-                                  No hay empleados asignados a esta encuesta todavía.
+                                  {t('companySurvey.list.noAssignedEmployees', 'No hay empleados asignados a esta encuesta todavía.')}
                                 </Typography>
                               );
                             }
@@ -581,10 +585,10 @@ export default function CompanySurveyList({ refreshFlag }) {
                                       sx={{ fontWeight: 500 }}
                                     />
                                     <Typography variant="caption" sx={{ color: '#64748b' }}>
-                                      Inicio: {formatDateTime(application.startedAt)}
+                                      {t('companySurvey.list.start', 'Inicio: {{value}}', { value: formatDateTime(application.startedAt) })}
                                     </Typography>
                                     <Typography variant="caption" sx={{ color: '#64748b' }}>
-                                      Fin: {formatDateTime(application.completedAt)}
+                                      {t('companySurvey.list.end', 'Fin: {{value}}', { value: formatDateTime(application.completedAt) })}
                                     </Typography>
                                   </Stack>
                                 </Box>
@@ -625,17 +629,17 @@ export default function CompanySurveyList({ refreshFlag }) {
           textAlign: 'center',
           py: 1.5
         }}>
-          Confirmar eliminación de encuesta
+          {t('companySurvey.list.confirmDeleteTitle', 'Confirmar eliminación de encuesta')}
         </DialogTitle>
         <DialogContent sx={{ p: 3 }}>
           <Typography sx={{ color: '#475569', fontWeight: 500, fontSize: '0.98rem', textAlign: 'center', mb: 1.2 }}>
-            ¿Está seguro de que desea eliminar la encuesta <strong>#{deleteDialog.survey?.id}</strong>?
+            {t('companySurvey.list.confirmDeletePrefix', '¿Está seguro de que desea eliminar la encuesta')} <strong>#{deleteDialog.survey?.id}</strong>{t('companySurvey.list.confirmDeleteSuffix', '?')}
           </Typography>
           <Typography sx={{ color: '#6366f1', fontWeight: 500, textAlign: 'center', mb: 0.7, fontSize: '0.95rem' }}>
-            <strong>Empresa:</strong> {deleteDialog.survey && getCompanyName(deleteDialog.survey.companyId)}
+            <strong>{t('companySurvey.list.company', 'Empresa:')}</strong> {deleteDialog.survey && getCompanyName(deleteDialog.survey.companyId)}
           </Typography>
           <Typography sx={{ color: '#ef4444', fontWeight: 600, textAlign: 'center', fontSize: '0.93rem' }}>
-            Esta acción no se puede deshacer.
+            {t('companySurvey.list.cannotUndo', 'Esta acción no se puede deshacer.')}
           </Typography>
         </DialogContent>
         <DialogActions sx={{ p: 3, pt: 0, justifyContent: 'center' }}>
@@ -654,7 +658,7 @@ export default function CompanySurveyList({ refreshFlag }) {
               }
             }}
           >
-            Cancelar
+            {t('companySurvey.list.cancel', 'Cancelar')}
           </Button>
           <Button 
             onClick={() => handleDelete(deleteDialog.survey?.id)}
@@ -671,7 +675,7 @@ export default function CompanySurveyList({ refreshFlag }) {
               }
             }}
           >
-            Confirmar
+            {t('companySurvey.list.confirm', 'Confirmar')}
           </Button>
         </DialogActions>
       </Dialog>

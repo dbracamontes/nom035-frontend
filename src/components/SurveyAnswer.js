@@ -547,7 +547,7 @@ export default function SurveyAnswer() {
     e.preventDefault();
     if (!selectedEmployee || !selectedSurvey) return;
     if (formDisabled && existingApplication) {
-      alert('Esta evaluación ya fue enviada para este empleado. Revisión en modo lectura.');
+      alert(t('surveyAnswer.alreadySubmittedReadOnly', 'Esta evaluación ya fue enviada para este empleado. Revisión en modo lectura.'));
       return;
     }
 
@@ -658,7 +658,7 @@ export default function SurveyAnswer() {
       }
       
       console.log('✅ All responses submitted successfully:', results);
-      alert("¡Encuesta enviada exitosamente!");
+      alert(t('surveyAnswer.submitSuccess', '¡Encuesta enviada exitosamente!'));
       
       // Instead of clearing the form, reload the check to show read-only mode
       // Keep the employee and survey selected so user can see the completed state
@@ -675,16 +675,16 @@ export default function SurveyAnswer() {
       console.error("💥 Error headers:", error.response?.headers);
       
       // Mostrar error más detallado
-      let errorMessage = "Error al enviar la encuesta. ";
+      let errorMessage = t('surveyAnswer.submitError', 'Error al enviar la encuesta.') + ' ';
       if (error.response?.status) {
-        errorMessage += `Status: ${error.response.status}. `;
+        errorMessage += t('surveyAnswer.errorStatus', 'Status: {{status}}.', { status: error.response.status }) + ' ';
       }
       if (error.response?.data?.message) {
-        errorMessage += `Mensaje: ${error.response.data.message}`;
+        errorMessage += t('surveyAnswer.errorMessage', 'Mensaje: {{message}}', { message: error.response.data.message });
       } else if (error.response?.data) {
-        errorMessage += `Detalle: ${JSON.stringify(error.response.data)}`;
+        errorMessage += t('surveyAnswer.errorDetail', 'Detalle: {{detail}}', { detail: JSON.stringify(error.response.data) });
       } else if (error.message) {
-        errorMessage += `Error: ${error.message}`;
+        errorMessage += t('surveyAnswer.errorGeneric', 'Error: {{message}}', { message: error.message });
       }
       
       alert(errorMessage);
@@ -765,7 +765,7 @@ export default function SurveyAnswer() {
         rows={isDateQuestion ? 1 : 2}
         value={typeof answerValue === 'string' ? answerValue : ''}
         onChange={e => setAnswerValue(question.id, e.target.value)}
-        placeholder="Escriba su respuesta aquí..."
+        placeholder={t('surveyAnswer.answerPlaceholder', 'Escriba su respuesta aquí...')}
         variant="outlined"
         disabled={formDisabled}
         InputLabelProps={isDateQuestion ? { shrink: true } : undefined}
@@ -797,16 +797,16 @@ export default function SurveyAnswer() {
 
       {formDisabled && existingApplication && (
         <Alert severity="warning" sx={{ mb: 3 }}>
-          Esta evaluación ya fue enviada para este empleado. Modo lectura activo.
+          {t('surveyAnswer.alreadySubmittedActive', 'Esta evaluación ya fue enviada para este empleado. Modo lectura activo.')}
           {(() => {
             const st = existingApplication.status ?? existingApplication.state ?? existingApplication.statusApplication;
             const started = existingApplication.startedAt ?? existingApplication.started_at;
             const completed = existingApplication.completedAt ?? existingApplication.completed_at;
             return (
               <>
-                {st ? <> Estado: <strong>{st}</strong>.</> : null}
-                {started ? <> Inicio: {started}.</> : null}
-                {completed ? <> Fin: {completed}.</> : null}
+                {st ? <> {t('surveyAnswer.statusLabel', 'Estado:')} <strong>{st}</strong>.</> : null}
+                {started ? <> {t('surveyAnswer.startLabel', 'Inicio:')} {started}.</> : null}
+                {completed ? <> {t('surveyAnswer.endLabel', 'Fin:')} {completed}.</> : null}
               </>
             );
           })()}
@@ -850,7 +850,7 @@ export default function SurveyAnswer() {
               <MenuItem value="" sx={{ whiteSpace: 'normal', minHeight: 48 }}>{t('survey.answer.selectSurveyPlaceholder') || "Seleccione una encuesta"}</MenuItem>
               {surveys.filter(Boolean).map(s => (
                 <MenuItem key={s.id} value={s.id} sx={{ whiteSpace: 'normal', minHeight: 48 }}>
-                  {(s.title || s.name || `Encuesta ${s.id}`)} ({s.questions?.length || 0} preguntas)
+                  {(s.title || s.name || t('surveyAnswer.surveyNumber', 'Encuesta {{id}}', { id: s.id }))} ({t('surveyAnswer.questionsCount', '{{count}} preguntas', { count: s.questions?.length || 0 })})
                 </MenuItem>
               ))}
             </TextField>
@@ -864,7 +864,7 @@ export default function SurveyAnswer() {
           <Grid container spacing={3} alignItems="center">
             <Grid item xs={12} md={8}>
               <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
-                {selectedSurvey.title || selectedSurvey.name || `Encuesta ${selectedSurvey.id}`}
+                {selectedSurvey.title || selectedSurvey.name || t('surveyAnswer.surveyNumber', 'Encuesta {{id}}', { id: selectedSurvey.id })}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 {selectedSurvey.description || ''}
@@ -872,12 +872,12 @@ export default function SurveyAnswer() {
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 <Chip 
                   icon={<AssignmentIcon />}
-                  label={`${selectedSurvey.questions?.length || 0} preguntas`}
+                  label={t('surveyAnswer.questionsCount', '{{count}} preguntas', { count: selectedSurvey.questions?.length || 0 })}
                   variant="outlined"
                 />
                 {selectedSurvey.questions?.length >= 70 && (
                   <Chip 
-                    label="Encuesta NOM-035 Completa"
+                    label={t('surveyAnswer.fullSurveyChip', 'Encuesta NOM-035 Completa')}
                     color="primary"
                     variant="outlined"
                   />
@@ -888,7 +888,7 @@ export default function SurveyAnswer() {
             <Grid item xs={12} md={4}>
               <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  Progreso Total
+                  {t('surveyAnswer.totalProgress', 'Progreso Total')}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <LinearProgress 
@@ -913,7 +913,7 @@ export default function SurveyAnswer() {
             <Box>
               <Alert severity="info" sx={{ mb: 3 }}>
                 <Typography variant="body2">
-                  Esta encuesta está organizada por módulos. Puede navegar entre módulos.
+                  {t('surveyAnswer.modulesInfo', 'Esta encuesta está organizada por módulos. Puede navegar entre módulos.')}
                 </Typography>
               </Alert>
 
@@ -932,9 +932,9 @@ export default function SurveyAnswer() {
                   <Accordion key={String(moduleId)} expanded={expandedModule === String(moduleId) || expandedModule === moduleId} onChange={(e, isExpanded) => setExpandedModule(isExpanded ? moduleId : null)} sx={{ mb: 2, border: '1px solid #e0e0e0' }}>
                     <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ backgroundColor: module.color ?? '#f5f5f5', '&:hover': { backgroundColor: (module.color ?? '#f5f5f5') + 'dd' } }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 600 }}>{module.name ?? `Módulo ${idx+1}`}</Typography>
+                        <Typography variant="h6" sx={{ fontWeight: 600 }}>{module.name ?? t('surveyAnswer.moduleNumber', 'Módulo {{n}}', { n: idx + 1 })}</Typography>
                         {complete && (<CheckCircleIcon color="success" />)}
-                        <Box sx={{ marginLeft: 'auto', mr: 2 }}><Chip label={`${moduleQuestions.length} preguntas`} size="small" variant="outlined"/></Box>
+                        <Box sx={{ marginLeft: 'auto', mr: 2 }}><Chip label={t('surveyAnswer.questionsCount', '{{count}} preguntas', { count: moduleQuestions.length })} size="small" variant="outlined"/></Box>
                       </Box>
                     </AccordionSummary>
                     <AccordionDetails sx={{ p: 3 }}>
@@ -948,7 +948,7 @@ export default function SurveyAnswer() {
           ) : (
             // Fallback: flat list of questions
             <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>Preguntas de la Encuesta</Typography>
+              <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>{t('surveyAnswer.surveyQuestions', 'Preguntas de la Encuesta')}</Typography>
               {selectedSurvey.questions.map((question, index) => renderQuestion(question, index))}
             </Paper>
           )}
@@ -967,11 +967,11 @@ export default function SurveyAnswer() {
                 '&:hover': { backgroundColor: '#4f46e5' }
               }}
             >
-              {t('survey.answer.submit') || 'Enviar Encuesta Completa'}
+              {t('surveyAnswer.submitComplete', 'Enviar Encuesta Completa')}
             </Button>
             {getTotalProgress() < 100 && (
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                Complete todas las preguntas para enviar la encuesta
+                {t('surveyAnswer.completeAllQuestions', 'Complete todas las preguntas para enviar la encuesta')}
               </Typography>
             )}
           </Box>

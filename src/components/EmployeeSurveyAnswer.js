@@ -1,19 +1,20 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, useDeferredValue } from "react";
 import { getSurveys, submitSurveyResponse, getSurveyById, getSurveyWithQuestions, createSurveyApplication, getSurveyApplications, getSurveyResponsesByApplication, completeSurveyApplication } from "../api/nom035";
 import debounce from 'lodash.debounce';
-import { 
-  Box, Button, Paper, MenuItem, Typography, 
+import { useTranslation } from 'react-i18next';
+import {
+  Box, Button, Paper, MenuItem, Typography,
   Card, CardContent, LinearProgress,
-  Chip, FormControl, RadioGroup, FormControlLabel, 
+  Chip, FormControl, RadioGroup, FormControlLabel,
   Radio, Accordion, AccordionSummary, AccordionDetails, Alert, Select, InputLabel,
   Checkbox, TextField, FormGroup, Stack, Table, TableBody, TableCell, TableHead, TableRow
 } from "@mui/material";
-import { 
-  ExpandMore as ExpandMoreIcon, 
+import {
+  ExpandMore as ExpandMoreIcon,
   CheckCircle as CheckCircleIcon,
-  Assignment as AssignmentIcon 
+  Assignment as AssignmentIcon
 } from '@mui/icons-material';
-import { 
+import {
   normalizeQuestionList,
   LIKERT_LABELS,
   questionAnswered,
@@ -64,6 +65,7 @@ const extractSurveyIdFromApplication = (application) => {
 };
 
 export default function EmployeeSurveyAnswer() {
+  const { t } = useTranslation();
   const [surveys, setSurveys] = useState([]);
   const [selectedSurvey, setSelectedSurvey] = useState(null);
   const [answers, setAnswers] = useState({});
@@ -131,7 +133,7 @@ export default function EmployeeSurveyAnswer() {
     });
     return parsedAnswers;
   }, []);
-  
+
   useEffect(() => {
     if (initialDataLoadedRef.current) return;
     initialDataLoadedRef.current = true;
@@ -199,7 +201,7 @@ export default function EmployeeSurveyAnswer() {
 
     loadData();
   }, [refreshSurveyApplications]);
-  
+
   const checkExistingSubmission = useCallback(async (surveyObj = selectedSurvey, options = {}) => {
     const { forceRefresh = false } = options || {};
     setExistingApplication(null);
@@ -275,7 +277,7 @@ export default function EmployeeSurveyAnswer() {
           const totalQuestions = Array.isArray(surveyObj.questions) ? surveyObj.questions.length : 0;
           const answeredQuestionCount = Object.keys(hydratedAnswers).length;
           const allQuestionsAnswered = totalQuestions > 0 && answeredQuestionCount >= totalQuestions;
-        
+
         if (hasCompletedAt || statusIsCompleted || allQuestionsAnswered) {
           setFormDisabled(true);
         } else {
@@ -493,10 +495,10 @@ export default function EmployeeSurveyAnswer() {
   // Función de guardado automático con debounce
   const autoSaveAnswers = useCallback(async () => {
     if (!selectedSurvey || formDisabled) return;
-    
+
     try {
       setAutoSaving(true);
-      
+
       // Ensure we have a survey application id
       let appId = existingApplication?.id ?? existingApplication?.applicationId ?? existingApplication?.surveyApplicationId;
       if (!appId) {
@@ -546,36 +548,36 @@ export default function EmployeeSurveyAnswer() {
   const handleAnswerChange = (questionId, value) => {
     setAnswers(prev => {
       const newAnswers = { ...prev, [String(questionId)]: value };
-      
+
       // Limpiar respuestas de preguntas que se ocultan al responder "No"
       // Pregunta 31 (ID 104): Si cambia a 'No', elimina respuestas de IDs 105-108
       if (Number(questionId) === 104 && (value === 'No' || value?.label === 'No')) {
         [105, 106, 107, 108].forEach(id => delete newAnswers[String(id)]);
       }
-      
+
       // Pregunta 37 (ID 110): Si cambia a 'No', elimina respuestas de IDs 111-114
       if (Number(questionId) === 110 && (value === 'No' || value?.label === 'No')) {
         [111, 112, 113, 114].forEach(id => delete newAnswers[String(id)]);
       }
-      
+
       // Pregunta 42 (ID 115): Si cambia a 'No', elimina respuestas de IDs 116-117
       if (Number(questionId) === 115 && (value === 'No' || value?.label === 'No')) {
         [116, 117].forEach(id => delete newAnswers[String(id)]);
       }
-      
+
       // Pregunta 45 (ID 118): Si cambia a 'No', elimina respuestas de IDs 119-122
       if (Number(questionId) === 118 && (value === 'No' || value?.label === 'No')) {
         [119, 120, 121, 122].forEach(id => delete newAnswers[String(id)]);
       }
-      
+
       // Pregunta 58 (ID 131): Si cambia a 'No', elimina respuestas de IDs 132-138
       if (Number(questionId) === 131 && (value === 'No' || value?.label === 'No')) {
         [132, 133, 134, 135, 136, 137, 138].forEach(id => delete newAnswers[String(id)]);
       }
-      
+
       return newAnswers;
     });
-    
+
     // Activar auto-guardado después de cada cambio
     if (!formDisabled) {
       debouncedAutoSave();
@@ -598,7 +600,7 @@ export default function EmployeeSurveyAnswer() {
                 value={label}
                 disabled={disabled}
                 control={
-                  <Radio 
+                  <Radio
                     disabled={disabled}
                     sx={{
                       ...(disabled && selected && {
@@ -619,8 +621,8 @@ export default function EmployeeSurveyAnswer() {
                   />
                 }
                 label={
-                  <Typography 
-                    sx={{ 
+                  <Typography
+                    sx={{
                       fontWeight: disabled && selected ? 600 : 400,
                       color: disabled && selected ? 'success.dark' : 'inherit',
                       ...(disabled && !selected && {
@@ -773,7 +775,7 @@ export default function EmployeeSurveyAnswer() {
   const renderSingleChoiceControl = (question, answerValue, disabled) => {
     const { options } = resolveQuestionOptions(question);
     if (!options.length) {
-      return <Alert severity="warning">Esta pregunta no tiene opciones configuradas.</Alert>;
+      return <Alert severity="warning">{t('employeeSurveyAnswer.noOptions', 'Esta pregunta no tiene opciones configuradas.')}</Alert>;
     }
 
     const selectedOptionId = answerValue?.optionId ? String(answerValue.optionId) : '';
@@ -812,9 +814,9 @@ export default function EmployeeSurveyAnswer() {
         </FormControl>
         {showOtherField && (
           <TextField
-            label="Especifica (opcional)"
+            label={t('employeeSurveyAnswer.specifyOptional', 'Especifica (opcional)')}
             fullWidth
-            sx={{ 
+            sx={{
               mt: 2,
               '& .MuiInputBase-root': {
                 backgroundColor: (answerValue?.otherText && answerValue.otherText.trim()) ? '#e3f2fd' : 'white'
@@ -836,7 +838,7 @@ export default function EmployeeSurveyAnswer() {
   const renderMultiSelectControl = (question, answerValue, disabled) => {
     const { options } = resolveQuestionOptions(question);
     if (!options.length) {
-      return <Alert severity="warning">Esta pregunta no tiene opciones configuradas.</Alert>;
+      return <Alert severity="warning">{t('employeeSurveyAnswer.noOptions', 'Esta pregunta no tiene opciones configuradas.')}</Alert>;
     }
 
     // Forzar radio button en la pregunta 25
@@ -907,9 +909,9 @@ export default function EmployeeSurveyAnswer() {
         </FormGroup>
         {requiresOther && (
           <TextField
-            label="Especifica (opcional)"
+            label={t('employeeSurveyAnswer.specifyOptional', 'Especifica (opcional)')}
             fullWidth
-            sx={{ 
+            sx={{
               mt: 2,
               '& .MuiInputBase-root': {
                 backgroundColor: (answerValue?.otherText && answerValue.otherText.trim()) ? '#e3f2fd' : 'white'
@@ -933,7 +935,7 @@ export default function EmployeeSurveyAnswer() {
     const multiline = kind === 'text' ? Boolean(question.metadata?.multiline ?? (question.text?.length > 120)) : false;
     const minRows = question.metadata?.rows ?? (multiline ? 3 : 1);
     const value = typeof answerValue === 'string' ? answerValue : '';
-    
+
     // Solo las preguntas 159, 163, 168 son opcionales
     const isOptional = [159, 163, 168].includes(question.id);
     const hasValue = value && value.trim().length > 0;
@@ -963,7 +965,9 @@ export default function EmployeeSurveyAnswer() {
     // ...existing code...
     let label = question.metadata?.placeholder;
     if (!label) {
-      label = isOptional ? 'Respuesta (opcional)' : 'Respuesta';
+      label = isOptional
+        ? t('employeeSurveyAnswer.answerOptional', 'Respuesta (opcional)')
+        : t('employeeSurveyAnswer.answer', 'Respuesta');
     }
     return (
       <TextField
@@ -988,7 +992,7 @@ export default function EmployeeSurveyAnswer() {
     const rows = question.metadata?.rows || [];
     const columns = question.metadata?.columns || [];
     if (!rows.length || !columns.length) {
-      return <Alert severity="warning">Esta pregunta matricial no tiene filas u opciones configuradas.</Alert>;
+      return <Alert severity="warning">{t('employeeSurveyAnswer.matrixNoRows', 'Esta pregunta matricial no tiene filas u opciones configuradas.')}</Alert>;
     }
 
     const currentAnswer = (answerValue && typeof answerValue === 'object') ? answerValue : {};
@@ -1005,10 +1009,10 @@ export default function EmployeeSurveyAnswer() {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell sx={{ fontWeight: 600 }}>Reactivo</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>{t('employeeSurveyAnswer.item', 'Reactivo')}</TableCell>
               {columns.map((col, colIdx) => (
                 <TableCell key={colIdx} align="center" sx={{ fontWeight: 600 }}>
-                  {toLabel(col, `Opción ${colIdx + 1}`)}
+                  {toLabel(col, t('employeeSurveyAnswer.optionNumber', 'Opción {{n}}', { n: colIdx + 1 }))}
                 </TableCell>
               ))}
             </TableRow>
@@ -1016,7 +1020,7 @@ export default function EmployeeSurveyAnswer() {
           <TableBody>
             {rows.map((row, rowIdx) => {
               const rowKey = String(row);
-              const displayLabel = toLabel(row, `Fila ${rowIdx + 1}`);
+              const displayLabel = toLabel(row, t('employeeSurveyAnswer.rowNumber', 'Fila {{n}}', { n: rowIdx + 1 }));
               const rowValue = currentAnswer[rowKey] ?? '';
               return (
                 <TableRow key={rowKey}>
@@ -1079,16 +1083,16 @@ export default function EmployeeSurveyAnswer() {
     if (currentIndex === -1) return;
 
     const sectionQs = questionsInSection(surveyTitleFilter);
-    
+
     // Obtener IDs de preguntas ocultas u opcionales (texto libre)
     const optionalIds = getOptionalQuestionIds();
-    
+
     console.log('🔍 DEBUG saveCurrentSection:', {
       totalQuestions: sectionQs.length,
       optionalIds,
       sectionTitle: surveyTitleFilter
     });
-    
+
     // Filtrar preguntas sin responder, excluyendo las opcionales
     let unanswered = sectionQs.filter(q => {
       // Si la pregunta es opcional (oculta o texto libre), no bloquea el guardado
@@ -1099,11 +1103,11 @@ export default function EmployeeSurveyAnswer() {
       }
       return !hasAnswer;
     });
-    
+
     console.log('📊 Preguntas sin responder (obligatorias):', unanswered.length);
-    
+
     if (unanswered.length > 0) {
-      alert(`Por favor responde todas las preguntas obligatorias de la sección antes de guardar. Faltan ${unanswered.length}.`);
+      alert(t('employeeSurveyAnswer.sectionRequiredMissing', 'Por favor responde todas las preguntas obligatorias de la sección antes de guardar. Faltan {{count}}.', { count: unanswered.length }));
       return;
     }
 
@@ -1133,7 +1137,7 @@ export default function EmployeeSurveyAnswer() {
         .filter(Boolean);
 
       if (!responsesPayload.length) {
-        throw new Error('No se pudieron construir las respuestas para esta sección.');
+        throw new Error(t('employeeSurveyAnswer.sectionBuildError', 'No se pudieron construir las respuestas para esta sección.'));
       }
 
       await submitSurveyResponse(responsesPayload);
@@ -1157,7 +1161,7 @@ export default function EmployeeSurveyAnswer() {
       }
     } catch (err) {
       console.error('Error guardando sección:', err);
-      alert('Error al guardar la sección: ' + (err.response?.data?.message || err.message));
+      alert(t('employeeSurveyAnswer.sectionSaveError', 'Error al guardar la sección:') + ' ' + (err.response?.data?.message || err.message));
     } finally {
       setSavingSection(false);
     }
@@ -1165,30 +1169,30 @@ export default function EmployeeSurveyAnswer() {
 
   const handleSubmit = async () => {
     if (!selectedSurvey) {
-      alert('Por favor selecciona una encuesta');
+      alert(t('employeeSurveyAnswer.selectSurveyPrompt', 'Por favor selecciona una encuesta'));
       return;
     }
 
     const allQs = selectedSurvey.questions || [];
-    
+
     // Obtener IDs de preguntas ocultas u opcionales (texto libre)
     const optionalIds = getOptionalQuestionIds();
-    
+
     // Filtrar preguntas sin responder, excluyendo las opcionales
     let unanswered = allQs.filter(q => {
       // Si la pregunta es opcional (oculta o texto libre), no bloquea el envío
       if (optionalIds.includes(Number(q.id))) return false;
       return !questionHasAnswerImmediate(q);
     });
-    
+
     if (unanswered.length > 0) {
-      alert(`Por favor responde todas las preguntas obligatorias. Faltan ${unanswered.length} respuestas.`);
+      alert(t('employeeSurveyAnswer.requiredMissing', 'Por favor responde todas las preguntas obligatorias. Faltan {{count}} respuestas.', { count: unanswered.length }));
       return;
     }
 
     try {
       let appId = existingApplication?.id ?? existingApplication?.applicationId ?? existingApplication?.surveyApplicationId;
-      
+
       if (!appId) {
         const appRes = await createSurveyApplication({
           surveyId: selectedSurvey.id,
@@ -1210,15 +1214,15 @@ export default function EmployeeSurveyAnswer() {
         .filter(Boolean);
 
       if (!responsesPayload.length) {
-        throw new Error('No se pudieron construir las respuestas para esta encuesta.');
+        throw new Error(t('employeeSurveyAnswer.surveyBuildError', 'No se pudieron construir las respuestas para esta encuesta.'));
       }
 
       // Paso 1: Enviar las respuestas
       await submitSurveyResponse(responsesPayload);
-      
+
       // Paso 2: Marcar la aplicación como completada
       await completeSurveyApplication(appId);
-      
+
       // Paso 3: Actualizar el estado local INMEDIATAMENTE
       setShowSuccessMessage(true);
       setFormDisabled(true);
@@ -1226,12 +1230,12 @@ export default function EmployeeSurveyAnswer() {
       if (selectedSurvey?.id) {
         setCompletedSurveys(prev => ({ ...prev, [selectedSurvey.id]: true }));
       }
-      
+
       // Paso 4: Recargar la información de la encuesta para reflejar el estado completado
       await checkExistingSubmission(selectedSurvey, { forceRefresh: true });
     } catch (err) {
       console.error('❌ Error submitting survey:', err);
-      alert('Error al enviar la encuesta: ' + (err.response?.data?.message || err.message));
+      alert(t('employeeSurveyAnswer.submitError', 'Error al enviar la encuesta:') + ' ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -1383,18 +1387,18 @@ export default function EmployeeSurveyAnswer() {
             }}
           >
             <CheckCircleIcon fontSize="small" />
-            <Typography variant="body2" fontWeight="bold">COMPLETADA</Typography>
+            <Typography variant="body2" fontWeight="bold">{t('employeeSurveyAnswer.completedBadge', 'COMPLETADA')}</Typography>
           </Box>
         )}
 
         <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <AssignmentIcon color="primary" />
-          {formDisabled ? 'Encuesta Completada' : 'Responder Encuesta'}
+          {formDisabled ? t('employeeSurveyAnswer.surveyCompleted', 'Encuesta Completada') : t('employeeSurveyAnswer.answerSurvey', 'Responder Encuesta')}
           {autoSaving && (
-            <Chip 
-              label="Guardando..." 
-              size="small" 
-              color="info" 
+            <Chip
+              label={t('employeeSurveyAnswer.saving', 'Guardando...')}
+              size="small"
+              color="info"
               sx={{ ml: 2 }}
             />
           )}
@@ -1402,16 +1406,16 @@ export default function EmployeeSurveyAnswer() {
 
         {/* Dropdown de Selección de Encuesta */}
         <FormControl fullWidth sx={{ mt: 3, mb: 3 }}>
-          <InputLabel id="survey-select-label">Seleccionar Encuesta</InputLabel>
+          <InputLabel id="survey-select-label">{t('employeeSurveyAnswer.selectSurvey', 'Seleccionar Encuesta')}</InputLabel>
           <Select
             labelId="survey-select-label"
             value={selectedSurvey?.id || ''}
             onChange={handleSurveyChange}
-            label="Seleccionar Encuesta"
+            label={t('employeeSurveyAnswer.selectSurvey', 'Seleccionar Encuesta')}
             MenuProps={MENU_PROPS}
           >
             <MenuItem value="">
-              <em>-- Selecciona una encuesta --</em>
+              <em>{t('employeeSurveyAnswer.selectSurveyPlaceholder', '-- Selecciona una encuesta --')}</em>
             </MenuItem>
             {surveys.map(survey => (
               <MenuItem key={survey.id} value={survey.id}>
@@ -1425,12 +1429,12 @@ export default function EmployeeSurveyAnswer() {
                     </Typography>
                   )}
                   <Box sx={{ display: 'flex', gap: 1, mt: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <Chip label={`${survey.questions?.length || 0} preguntas`} size="small" color="primary" variant="outlined" />
+                    <Chip label={t('employeeSurveyAnswer.questionsCount', '{{count}} preguntas', { count: survey.questions?.length || 0 })} size="small" color="primary" variant="outlined" />
                     {survey.guideType && (
                       <Chip label={survey.guideType} size="small" color="secondary" variant="outlined" />
                     )}
                     {completedSurveys[survey.id] && (
-                      <Chip label="Completada" size="small" color="success" variant="filled" />
+                      <Chip label={t('employeeSurveyAnswer.completed', 'Completada')} size="small" color="success" variant="filled" />
                     )}
                   </Box>
                 </Box>
@@ -1442,11 +1446,11 @@ export default function EmployeeSurveyAnswer() {
         {/* Nueva dropdown para filtrar por Bloque / Módulo (secuencial) */}
         {selectedSurvey && sectionTitles.length > 0 && (
           <FormControl fullWidth sx={{ mb: 3 }}>
-            <InputLabel id="survey-title-filter-label">Sección</InputLabel>
+            <InputLabel             id="survey-title-filter-label">{t('employeeSurveyAnswer.section', 'Sección')}</InputLabel>
             <Select
               labelId="survey-title-filter-label"
               value={surveyTitleFilter}
-              label="Sección"
+                          label={t('employeeSurveyAnswer.section', 'Sección')}
               onChange={(e) => handleSectionFilterChange(e.target.value)}
               MenuProps={MENU_PROPS}
             >
@@ -1454,13 +1458,13 @@ export default function EmployeeSurveyAnswer() {
                 <MenuItem key={title} value={title} disabled={idx > enabledSectionMaxIndex}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Typography>{sectionTitleMap[title] || title}</Typography>
-                    <Chip 
-                      label={`${questionsInSection(title).filter(questionHasAnswer).length}/${questionsInSection(title).length}`} 
-                      size="small" 
+                    <Chip
+                      label={`${questionsInSection(title).filter(questionHasAnswer).length}/${questionsInSection(title).length}`}
+                      size="small"
                       color={isSectionComplete(title) ? 'success' : 'default'}
                     />
                     {idx > enabledSectionMaxIndex && (
-                      <Chip label="Bloqueado" size="small" color="warning" variant="outlined" />
+                      <Chip label={t('employeeSurveyAnswer.locked', 'Bloqueado')} size="small" color="warning" variant="outlined" />
                     )}
                   </Box>
                 </MenuItem>
@@ -1471,9 +1475,9 @@ export default function EmployeeSurveyAnswer() {
 
         {/* Estado de la Encuesta */}
         {existingApplication && (
-          <Alert 
-            severity={formDisabled ? "success" : "info"} 
-            sx={{ 
+          <Alert
+            severity={formDisabled ? "success" : "info"}
+            sx={{
               mb: 3,
               '& .MuiAlert-icon': {
                 fontSize: '28px'
@@ -1484,15 +1488,15 @@ export default function EmployeeSurveyAnswer() {
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Typography variant="body1" fontWeight="bold">
-                    ¡Encuesta completada exitosamente!
+                    {t('employeeSurveyAnswer.completedSuccess', '¡Encuesta completada exitosamente!')}
                   </Typography>
                 </Box>
                 <Typography variant="body2">
-                  Puedes revisar tus respuestas a continuación. Esta encuesta ya no puede ser modificada.
+                  {t('employeeSurveyAnswer.reviewAnswers', 'Puedes revisar tus respuestas a continuación. Esta encuesta ya no puede ser modificada.')}
                 </Typography>
                 {existingApplication.completedAt && (
                   <Typography variant="caption" color="text.secondary">
-                    Completada el: {new Date(existingApplication.completedAt).toLocaleDateString('es-MX', {
+                    {t('employeeSurveyAnswer.completedOn', 'Completada el:')} {new Date(existingApplication.completedAt).toLocaleDateString('es-MX', {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric',
@@ -1504,7 +1508,7 @@ export default function EmployeeSurveyAnswer() {
               </Box>
             ) : (
               <Typography variant="body1">
-                Continuando con una encuesta en progreso... Puedes seguir contestando donde lo dejaste.
+                {t('employeeSurveyAnswer.inProgress', 'Continuando con una encuesta en progreso... Puedes seguir contestando donde lo dejaste.')}
               </Typography>
             )}
           </Alert>
@@ -1514,10 +1518,10 @@ export default function EmployeeSurveyAnswer() {
         {showSuccessMessage && (
           <Alert severity="success" sx={{ mb: 3 }} onClose={() => setShowSuccessMessage(false)}>
             <Typography variant="body1" fontWeight="bold">
-              ¡Gracias por completar la encuesta!
+              {t('employeeSurveyAnswer.thanks', '¡Gracias por completar la encuesta!')}
             </Typography>
             <Typography variant="body2">
-              Tus respuestas han sido registradas correctamente.
+              {t('employeeSurveyAnswer.answersRecorded', 'Tus respuestas han sido registradas correctamente.')}
             </Typography>
           </Alert>
         )}
@@ -1527,7 +1531,7 @@ export default function EmployeeSurveyAnswer() {
           <Box sx={{ mb: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
               <Typography variant="body2" color="text.secondary">
-                Progreso: {answeredCount} / {totalQuestions} preguntas{surveyTitleFilter ? ' (filtrado)' : ''}
+                {t('employeeSurveyAnswer.progress', 'Progreso: {{answered}} / {{total}} preguntas', { answered: answeredCount, total: totalQuestions })}{surveyTitleFilter ? ` ${t('employeeSurveyAnswer.filtered', '(filtrado)')}` : ''}
               </Typography>
               <Typography variant="body2" color="primary" sx={{ fontWeight: 500 }}>
                 {Math.round(progress)}%
@@ -1542,11 +1546,11 @@ export default function EmployeeSurveyAnswer() {
           <Box sx={{ mb: 3, p: 2, bgcolor: 'success.light', borderRadius: 2, border: '2px solid', borderColor: 'success.main' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant="body1" fontWeight="bold" color="success.dark">
-                Todas las preguntas han sido respondidas
+                {t('employeeSurveyAnswer.allAnswered', 'Todas las preguntas han sido respondidas')}
               </Typography>
-              <Chip 
-                label={`${totalQuestions}/${totalQuestions}`} 
-                color="success" 
+              <Chip
+                label={`${totalQuestions}/${totalQuestions}`}
+                color="success"
                 size="medium"
                 sx={{ fontWeight: 'bold' }}
               />
@@ -1560,7 +1564,7 @@ export default function EmployeeSurveyAnswer() {
             {totalPages > 1 && (
               <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
                 <Typography variant="body2" color="text.secondary">
-                  Mostrando preguntas {pageStart}-{pageEnd} de {totalItemsInSection}
+                  {t('employeeSurveyAnswer.showingQuestions', 'Mostrando preguntas {{start}}-{{end}} de {{total}}', { start: pageStart, end: pageEnd, total: totalItemsInSection })}
                 </Typography>
                 <Stack direction="row" spacing={2}>
                   <Button
@@ -1569,7 +1573,7 @@ export default function EmployeeSurveyAnswer() {
                     onClick={() => setSectionPageIndex(prev => Math.max(0, prev - 1))}
                     disabled={currentPageIndex === 0}
                   >
-                    Página anterior
+                    {t('employeeSurveyAnswer.previousPage', 'Página anterior')}
                   </Button>
                   <Button
                     variant="outlined"
@@ -1577,7 +1581,7 @@ export default function EmployeeSurveyAnswer() {
                     onClick={() => setSectionPageIndex(prev => Math.min(totalPages - 1, prev + 1))}
                     disabled={totalPages === 0 || currentPageIndex >= totalPages - 1}
                   >
-                    Página siguiente
+                    {t('employeeSurveyAnswer.nextPage', 'Página siguiente')}
                   </Button>
                 </Stack>
               </Box>
@@ -1585,14 +1589,14 @@ export default function EmployeeSurveyAnswer() {
 
             <Box sx={{ mt: 2 }}>
               {Object.keys(groupedQuestions).length === 0 && (
-                <Alert severity="info">No hay preguntas visibles para esta página.</Alert>
+                <Alert severity="info">{t('employeeSurveyAnswer.noVisibleQuestions', 'No hay preguntas visibles para esta página.')}</Alert>
               )}
               {Object.entries(groupedQuestions).map(([category, questions]) => (
-                <Accordion 
+                <Accordion
                   key={category}
                   expanded={expandedModule === category}
                   onChange={() => setExpandedModule(expandedModule === category ? null : category)}
-                  sx={{ 
+                  sx={{
                     mb: 2,
                     ...(formDisabled && {
                       bgcolor: '#f8f9fa',
@@ -1602,7 +1606,7 @@ export default function EmployeeSurveyAnswer() {
                     })
                   }}
                 >
-                  <AccordionSummary 
+                  <AccordionSummary
                     expandIcon={<ExpandMoreIcon />}
                     sx={{
                       ...(formDisabled && {
@@ -1617,9 +1621,9 @@ export default function EmployeeSurveyAnswer() {
                       <Typography variant="h6" sx={{ fontWeight: formDisabled ? 600 : 500 }}>
                         {category}
                       </Typography>
-                      <Chip 
-                        label={`${questions.filter(questionHasAnswer).length}/${questions.length}`} 
-                        size="small" 
+                      <Chip
+                        label={`${questions.filter(questionHasAnswer).length}/${questions.length}`}
+                        size="small"
                         color={questions.every(questionHasAnswer) ? "success" : "default"}
                       />
                     </Box>
@@ -1628,15 +1632,15 @@ export default function EmployeeSurveyAnswer() {
                     {questions.map((question, idx) => {
                       const hasAnswer = questionHasAnswer(question);
                       return (
-                        <Card 
-                          key={question.id} 
-                          sx={{ 
-                            mb: 2, 
-                            bgcolor: formDisabled 
+                        <Card
+                          key={question.id}
+                          sx={{
+                            mb: 2,
+                            bgcolor: formDisabled
                               ? (hasAnswer ? '#e8f5e9' : '#f5f5f5')
                               : (hasAnswer ? '#f0f9ff' : 'white'),
                             border: formDisabled ? '2px solid' : '1px solid',
-                            borderColor: formDisabled 
+                            borderColor: formDisabled
                               ? (hasAnswer ? 'success.light' : 'grey.300')
                               : (hasAnswer ? 'primary.light' : 'grey.300'),
                             position: 'relative',
@@ -1659,9 +1663,9 @@ export default function EmployeeSurveyAnswer() {
                         >
                           <CardContent>
                             <Box sx={{ mb: 2 }}>
-                              <Typography 
-                                variant="body1" 
-                                sx={{ 
+                              <Typography
+                                variant="body1"
+                                sx={{
                                   fontWeight: 500,
                                   color: 'text.primary'
                                 }}
@@ -1678,7 +1682,7 @@ export default function EmployeeSurveyAnswer() {
                               <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
                                 <CheckCircleIcon color="success" fontSize="small" />
                                 <Typography variant="body2" color="success.dark">
-                                  Respondida
+                                  {t('employeeSurveyAnswer.answered', 'Respondida')}
                                 </Typography>
                               </Stack>
                             )}
@@ -1697,7 +1701,7 @@ export default function EmployeeSurveyAnswer() {
         {selectedSurvey && totalItemsInSection > 0 && totalPages > 1 && (
           <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
             <Typography variant="body2" color="text.secondary">
-              Página {currentPageIndex + 1} de {totalPages}
+              {t('employeeSurveyAnswer.pageOf', 'Página {{current}} de {{total}}', { current: currentPageIndex + 1, total: totalPages })}
             </Typography>
             <Stack direction="row" spacing={2}>
               <Button
@@ -1705,14 +1709,14 @@ export default function EmployeeSurveyAnswer() {
                 onClick={() => setSectionPageIndex(prev => Math.max(0, prev - 1))}
                 disabled={currentPageIndex === 0}
               >
-                Página anterior
+                {t('employeeSurveyAnswer.previousPage', 'Página anterior')}
               </Button>
               <Button
                 variant="outlined"
                 onClick={() => setSectionPageIndex(prev => Math.min(totalPages - 1, prev + 1))}
                 disabled={currentPageIndex >= totalPages - 1}
               >
-                Página siguiente
+                {t('employeeSurveyAnswer.nextPage', 'Página siguiente')}
               </Button>
             </Stack>
           </Box>
@@ -1720,45 +1724,45 @@ export default function EmployeeSurveyAnswer() {
 
         {selectedSurvey && totalItemsInSection === 0 && (
           <Alert severity="info" sx={{ mt: 3 }}>
-            No hay preguntas disponibles para esta sección.
+            {t('employeeSurveyAnswer.noQuestionsInSection', 'No hay preguntas disponibles para esta sección.')}
           </Alert>
         )}
 
         {/* Botones de Guardado por Sección */}
         {selectedSurvey && !formDisabled && surveyTitleFilter && (
           <Box sx={{ mt: 2, mb: 1, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-            <Button 
-              variant="contained" 
-              color="primary" 
+            <Button
+              variant="contained"
+              color="primary"
               onClick={saveCurrentSection}
               disabled={!isSectionComplete(surveyTitleFilter) || savingSection}
             >
-              {savingSection ? 'Guardando…' : 'Guardar sección'}
+              {savingSection ? t('employeeSurveyAnswer.savingSection', 'Guardando…') : t('employeeSurveyAnswer.saveSection', 'Guardar sección')}
             </Button>
           </Box>
         )}
 
         {/* Botón de Envío - Solo se muestra si no está completada */}
         {selectedSurvey && !formDisabled && (
-          <Button 
-            variant="contained" 
-            color="primary" 
-            fullWidth 
+          <Button
+            variant="contained"
+            color="primary"
+            fullWidth
             size="large"
             onClick={handleSubmit}
             disabled={!allSectionsComplete}
-            sx={{ 
+            sx={{
               mt: 3,
               py: 1.5,
               fontWeight: 'bold',
               fontSize: '1.1rem'
             }}
           >
-            {!allSectionsComplete 
+            {!allSectionsComplete
               ? (sectionTitles.length > 0
-                  ? `Completa todas las secciones (${completedSectionsCount}/${sectionTitles.length})`
-                  : `Completa todas las preguntas (${fullAnsweredCount}/${fullTotalQuestions})`)
-              : 'Enviar Encuesta'
+                  ? t('employeeSurveyAnswer.completeAllSections', 'Completa todas las secciones ({{done}}/{{total}})', { done: completedSectionsCount, total: sectionTitles.length })
+                  : t('employeeSurveyAnswer.completeAllQuestions', 'Completa todas las preguntas ({{done}}/{{total}})', { done: fullAnsweredCount, total: fullTotalQuestions }))
+              : t('employeeSurveyAnswer.submitSurvey', 'Enviar Encuesta')
             }
           </Button>
         )}
@@ -1767,10 +1771,10 @@ export default function EmployeeSurveyAnswer() {
         {selectedSurvey && formDisabled && (
           <Box sx={{ mt: 3, p: 3, bgcolor: 'info.light', borderRadius: 2, textAlign: 'center' }}>
             <Typography variant="body1" color="info.dark">
-              Esta encuesta ya ha sido enviada y no puede ser modificada.
+              {t('employeeSurveyAnswer.alreadySubmitted', 'Esta encuesta ya ha sido enviada y no puede ser modificada.')}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Si necesitas hacer cambios, contacta a tu administrador.
+              {t('employeeSurveyAnswer.contactAdmin', 'Si necesitas hacer cambios, contacta a tu administrador.')}
             </Typography>
           </Box>
         )}

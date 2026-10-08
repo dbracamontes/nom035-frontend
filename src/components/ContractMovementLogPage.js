@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   Box,
@@ -74,6 +75,7 @@ function getStatusChipColor(status) {
 }
 
 export default function ContractMovementLogPage() {
+  const { t } = useTranslation();
   const [rows, setRows] = React.useState([]);
   const [templateNameByType, setTemplateNameByType] = React.useState({});
   const [loading, setLoading] = React.useState(true);
@@ -115,7 +117,7 @@ export default function ContractMovementLogPage() {
         }
       } catch (err) {
         if (isMounted) {
-          setError(err?.response?.data || err?.message || "No se pudo cargar la bitácora.");
+          setError(err?.response?.data || err?.message || t("movementLog.loadError", "No se pudo cargar la bitácora."));
         }
       } finally {
         if (isMounted) {
@@ -133,8 +135,8 @@ export default function ContractMovementLogPage() {
 
   const statusToSpanish = React.useCallback((status) => {
     if (!status) return "-";
-    return STATUS_LABELS[status] || status;
-  }, []);
+    return STATUS_LABELS[status] ? t(`movementLog.status.${status}`, STATUS_LABELS[status]) : status;
+  }, [t]);
 
   const getTemplateDisplayName = React.useCallback(
     (templateType) => {
@@ -208,10 +210,10 @@ export default function ContractMovementLogPage() {
     >
       <CardContent sx={{ p: { xs: 2, md: 3 } }}>
         <Typography variant="h5" sx={{ mb: 1, fontWeight: 700, letterSpacing: 0.3 }}>
-          Bitácora de Movimientos
+          {t("movementLog.title", "Bitácora de Movimientos")}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Historial de contratos generados con fecha del contrato y vigencia.
+          {t("movementLog.subtitle", "Historial de contratos generados con fecha del contrato y vigencia.")}
         </Typography>
 
         <Box
@@ -225,7 +227,7 @@ export default function ContractMovementLogPage() {
           }}
         >
           <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary" }}>
-            Registros: {filteredRows.length} de {rows.length}
+            {t("movementLog.records", "Registros: {{count}} de {{total}}", { count: filteredRows.length, total: rows.length })}
           </Typography>
         </Box>
 
@@ -247,20 +249,20 @@ export default function ContractMovementLogPage() {
               <Table size="small" stickyHeader>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>Creador</TableCell>
-                    <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>Cliente</TableCell>
-                    <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>Tipo</TableCell>
-                    <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>Fecha contrato</TableCell>
-                    <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>Inicio vigencia</TableCell>
-                    <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>Término vigencia</TableCell>
-                    <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>Generado</TableCell>
-                    <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>Estatus</TableCell>
+                    <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>{t("movementLog.columns.creator", "Creador")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>{t("movementLog.columns.client", "Cliente")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>{t("movementLog.columns.type", "Tipo")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>{t("movementLog.columns.contractDate", "Fecha contrato")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>{t("movementLog.columns.validityStart", "Inicio vigencia")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>{t("movementLog.columns.validityEnd", "Término vigencia")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>{t("movementLog.columns.generated", "Generado")}</TableCell>
+                    <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>{t("movementLog.columns.status", "Estatus")}</TableCell>
                   </TableRow>
                   <TableRow sx={{ backgroundColor: "#F5F9FC" }}>
                     <TableCell>
                       <TextField
                         size="small"
-                        placeholder="Filtrar"
+                        placeholder={t("movementLog.filterPlaceholder", "Filtrar")}
                         value={columnFilters.createdByUser}
                         onChange={(event) => onFilterChange("createdByUser", event.target.value)}
                         fullWidth
@@ -270,7 +272,7 @@ export default function ContractMovementLogPage() {
                     <TableCell>
                       <TextField
                         size="small"
-                        placeholder="Filtrar"
+                        placeholder={t("movementLog.filterPlaceholder", "Filtrar")}
                         value={columnFilters.clientName}
                         onChange={(event) => onFilterChange("clientName", event.target.value)}
                         fullWidth
@@ -286,7 +288,7 @@ export default function ContractMovementLogPage() {
                         fullWidth
                         sx={{ backgroundColor: "#fff", borderRadius: 1 }}
                       >
-                        <MenuItem value="">Todos</MenuItem>
+                        <MenuItem value="">{t("movementLog.all", "Todos")}</MenuItem>
                         {templateOptions.map((templateName) => (
                           <MenuItem key={templateName} value={templateName}>
                             {templateName}
@@ -297,7 +299,7 @@ export default function ContractMovementLogPage() {
                     <TableCell>
                       <TextField
                         size="small"
-                        placeholder="dd/mm/aaaa"
+                        placeholder={t("movementLog.datePlaceholder", "dd/mm/aaaa")}
                         value={columnFilters.contractDate}
                         onChange={(event) => onFilterChange("contractDate", event.target.value)}
                         fullWidth
@@ -307,7 +309,7 @@ export default function ContractMovementLogPage() {
                     <TableCell>
                       <TextField
                         size="small"
-                        placeholder="dd/mm/aaaa"
+                        placeholder={t("movementLog.datePlaceholder", "dd/mm/aaaa")}
                         value={columnFilters.vigenciaStartDate}
                         onChange={(event) => onFilterChange("vigenciaStartDate", event.target.value)}
                         fullWidth
@@ -317,7 +319,7 @@ export default function ContractMovementLogPage() {
                     <TableCell>
                       <TextField
                         size="small"
-                        placeholder="dd/mm/aaaa"
+                        placeholder={t("movementLog.datePlaceholder", "dd/mm/aaaa")}
                         value={columnFilters.vigenciaEndDate}
                         onChange={(event) => onFilterChange("vigenciaEndDate", event.target.value)}
                         fullWidth
@@ -327,7 +329,7 @@ export default function ContractMovementLogPage() {
                     <TableCell>
                       <TextField
                         size="small"
-                        placeholder="dd/mm/aaaa hh:mm"
+                        placeholder={t("movementLog.dateTimePlaceholder", "dd/mm/aaaa hh:mm")}
                         value={columnFilters.createdAt}
                         onChange={(event) => onFilterChange("createdAt", event.target.value)}
                         fullWidth
@@ -343,7 +345,7 @@ export default function ContractMovementLogPage() {
                         fullWidth
                         sx={{ backgroundColor: "#fff", borderRadius: 1 }}
                       >
-                        <MenuItem value="">Todos</MenuItem>
+                        <MenuItem value="">{t("movementLog.all", "Todos")}</MenuItem>
                         {statusOptions.map((statusName) => (
                           <MenuItem key={statusName} value={statusName}>
                             {statusName}
@@ -357,7 +359,7 @@ export default function ContractMovementLogPage() {
                   {filteredRows.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} align="center">
-                        No hay movimientos registrados todavía.
+                        {t("movementLog.empty", "No hay movimientos registrados todavía.")}
                       </TableCell>
                     </TableRow>
                   ) : (
