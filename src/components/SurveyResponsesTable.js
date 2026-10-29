@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { useTranslation } from 'react-i18next';
 import { getSurveyResponses, getSurveys, getEmployees, getSurveyApplications, getCompanies } from "../api/nom035";
 import { DataGrid } from "@mui/x-data-grid";
 import { Button, TextField, MenuItem, Box } from "@mui/material";
+import { UserContext } from "../context/UserContext";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
@@ -13,6 +14,16 @@ import EmployeeSurveyResponseReport from './EmployeeSurveyResponseReport';
 export default function SurveyResponsesTable() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { user } = useContext(UserContext);
+  const hasRole = (roleName) => {
+    if (!user || !user.roles) return false;
+    return user.roles.some(role =>
+      (typeof role === 'string' && role === roleName) ||
+      (role && role.authority === roleName) ||
+      (role && role.name === roleName)
+    );
+  };
+  const isCompanyRole = hasRole('ROLE_COMPANY');
   const [rows, setRows] = useState([]);
   const [surveys, setSurveys] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -23,6 +34,16 @@ export default function SurveyResponsesTable() {
   const [selectedCompany, setSelectedCompany] = useState("");
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [selectedApplicationId, setSelectedApplicationId] = useState(null);
+
+  useEffect(() => {
+    if (user && isCompanyRole) {
+      const userCompanyId = user.companyId || (user.company && user.company.id);
+      if (userCompanyId && String(userCompanyId) !== String(selectedCompany)) {
+        setSelectedCompany(String(userCompanyId));
+      }
+      setSelectedSurvey("");
+    }
+  }, [user, isCompanyRole, selectedCompany]);
 
   // Helpers to safely extract fields regardless of backend shape
   const toNum = (v) => {
@@ -218,17 +239,19 @@ export default function SurveyResponsesTable() {
     <div style={{ height: 500, width: "100%" }}>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2, mb: 2 }}>
 
-        <TextField
-          select
-          size="small"
-          label={t('responses.filterBySurvey')}
-          value={selectedSurvey}
-          onChange={e => setSelectedSurvey(e.target.value)}
-          sx={{ minWidth: 240 }}
-        >
-          <MenuItem value="">{t('responses.allSurveys')}</MenuItem>
-          {surveys.filter(Boolean).map(s => <MenuItem key={s.id} value={s.id}>{s.title || s.name || `${t('responses.survey')} ${s.id}`}</MenuItem>)}
-        </TextField>
+        {!isCompanyRole && (
+          <TextField
+            select
+            size="small"
+            label={t('responses.filterBySurvey')}
+            value={selectedSurvey}
+            onChange={e => setSelectedSurvey(e.target.value)}
+            sx={{ minWidth: 240 }}
+          >
+            <MenuItem value="">{t('responses.allSurveys')}</MenuItem>
+            {surveys.filter(Boolean).map(s => <MenuItem key={s.id} value={s.id}>{s.title || s.name || `${t('responses.survey')} ${s.id}`}</MenuItem>)}
+          </TextField>
+        )}
 
         <TextField
           select
@@ -242,17 +265,19 @@ export default function SurveyResponsesTable() {
           {employees.filter(Boolean).map(emp => <MenuItem key={emp.id} value={emp.id}>{emp.name || emp.email || `#${emp.id}`}</MenuItem>)}
         </TextField>
 
-        <TextField
-          select
-          size="small"
-          label={t('surveyResults.table.filterByCompany', 'Filtrar por Empresa')}
-          value={selectedCompany}
-          onChange={e => setSelectedCompany(e.target.value)}
-          sx={{ minWidth: 240 }}
-        >
-          <MenuItem value="">{t('surveyResults.table.allCompanies', 'Todas las Empresas')}</MenuItem>
-          {companies.filter(Boolean).map(comp => <MenuItem key={comp.id} value={comp.id}>{comp.name || t('surveyResults.table.companyNumber', 'Empresa #{{id}}', { id: comp.id })}</MenuItem>)}
-        </TextField>
+        {!isCompanyRole && (
+          <TextField
+            select
+            size="small"
+            label={t('surveyResults.table.filterByCompany', 'Filtrar por Empresa')}
+            value={selectedCompany}
+            onChange={e => setSelectedCompany(e.target.value)}
+            sx={{ minWidth: 240 }}
+          >
+            <MenuItem value="">{t('surveyResults.table.allCompanies', 'Todas las Empresas')}</MenuItem>
+            {companies.filter(Boolean).map(comp => <MenuItem key={comp.id} value={comp.id}>{comp.name || t('surveyResults.table.companyNumber', 'Empresa #{{id}}', { id: comp.id })}</MenuItem>)}
+          </TextField>
+        )}
 
         <Box sx={{ flexGrow: 1 }} />
 

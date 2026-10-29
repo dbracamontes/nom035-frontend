@@ -238,7 +238,7 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
       setSelectedDocFile(field, null);
       return;
     }
-    const maxBytes = 5 * 1024 * 1024; // 5 MB
+    const maxBytes = 10 * 1024 * 1024; // 10 MB
     if (file.size > maxBytes) {
       const friendlyNameMap = {
         acta_constitutiva: t('medicaLeben.form.docs.actaConstitutiva', 'Acta constitutiva'),
@@ -251,7 +251,7 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
         comprobante_ema_eba: t('medicaLeben.form.docs.comprobanteEmaEba', 'Comprobante EMA/EBA último periodo'),
       };
       const label = friendlyNameMap[normalizeDocFieldName(field)] || field;
-      setError(t('medicaLeben.form.errors.fileTooLarge', 'El archivo para "{{label}}" es demasiado grande. Tamaño máximo: 5 MB.', { label }));
+      setError(t('medicaLeben.form.errors.fileTooLarge', 'El archivo para "{{label}}" es demasiado grande. Tamaño máximo: 10 MB.', { label }));
       setFailedDocs((prev) => Array.from(new Set([...prev, label])));
       e.target.value = "";
       return;
@@ -300,9 +300,9 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
       setFailedDocs([]);
 
       const ensuredCompany = await ensureCompanyExists();
-      const maxBytes = 5 * 1024 * 1024;
+      const maxBytes = 10 * 1024 * 1024;
       if (singleFile.size > maxBytes) {
-        setError(t('medicaLeben.form.errors.fileExceedsMax', 'El archivo seleccionado excede el tamaño máximo permitido de 5 MB.'));
+        setError(t('medicaLeben.form.errors.fileExceedsMax', 'El archivo seleccionado excede el tamaño máximo permitido de 10 MB.'));
         setLoading(false);
         return;
       }
@@ -330,7 +330,7 @@ export default function MedicaLebenCompanyForm({ company, onClose, isNewCompany 
           : (resp?.data?.error || resp?.data?.message || "");
 
       if (isMaxSizeError) {
-        setError(t('medicaLeben.form.errors.uploadExceedsMax', 'La carga del documento excede el tamaño máximo permitido de 5 MB.'));
+        setError(t('medicaLeben.form.errors.uploadExceedsMax', 'La carga del documento excede el tamaño máximo permitido de 10 MB.'));
       } else if (validationMessage) {
         setError(validationMessage.replace(/^Error de validación:\s*/i, ""));
       } else {
