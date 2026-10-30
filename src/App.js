@@ -97,23 +97,23 @@ export default function App() {
       label: t('navigation.section.documents', 'Documentos'),
       items: [
         { text: t('navigation.documentsCenter', 'Centro de Documentos'), icon: <DescriptionIcon />, component: <DocumentsPage />, roles: ['ROLE_ADMIN'] },
-        { text: t('navigation.photoGenerator', 'Generador Alta Fotografías'), icon: <DescriptionIcon />, component: <MaterialidadPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
       ],
     },
     {
       id: 'docgen',
       label: t('navigation.section.docgen', 'Generar Documentos'),
       items: [
-        { text: t('navigation.documentInterpretation', 'Interpretación de Documento'), icon: <DescriptionIcon />, component: <DocumentInterpretationPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
-        { text: t('navigation.createDocument', 'Crear Documento'), icon: <DescriptionIcon />, component: <DocumentCreationPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
-        { text: t('navigation.generateContract', 'Genera Contrato'), icon: <DescriptionIcon />, component: <ContractGenerationPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
+        { text: t('navigation.photoGenerator', 'Generador Alta Fotografías'), icon: <DescriptionIcon />, component: <MaterialidadPage />, roles: ['ROLE_ADMIN'] },
+        { text: t('navigation.documentInterpretation', 'Interpretación de Documento'), icon: <DescriptionIcon />, component: <DocumentInterpretationPage />, roles: ['ROLE_ADMIN'] },
+        { text: t('navigation.createDocument', 'Crear Documento'), icon: <DescriptionIcon />, component: <DocumentCreationPage />, roles: ['ROLE_ADMIN'] },
+        { text: t('navigation.generateContract', 'Genera Contrato'), icon: <DescriptionIcon />, component: <ContractGenerationPage />, roles: ['ROLE_ADMIN'] },
       ],
     },
     {
       id: 'movements',
       label: t('navigation.section.movements', 'Bitácora de Movimientos'),
       items: [
-        { text: t('navigation.movementLog', 'Bitácora'), icon: <DescriptionIcon />, component: <ContractMovementLogPage />, roles: ['ROLE_ADMIN', 'ROLE_COMPANY'] },
+        { text: t('navigation.movementLog', 'Bitácora de contratos generados'), icon: <DescriptionIcon />, component: <ContractMovementLogPage />, roles: ['ROLE_ADMIN'] },
       ],
     },
   ];

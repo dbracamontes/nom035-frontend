@@ -516,6 +516,7 @@ export default function SurveyResults() {
         log.debug('Locking company for ROLE_COMPANY user', { userCompanyId });
         setSelectedCompany(userCompanyId);
       }
+      setSelectedSurvey('');
     }
   }, [user, isCompanyRole, selectedCompany]);
 
@@ -603,25 +604,27 @@ export default function SurveyResults() {
               </TextField>
             )}
           </Grid>
-          <Grid item xs={12} md={6}>
-            <TextField
-              select
-              fullWidth
-              label={t('surveyResults.filters.selectSurvey', 'Seleccionar Encuesta')}
-              value={selectedSurvey}
-              onChange={e => { setSelectedSurvey(e.target.value); log.debug('Survey filter changed', { surveyId: e.target.value }); }}
-              variant="outlined"
-              sx={{ backgroundColor: '#fff', borderRadius: 2, minWidth: 300 }}
-              InputProps={{ style: { fontSize: 16 } }}
-            >
-              <MenuItem value="">{t('surveyResults.filters.allSurveys', 'Todas las encuestas')}</MenuItem>
-              {surveys.filter(Boolean).map(survey => (
-                <MenuItem key={survey.id} value={survey.id}>
-                  {survey.title || survey.name || t('surveyResults.filters.surveyNumber', 'Encuesta {{id}}', { id: survey.id })}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Grid>
+          {!isCompanyRole && (
+            <Grid item xs={12} md={6}>
+              <TextField
+                select
+                fullWidth
+                label={t('surveyResults.filters.selectSurvey', 'Seleccionar Encuesta')}
+                value={selectedSurvey}
+                onChange={e => { setSelectedSurvey(e.target.value); log.debug('Survey filter changed', { surveyId: e.target.value }); }}
+                variant="outlined"
+                sx={{ backgroundColor: '#fff', borderRadius: 2, minWidth: 300 }}
+                InputProps={{ style: { fontSize: 16 } }}
+              >
+                <MenuItem value="">{t('surveyResults.filters.allSurveys', 'Todas las encuestas')}</MenuItem>
+                {surveys.filter(Boolean).map(survey => (
+                  <MenuItem key={survey.id} value={survey.id}>
+                    {survey.title || survey.name || t('surveyResults.filters.surveyNumber', 'Encuesta {{id}}', { id: survey.id })}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+          )}
         </Grid>
       </Paper>
 

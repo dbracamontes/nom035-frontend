@@ -84,9 +84,6 @@ export default function ContractMovementLogPage() {
     createdByUser: "",
     clientName: "",
     templateType: "",
-    contractDate: "",
-    vigenciaStartDate: "",
-    vigenciaEndDate: "",
     createdAt: "",
     status: "",
   });
@@ -179,9 +176,6 @@ export default function ContractMovementLogPage() {
       const creatorText = normalize(row?.createdByUser || "-");
       const clientText = normalize(row?.clientName || "-");
       const typeText = normalize(getTemplateDisplayName(row?.templateType));
-      const contractText = normalize(formatDate(row?.contractDate));
-      const startText = normalize(formatDate(row?.vigenciaStartDate));
-      const endText = normalize(formatDate(row?.vigenciaEndDate));
       const createdText = normalize(formatDateTime(row?.createdAt));
       const statusText = normalize(statusToSpanish(row?.status));
 
@@ -189,9 +183,6 @@ export default function ContractMovementLogPage() {
         creatorText.includes(normalize(columnFilters.createdByUser)) &&
         clientText.includes(normalize(columnFilters.clientName)) &&
         typeText.includes(normalize(columnFilters.templateType)) &&
-        contractText.includes(normalize(columnFilters.contractDate)) &&
-        startText.includes(normalize(columnFilters.vigenciaStartDate)) &&
-        endText.includes(normalize(columnFilters.vigenciaEndDate)) &&
         createdText.includes(normalize(columnFilters.createdAt)) &&
         statusText.includes(normalize(columnFilters.status))
       );
@@ -210,10 +201,10 @@ export default function ContractMovementLogPage() {
     >
       <CardContent sx={{ p: { xs: 2, md: 3 } }}>
         <Typography variant="h5" sx={{ mb: 1, fontWeight: 700, letterSpacing: 0.3 }}>
-          {t("movementLog.title", "Bitácora de Movimientos")}
+          {t("movementLog.title", "Bitácora de contratos generados")}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          {t("movementLog.subtitle", "Historial de contratos generados con fecha del contrato y vigencia.")}
+          {t("movementLog.subtitle", "Historial de contratos generados.")}
         </Typography>
 
         <Box
@@ -252,9 +243,6 @@ export default function ContractMovementLogPage() {
                     <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>{t("movementLog.columns.creator", "Creador")}</TableCell>
                     <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>{t("movementLog.columns.client", "Cliente")}</TableCell>
                     <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>{t("movementLog.columns.type", "Tipo")}</TableCell>
-                    <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>{t("movementLog.columns.contractDate", "Fecha contrato")}</TableCell>
-                    <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>{t("movementLog.columns.validityStart", "Inicio vigencia")}</TableCell>
-                    <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>{t("movementLog.columns.validityEnd", "Término vigencia")}</TableCell>
                     <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>{t("movementLog.columns.generated", "Generado")}</TableCell>
                     <TableCell sx={{ fontWeight: 700, backgroundColor: "#895dda", color: "#fff" }}>{t("movementLog.columns.status", "Estatus")}</TableCell>
                   </TableRow>
@@ -299,36 +287,6 @@ export default function ContractMovementLogPage() {
                     <TableCell>
                       <TextField
                         size="small"
-                        placeholder={t("movementLog.datePlaceholder", "dd/mm/aaaa")}
-                        value={columnFilters.contractDate}
-                        onChange={(event) => onFilterChange("contractDate", event.target.value)}
-                        fullWidth
-                        sx={{ backgroundColor: "#fff", borderRadius: 1 }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <TextField
-                        size="small"
-                        placeholder={t("movementLog.datePlaceholder", "dd/mm/aaaa")}
-                        value={columnFilters.vigenciaStartDate}
-                        onChange={(event) => onFilterChange("vigenciaStartDate", event.target.value)}
-                        fullWidth
-                        sx={{ backgroundColor: "#fff", borderRadius: 1 }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <TextField
-                        size="small"
-                        placeholder={t("movementLog.datePlaceholder", "dd/mm/aaaa")}
-                        value={columnFilters.vigenciaEndDate}
-                        onChange={(event) => onFilterChange("vigenciaEndDate", event.target.value)}
-                        fullWidth
-                        sx={{ backgroundColor: "#fff", borderRadius: 1 }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <TextField
-                        size="small"
                         placeholder={t("movementLog.dateTimePlaceholder", "dd/mm/aaaa hh:mm")}
                         value={columnFilters.createdAt}
                         onChange={(event) => onFilterChange("createdAt", event.target.value)}
@@ -358,7 +316,7 @@ export default function ContractMovementLogPage() {
                 <TableBody>
                   {filteredRows.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} align="center">
+                      <TableCell colSpan={5} align="center">
                         {t("movementLog.empty", "No hay movimientos registrados todavía.")}
                       </TableCell>
                     </TableRow>
@@ -379,9 +337,6 @@ export default function ContractMovementLogPage() {
                         <TableCell>{row.createdByUser || "-"}</TableCell>
                         <TableCell>{row.clientName || "-"}</TableCell>
                         <TableCell>{getTemplateDisplayName(row.templateType)}</TableCell>
-                        <TableCell>{formatDate(row.contractDate)}</TableCell>
-                        <TableCell>{formatDate(row.vigenciaStartDate)}</TableCell>
-                        <TableCell>{formatDate(row.vigenciaEndDate)}</TableCell>
                         <TableCell>{formatDateTime(row.createdAt)}</TableCell>
                         <TableCell>
                           <Chip
